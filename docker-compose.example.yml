@@ -1,0 +1,200 @@
+version: '3.8'
+
+# Example Docker Compose file for ProductAuth Microservices
+# Copy this file to docker-compose.yml and update the configuration
+
+services:
+  # PostgreSQL Database - Single Instance for Both Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: productauth-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ProductAuthDB
+      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${PRODUCT_DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    networks:
+      - productauth-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ProductAuthDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: productauth-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
+    ports:
+      - "${RABBITMQ_PORT}:5672"   # AMQP port
+      - "15672:15672" # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - productauth-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis Cache for Distributed Caching
+  redis:
+    image: redis:7-alpine
+    container_name: productauth-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - productauth-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # AuthService API
+  authservice-api:
+    build:
+      context: ./src
+      dockerfile: AuthService/AuthService.API/Dockerfile
+    container_name: authservice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${AUTH_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
+      JwtConfig__Key: ${JWT_SECRET_KEY}
+      JwtConfig__Issuer: ${JWT_ISSUER}
+      JwtConfig__Audience: ${JWT_AUDIENCE}
+      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
+      DefaultAdminAccount__Email: ${ADMIN_EMAIL}
+      DefaultAdminAccount__Password: ${ADMIN_PASSWORD}
+    ports:
+      - "5001:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - productauth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ProductService API
+  productservice-api:
+    build:
+      context: ./src
+      dockerfile: ProductService/ProductService.API/Dockerfile
+    container_name: productservice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${PRODUCT_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
+      JwtConfig__Key: ${JWT_SECRET_KEY}
+      JwtConfig__Issuer: ${JWT_ISSUER}
+      JwtConfig__Audience: ${JWT_AUDIENCE}
+      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
+      OutboxProcessor__ProcessingIntervalSeconds: 30
+      OutboxProcessor__BatchSize: 100
+      OutboxProcessor__Enabled: true
+    ports:
+      - "5002:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - productauth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Gateway API
+  gateway-api:
+    build:
+      context: ./src
+      dockerfile: Gateway/Gateway.API/Dockerfile
+    container_name: gateway-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      JwtConfig__Key: ${JWT_SECRET_KEY}
+      JwtConfig__Issuer: ${JWT_ISSUER}
+      JwtConfig__Audience: ${JWT_AUDIENCE}
+      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
+      AuthServiceUrl: "http://authservice-api"
+      ProductServiceUrl: "http://productservice-api"
+    ports:
+      - "5000:80"
+    depends_on:
+      authservice-api:
+        condition: service_healthy
+      productservice-api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - productauth-network
+    restart: unless-stopped
+
+  # pgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: productauth-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${ADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${ADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - productauth-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+networks:
+  productauth-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  pgadmin_data:
