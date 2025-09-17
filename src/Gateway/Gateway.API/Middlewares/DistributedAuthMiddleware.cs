@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Options;
-using ProductAuthMicroservice.Commons.Cache;
-using ProductAuthMicroservice.Commons.Configs;
-using ProductAuthMicroservice.Commons.Services;
+using SharedLibrary.Commons.Cache;
+using SharedLibrary.Commons.Configs;
+using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Models;
+using SharedLibrary.Commons.Enums;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
 
-namespace ProductAuthMicroservice.Gateway.API.Middlewares;
+namespace Gateway.API.Middlewares;
 
 /// <summary>
 /// Middleware để validate user state từ cache thay vì chỉ dựa vào JWT
@@ -55,7 +57,7 @@ public class DistributedAuthMiddleware
             if (!_jwtService.ValidateToken(token))
             {
                 _logger.LogWarning("Invalid JWT token received");
-                await HandleUnauthorized(context, "Invalid token");
+                await HandleUnauthorized(context, "Invalid token", ErrorCodeEnum.InvalidToken);
                 return;
             }
 
@@ -64,7 +66,7 @@ public class DistributedAuthMiddleware
             if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
             {
                 _logger.LogWarning("Invalid user ID in token");
-                await HandleUnauthorized(context, "Invalid user ID");
+                await HandleUnauthorized(context, "Invalid user ID", ErrorCodeEnum.InvalidToken);
                 return;
             }
 
@@ -73,7 +75,7 @@ public class DistributedAuthMiddleware
             if (userState == null)
             {
                 _logger.LogWarning("User {UserId} not found in cache - token invalid", userGuid);
-                await HandleUnauthorized(context, "User session not found");
+                await HandleUnauthorized(context, "User session not found", ErrorCodeEnum.TokenExpired);
                 return;
             }
 
@@ -81,7 +83,7 @@ public class DistributedAuthMiddleware
             if (!userState.IsActive)
             {
                 _logger.LogWarning("User {UserId} is inactive - status: {Status}", userGuid, userState.Status);
-                await HandleUnauthorized(context, "User account is inactive");
+                await HandleForbidden(context, "User account is inactive", ErrorCodeEnum.Forbidden);
                 return;
             }
 
@@ -93,13 +95,13 @@ public class DistributedAuthMiddleware
                 if (!isRefreshTokenValid)
                 {
                     _logger.LogWarning("Invalid refresh token for user {UserId}", userGuid);
-                    await HandleUnauthorized(context, "Invalid refresh token");
+                    await HandleUnauthorized(context, "Invalid refresh token", ErrorCodeEnum.TokenRevoked);
                     return;
                 }
             }
 
             // 6. Set user claims từ cache (not from JWT)
-            await SetUserClaimsFromCache(context, userState);
+            SetUserClaimsFromCache(context, userState);
 
             _logger.LogDebug("User {UserId} authenticated successfully via cache", userGuid);
         }
@@ -144,7 +146,7 @@ public class DistributedAuthMiddleware
         return publicPaths.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task SetUserClaimsFromCache(HttpContext context, UserStateInfo userState)
+    private void SetUserClaimsFromCache(HttpContext context, UserStateInfo userState)
     {
         var claims = new List<Claim>
         {
@@ -169,19 +171,34 @@ public class DistributedAuthMiddleware
         context.Items["UserStatus"] = userState.Status;
     }
 
-    private async Task HandleUnauthorized(HttpContext context, string message)
+    private async Task HandleUnauthorized(HttpContext context, string message, ErrorCodeEnum errorCode = ErrorCodeEnum.Unauthorized)
     {
         context.Response.StatusCode = 401;
         context.Response.ContentType = "application/json";
 
-        var response = new
+        var result = Result.Failure(message, errorCode);
+
+        var jsonOptions = new JsonSerializerOptions
         {
-            error = "Unauthorized",
-            message = message,
-            timestamp = DateTime.UtcNow
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(result, jsonOptions));
+    }
+
+    private async Task HandleForbidden(HttpContext context, string message, ErrorCodeEnum errorCode = ErrorCodeEnum.Forbidden)
+    {
+        context.Response.StatusCode = 403;
+        context.Response.ContentType = "application/json";
+
+        var result = Result.Failure(message, errorCode);
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(result, jsonOptions));
     }
 
     private async Task HandleInternalError(HttpContext context, string message)
@@ -189,13 +206,13 @@ public class DistributedAuthMiddleware
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
 
-        var response = new
+        var result = Result.Failure(message, ErrorCodeEnum.InternalError);
+
+        var jsonOptions = new JsonSerializerOptions
         {
-            error = "Internal Server Error",
-            message = message,
-            timestamp = DateTime.UtcNow
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(result, jsonOptions));
     }
 }

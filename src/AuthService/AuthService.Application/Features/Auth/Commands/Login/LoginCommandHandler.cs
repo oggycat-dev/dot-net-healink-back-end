@@ -1,15 +1,14 @@
 using AuthService.Application.Commons.DTOs;
 using AuthService.Application.Commons.Interfaces;
-using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using ProductAuthMicroservice.Commons.Entities;
-using ProductAuthMicroservice.Commons.Enums;
-using ProductAuthMicroservice.Commons.Models;
-using ProductAuthMicroservice.Commons.Cache;
-using ProductAuthMicroservice.Shared.Contracts.Events;
-using ProductAuthMicroservice.Commons.EventBus;
-using ProductAuthMicroservice.Commons.Outbox;
+using SharedLibrary.Commons.Enums;
+using SharedLibrary.Commons.Models;
+using SharedLibrary.Commons.Cache;
+using SharedLibrary.SharedLibrary.Contracts.Events;
+using SharedLibrary.Commons.EventBus;
+using SharedLibrary.Commons.Outbox;
+using SharedLibrary.Commons.Entities;
 
 
 namespace AuthService.Application.Features.Auth.Commands.Login;

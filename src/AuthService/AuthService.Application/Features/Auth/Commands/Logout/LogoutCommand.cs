@@ -1,5 +1,5 @@
 using MediatR;
-using ProductAuthMicroservice.Commons.Models;
+using SharedLibrary.Commons.Models;
 
 namespace AuthService.Application.Features.Auth.Commands.Logout;
 

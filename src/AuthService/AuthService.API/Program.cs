@@ -1,12 +1,11 @@
+// Create startup logger
 using AuthService.API.Configurations;
 using AuthService.Infrastructure.Extensions;
-using ProductAuthMicroservice.Commons.Configurations;
-using ProductAuthMicroservice.Commons.DependencyInjection;
-using ProductAuthMicroservice.Shared.Contracts.Events;
-using ProductAuthMicroservice.Commons.Extensions;
-using ProductAuthMicroservice.Commons.Services;
+using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.DependencyInjection;
+using SharedLibrary.Commons.EventBus;
+using SharedLibrary.Commons.Extensions;
 
-// Create startup logger
 var logger = LoggingConfiguration.CreateStartupLogger("AuthService");
 
 try
@@ -21,8 +20,6 @@ try
     // Add distributed authentication
     builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
     
-    // Add current user service for auth
-    builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
     var app = builder.Build();
 
@@ -38,11 +35,8 @@ try
     // Add RabbitMQ Event Bus and subscribe to events
     app.AddRabbitMQEventBus();
     
-    // Subscribe to Product Events
-    var eventBus = app.Services.GetRequiredService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
-    eventBus.Subscribe<ProductCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductCreatedEventHandler>();
-    eventBus.Subscribe<ProductUpdatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductUpdatedEventHandler>();
-    eventBus.Subscribe<ProductInventoryCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductInventoryCreatedEventHandler>();
+    // To do: Subscribe to events
+    var eventBus = app.Services.GetRequiredService<IEventBus>();
     
     // Subscribe to auth events for distributed authentication
     app.Services.SubscribeToAuthEvents();
@@ -63,3 +57,5 @@ finally
 {
     logger.LogInformation("AuthService API shutting down");
 }
+
+

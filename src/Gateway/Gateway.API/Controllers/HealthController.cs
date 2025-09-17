@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace ProductAuthMicroservice.Gateway.API.Controllers;
+namespace Gateway.API.Controllers;
 
 /// <summary>
 /// Health check controller for API Gateway
