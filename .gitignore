@@ -103,6 +103,9 @@ yarn-error.log*
 *.crt
 *.cer
 
+# Healink sensitive keys
+healink_accessKeys.csv
+
 # Local development overrides
 docker-compose.override.yml
 launchSettings.json
