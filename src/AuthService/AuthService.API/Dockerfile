@@ -20,7 +20,7 @@ COPY ["SharedLibrary/SharedLibrary.csproj", "SharedLibrary/"]
 RUN dotnet restore "AuthService/AuthService.API/AuthService.API.csproj"
 
 
-COPY ["src/", "."]
+COPY . .
 WORKDIR "/src/AuthService/AuthService.API"
 RUN dotnet build "AuthService.API.csproj" -c Release -o /app/build
 
