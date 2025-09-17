@@ -1,22 +1,38 @@
-using AuthService.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
-using ProductAuthMicroservice.Commons.Entities;
-using ProductAuthMicroservice.Commons.Enums;
+using SharedLibrary.Commons.Entities;
+using SharedLibrary.Commons.Enums;
 
-namespace ProductAuthMicroservice.AuthService.Domain.Entities;
+namespace AuthService.Domain.Entities;
 
+/// <summary>
+/// Entity chính quản lý authentication trong Auth Service
+/// </summary>
 public class AppUser : IdentityUser<Guid>, IEntityLike
 {
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public DateTime? LastLoginAt { get; set; }
-    public DateTime JoiningAt { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// Refresh token cho JWT
+    /// </summary>
     public string? RefreshToken { get; set; }
+    
+    /// <summary>
+    /// Thời gian hết hạn refresh token
+    /// </summary>
     public DateTime? RefreshTokenExpiryTime { get; set; }
+    
     public DateTime? CreatedAt { get; set; }
-    public Guid? CreatedBy { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public Guid? CreatedBy { get; set; }
     public Guid? UpdatedBy { get; set; }
     public EntityStatusEnum Status { get; set; }
-    public virtual ICollection<UserAction> UserActions { get; set; } = new List<UserAction>();
+    
+    /// <summary>
+    /// Lần cuối đăng nhập
+    /// </summary>
+    public DateTime? LastLoginAt { get; set; }
+    
+    /// <summary>
+    /// Lần cuối đăng xuất
+    /// </summary>
+    public DateTime? LastLogoutAt { get; set; }
+    
 }

@@ -2,11 +2,12 @@ using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using ProductAuthMicroservice.Gateway.API.Middlewares;
-using ProductAuthMicroservice.Commons.Extensions;
-using ProductAuthMicroservice.Commons.Services;
-using ProductAuthMicroservice.Commons.Configs;
-using ProductAuthMicroservice.Commons.Configurations;
+using Gateway.API.Middlewares;
+using SharedLibrary.Commons.Extensions;
+using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Configs;
+using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 

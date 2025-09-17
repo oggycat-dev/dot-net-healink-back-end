@@ -1,25 +1,25 @@
-# ProductAuth Microservices
+# UserAuth Microservices
 
-A distributed microservices system for product management and user authentication built with .NET 8 using Clean Architecture.
+A distributed microservices system for User management and user authentication built with .NET 8 using Clean Architecture.
 
 ## 📋 Overview
 
-ProductAuth Microservices is a distributed system consisting of:
+UserAuth Microservices is a distributed system consisting of:
 - **AuthService**: Authentication and user management service
-- **ProductService**: Product and category management service
+- **UserService**: User and category management service
 - **Gateway**: API Gateway using Ocelot for request routing
 - **Shared**: Common library for all services
 
 ## 🏗️ Architecture
 
 ```
-ProductAuth Microservices
+UserAuth Microservices
 ├── AuthService (Port: 5001)
 │   ├── API Layer (Controllers, Middlewares)
 │   ├── Application Layer (CQRS, Handlers, DTOs)
 │   ├── Domain Layer (Entities, Business Logic)
 │   └── Infrastructure Layer (Database, External Services)
-├── ProductService (Port: 5002)
+├── UserService (Port: 5002)
 │   ├── API Layer
 │   ├── Application Layer
 │   ├── Domain Layer
@@ -48,7 +48,7 @@ ProductAuth Microservices
 ## 🔧 System Requirements
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- [Docker Desktop](https://www.docker.com/Users/docker-desktop)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/) hoặc [VS Code](https://code.visualstudio.com/)
 
 ## 🚀 Installation and Setup
@@ -57,7 +57,7 @@ ProductAuth Microservices
 
 ```bash
 git clone <repository-url>
-cd ProductAuthMicroservice
+cd HealinkMicroservices
 ```
 
 ### 2. Environment Setup
@@ -76,14 +76,14 @@ DB_USER=postgres
 DB_PASSWORD=your_password
 DB_PORT=5432
 AUTH_DB_NAME=AuthServiceDB
-PRODUCT_DB_NAME=ProductServiceDB
+User_DB_NAME=UserServiceDB
 
 # RabbitMQ Configuration
 RABBITMQ_USER=admin
 RABBITMQ_PASSWORD=your_password
 RABBITMQ_PORT=5672
 RABBITMQ_VHOST=/
-RABBITMQ_EXCHANGE=ProductAuthExchange
+RABBITMQ_EXCHANGE=UserAuthExchange
 
 # Redis Configuration
 REDIS_PASSWORD=your_password
@@ -91,11 +91,11 @@ REDIS_PORT=6379
 
 # JWT Configuration
 JWT_SECRET_KEY=your_super_secret_key_here
-JWT_ISSUER=ProductAuthMicroservice
-JWT_AUDIENCE=ProductAuthMicroservice
+JWT_ISSUER=HealinkMicroservices
+JWT_AUDIENCE=HealinkMicroservices
 
 # Admin Account
-ADMIN_EMAIL=admin@productauth.com
+ADMIN_EMAIL=admin@Userauth.com
 ADMIN_PASSWORD=Admin@123
 ```
 
@@ -125,7 +125,7 @@ dotnet restore
 cd src/AuthService/AuthService.API
 dotnet run
 
-cd src/ProductService/ProductService.API
+cd src/UserService/UserService.API
 dotnet run
 
 cd src/Gateway/Gateway.API
@@ -140,18 +140,18 @@ dotnet run
 - `POST /api/cms/auth/refresh` - Refresh token
 - Swagger UI: http://localhost:5001/swagger
 
-### Product Service (Port: 5002)
-- `GET /api/cms/products` - Get products list
-- `GET /api/cms/products/{id}` - Get product by ID
-- `POST /api/cms/products` - Create new product
-- `PUT /api/cms/products/{id}` - Update product
-- `DELETE /api/cms/products/{id}` - Delete product
+### User Service (Port: 5002)
+- `GET /api/cms/Users` - Get Users list
+- `GET /api/cms/Users/{id}` - Get User by ID
+- `POST /api/cms/Users` - Create new User
+- `PUT /api/cms/Users/{id}` - Update User
+- `DELETE /api/cms/Users/{id}` - Delete User
 - `GET /api/cms/categories` - Category management
 - Swagger UI: http://localhost:5002/swagger
 
 ### Gateway (Port: 5000)
 - All endpoints are proxied through Gateway
-- Health checks: `/health`, `/health/auth`, `/health/products`
+- Health checks: `/health`, `/health/auth`, `/health/Users`
 - Swagger UI: http://localhost:5000/swagger
 
 ## 📚 Database Schema
@@ -162,9 +162,9 @@ dotnet run
 - **UserRoles**: User-role mapping
 - **RefreshTokens**: Refresh token management
 
-### ProductService Database
-- **Products**: Product information
-- **Categories**: Product categories
+### UserService Database
+- **Users**: User information
+- **Categories**: User categories
 - **OutboxEvents**: Event sourcing pattern
 
 ## 🔒 Security
@@ -180,12 +180,12 @@ dotnet run
 ### Using Postman
 1. Import collection from `postman/` folder
 2. Setup environment variables
-3. Execute workflow: Login → Create Category → Create Product
+3. Execute workflow: Login → Create Category → Create User
 
 See details at: [Postman Documentation](postman/README.md)
 
 ### Default Account
-- **Email**: admin@productauth.com
+- **Email**: admin@Userauth.com
 - **Password**: Admin@123
 
 ## 🐳 Docker Services
@@ -194,7 +194,7 @@ See details at: [Postman Documentation](postman/README.md)
 |---------|------|-------------|
 | Gateway | 5000 | API Gateway |
 | AuthService | 5001 | Authentication Service |
-| ProductService | 5002 | Product Management Service |
+| UserService | 5002 | User Management Service |
 | PostgreSQL | 5432 | Database |
 | Redis | 6379 | Cache |
 | RabbitMQ | 5672 | Message Broker |
@@ -210,7 +210,7 @@ See details at: [Postman Documentation](postman/README.md)
 ## 🔄 Event-Driven Architecture
 
 The system uses RabbitMQ for asynchronous communication between services:
-- **Product Events**: Create/update/delete products
+- **User Events**: Create/update/delete Users
 - **User Events**: Register/update user information
 - **Outbox Pattern**: Ensures consistency in distributed transactions
 

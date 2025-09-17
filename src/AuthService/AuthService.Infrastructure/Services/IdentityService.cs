@@ -3,10 +3,10 @@ using AuthService.Application.Commons.DTOs;
 using AuthService.Application.Commons.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using ProductAuthMicroservice.Commons.Entities;
-using ProductAuthMicroservice.Commons.Enums;
-using ProductAuthMicroservice.Commons.Models;
+using AuthService.Domain.Entities;
+using SharedLibrary.Commons.Entities;
+using SharedLibrary.Commons.Enums;
+using SharedLibrary.Commons.Models;
 
 namespace AuthService.Infrastructure.Services;
 

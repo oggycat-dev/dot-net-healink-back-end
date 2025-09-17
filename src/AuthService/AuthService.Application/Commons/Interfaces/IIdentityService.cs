@@ -1,8 +1,8 @@
 using System.Linq.Expressions;
 using AuthService.Application.Commons.DTOs;
 using Microsoft.AspNetCore.Identity;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using ProductAuthMicroservice.Commons.Models;
+using AuthService.Domain.Entities;
+using SharedLibrary.Commons.Models;
 
 namespace AuthService.Application.Commons.Interfaces;
 

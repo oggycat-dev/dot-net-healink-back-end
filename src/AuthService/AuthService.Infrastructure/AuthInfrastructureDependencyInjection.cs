@@ -1,14 +1,16 @@
+using AuthService.Application.Commons.Interfaces;
+using AuthService.Domain.Entities;
+using AuthService.Infrastructure.Context;
+using AuthService.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ProductAuthMicroservice.Commons.DependencyInjection;
-using ProductAuthMicroservice.Commons.Configs;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using AuthService.Infrastructure.Context;
-using AuthService.Application.Commons.Interfaces;
-using AuthService.Infrastructure.Services;
-using ProductAuthMicroservice.Commons.Configurations;
+using SharedLibrary.Commons.EventBus;
+using SharedLibrary.Commons.Outbox;
+using SharedLibrary.Commons.Repositories;
+using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Configs;
 
 namespace AuthService.Infrastructure;
 
@@ -60,37 +62,37 @@ public static class AuthInfrastructureDependencyInjection
         .AddDefaultTokenProviders();
 
         // Add shared repositories with Outbox support (with specific DbContext)
-        services.AddScoped<ProductAuthMicroservice.Commons.Repositories.IUnitOfWork>(provider =>
+        services.AddScoped<IUnitOfWork>(provider =>
         {
             var context = provider.GetRequiredService<AuthDbContext>();
-            return new ProductAuthMicroservice.Commons.Repositories.UnitOfWork(context);
+            return new UnitOfWork(context);
         });
-        
+
         // Register OutboxUnitOfWork for AuthService
-        services.AddScoped<ProductAuthMicroservice.Commons.Outbox.IOutboxUnitOfWork>(provider =>
+        services.AddScoped<IOutboxUnitOfWork>(provider =>
         {
             var context = provider.GetRequiredService<AuthDbContext>();
-            var eventBus = provider.GetRequiredService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
-            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork>>();
-            return new ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork(context, eventBus, logger);
+            var eventBus = provider.GetRequiredService<IEventBus>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<OutboxUnitOfWork>>();
+            return new OutboxUnitOfWork(context, eventBus, logger);
         });
-        
+
         // Add Memory Cache for Token Blocklist
         services.AddMemoryCache();
-        
+
         // Add Token Blocklist Service
-        
+
         // Add HTTP Client Factory for CurrentUserService
         services.AddHttpClient();
-        
+
         // Add Current User Service
-        services.AddScoped<ProductAuthMicroservice.Commons.Services.ICurrentUserService, ProductAuthMicroservice.Commons.Services.CurrentUserService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddHttpContextAccessor();
-        
+
         // Add auth-specific infrastructure services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthJwtService, AuthJwtService>();
-        
+
         return services;
     }
 }

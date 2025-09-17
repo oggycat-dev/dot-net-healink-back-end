@@ -4,7 +4,7 @@ WORKDIR /src
 
 # Copy csproj files and restore dependencies
 COPY ["Gateway/Gateway.API/Gateway.API.csproj", "Gateway/Gateway.API/"]
-COPY ["Shared/Shared.csproj", "Shared/"]
+COPY ["SharedLibrary/SharedLibrary.csproj", "SharedLibrary/"]
 
 RUN dotnet restore "Gateway/Gateway.API/Gateway.API.csproj"
 

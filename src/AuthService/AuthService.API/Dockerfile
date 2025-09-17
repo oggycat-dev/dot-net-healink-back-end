@@ -7,7 +7,7 @@ COPY ["AuthService/AuthService.API/AuthService.API.csproj", "AuthService/AuthSer
 COPY ["AuthService/AuthService.Application/AuthService.Application.csproj", "AuthService/AuthService.Application/"]
 COPY ["AuthService/AuthService.Domain/AuthService.Domain.csproj", "AuthService/AuthService.Domain/"]
 COPY ["AuthService/AuthService.Infrastructure/AuthService.Infrastructure.csproj", "AuthService/AuthService.Infrastructure/"]
-COPY ["Shared/Shared.csproj", "Shared/"]
+COPY ["SharedLibrary/SharedLibrary.csproj", "SharedLibrary/"]
 
 RUN dotnet restore "AuthService/AuthService.API/AuthService.API.csproj"
 
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 COPY --from=publish /app/publish .
 
 # Set environment variables
-ENV ASPNETCORE_ENVIRONMENT=Docker
+ENV ASPNETCORE_ENVIRONMENT=Development
 ENV ASPNETCORE_URLS=http://+:80
 
 EXPOSE 80
