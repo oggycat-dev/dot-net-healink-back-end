@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
     /// <response code="200">Login successfully</response>
     /// <response code="400">Login failed (validation error)</response>
     /// <response code="401">Login failed (email or password is incorrect)</response>
-    /// <response code="403">No access (user is not a CMS member)</response>
+    /// <response code="403">No access (user is not a CMS member))</response>
     [HttpPost("login")]
     [ServiceFilter(typeof(AdminRoleAccessFilter))]
     [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status200OK)]
