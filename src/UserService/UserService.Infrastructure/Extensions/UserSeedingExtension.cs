@@ -23,7 +23,7 @@ public static class UserSeedingExtension
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         
         // Check if seeding is enabled
-        var enableSeeding = configuration.GetSection("DataConfig").GetValue<bool>("EnableSeedData");
+        var enableSeeding = configuration.GetSection("DataConfig").GetValue<bool>("EnableSeeding");
         if (!enableSeeding)
         {
             logger.LogInformation("UserService: Data seeding is disabled.");
@@ -149,21 +149,21 @@ public static class UserSeedingExtension
             logger.LogInformation("UserService: Created admin user profile for {Email}", adminEmail);
 
             // Assign admin business roles
-            await AssignAdminBusinessRolesAsync(context, adminProfile.UserId, logger);
+            await AssignAdminBusinessRolesAsync(context, adminProfile.Id, logger);
         }
         else
         {
             logger.LogInformation("UserService: Admin user profile for {Email} already exists", adminEmail);
             
             // Make sure admin has proper business roles assigned
-            await AssignAdminBusinessRolesAsync(context, existingProfile.UserId, logger);
+            await AssignAdminBusinessRolesAsync(context, existingProfile.Id, logger);
         }
     }
 
     /// <summary>
     /// Assign business roles to admin user
     /// </summary>
-    private static async Task AssignAdminBusinessRolesAsync(UserDbContext context, Guid userId, ILogger logger)
+    private static async Task AssignAdminBusinessRolesAsync(UserDbContext context, Guid userProfileId, ILogger logger)
     {
         logger.LogInformation("UserService: Assigning business roles to admin user...");
 
@@ -185,21 +185,24 @@ public static class UserSeedingExtension
             }
 
             var existingAssignment = await context.UserBusinessRoles
-                .AnyAsync(ubr => ubr.UserId == userId && ubr.BusinessRoleId == businessRole.Id);
+                .AnyAsync(ubr => ubr.UserId == userProfileId && ubr.BusinessRoleId == businessRole.Id);
 
             if (!existingAssignment)
             {
+                // Get the actual UserId from UserProfile for the assignment metadata
+                var userProfile = await context.UserProfiles.FirstOrDefaultAsync(up => up.Id == userProfileId);
+                
                 var userBusinessRole = new UserBusinessRole
                 {
                     Id = Guid.NewGuid(),
-                    UserId = userId,
+                    UserId = userProfileId, // This now references UserProfile.Id (Primary Key)
                     BusinessRoleId = businessRole.Id,
                     AssignedAt = DateTime.UtcNow,
-                    AssignedBy = userId, // Self-assigned for initial admin
+                    AssignedBy = userProfile?.UserId, // Use the actual Auth Service User ID for audit
                     ExpiresAt = null, // Permanent assignment
                     Notes = "Initial admin role assignment during system seeding",
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = userId,
+                    CreatedBy = userProfile?.UserId, // Use the actual Auth Service User ID for audit
                     Status = EntityStatusEnum.Active
                 };
 
