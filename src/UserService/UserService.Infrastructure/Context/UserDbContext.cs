@@ -73,7 +73,7 @@ public class UserDbContext : DbContext
             entity.HasIndex(x => x.ExpiresAt).HasFilter("\"ExpiresAt\" IS NOT NULL");
             entity.HasIndex(x => new { x.UserId, x.ExpiresAt });
             
-            // Foreign key relationships
+            // Foreign key relationships - UserId references UserProfile.Id (Primary Key)
             entity.HasOne(x => x.User)
                 .WithMany(x => x.UserBusinessRoles)
                 .HasForeignKey(x => x.UserId)
@@ -104,7 +104,7 @@ public class UserDbContext : DbContext
             entity.HasIndex(x => x.ReviewedAt).HasFilter("\"ReviewedAt\" IS NOT NULL");
             entity.HasIndex(x => new { x.Status, x.SubmittedAt });
             
-            // Foreign key relationships
+            // Foreign key relationships - UserId references UserProfile.Id (Primary Key)
             entity.HasOne(x => x.User)
                 .WithMany(x => x.CreatorApplications)
                 .HasForeignKey(x => x.UserId)
@@ -147,7 +147,7 @@ public class UserDbContext : DbContext
             entity.HasIndex(x => new { x.UserId, x.OccurredAt });
             entity.HasIndex(x => new { x.ActivityType, x.OccurredAt });
             
-            // Foreign key relationship
+            // Foreign key relationship - UserId references UserProfile.Id (Primary Key)
             entity.HasOne(x => x.User)
                 .WithMany(x => x.ActivityLogs)
                 .HasForeignKey(x => x.UserId)

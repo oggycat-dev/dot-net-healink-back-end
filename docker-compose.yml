@@ -64,8 +64,8 @@ services:
   # AuthService API
   authservice-api:
     build:
-      context: ./src
-      dockerfile: AuthService/AuthService.API/Dockerfile
+      context: .
+      dockerfile: ./src/AuthService/AuthService.API/Dockerfile
     container_name: authservice-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -103,8 +103,8 @@ services:
   # UserService API
   userservice-api:
     build:
-      context: ./src
-      dockerfile: UserService/UserService.API/Dockerfile
+      context: .
+      dockerfile: ./src/UserService/UserService.API/Dockerfile
     container_name: userservice-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -143,8 +143,8 @@ services:
   # Gateway API
   gateway-api:
     build:
-      context: ./src
-      dockerfile: Gateway/Gateway.API/Dockerfile
+      context: .
+      dockerfile: ./src/Gateway/Gateway.API/Dockerfile
     container_name: gateway-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
