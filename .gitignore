@@ -109,3 +109,21 @@ healink_accessKeys.csv
 # Local development overrides
 docker-compose.override.yml
 launchSettings.json
+
+# Installer packages
+*.pkg
+*.dmg
+*.exe
+*.msi
+
+# Credentials & Sensitive Files
+*.csv
+*.pem
+*keys.csv
+.env
+
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
