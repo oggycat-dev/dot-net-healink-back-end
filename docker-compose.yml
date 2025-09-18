@@ -64,8 +64,10 @@ services:
   # AuthService API
   authservice-api:
     build:
-      context: ./src
-      dockerfile: AuthService/AuthService.API/Dockerfile
+      # SỬA Ở ĐÂY: Đặt ngữ cảnh là thư mục gốc của dự án
+      context: .
+      # SỬA Ở ĐÂY: Cung cấp đường dẫn đầy đủ đến Dockerfile
+      dockerfile: ./src/AuthService/AuthService.API/Dockerfile
     container_name: authservice-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -103,8 +105,10 @@ services:
   # ProductService API
   productservice-api:
     build:
-      context: ./src
-      dockerfile: ProductService/ProductService.API/Dockerfile
+      # SỬA Ở ĐÂY: Đặt ngữ cảnh là thư mục gốc của dự án
+      context: .
+      # SỬA Ở ĐÂY: Cung cấp đường dẫn đầy đủ đến Dockerfile
+      dockerfile: ./src/ProductService/ProductService.API/Dockerfile
     container_name: productservice-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -143,8 +147,10 @@ services:
   # Gateway API
   gateway-api:
     build:
-      context: ./src
-      dockerfile: Gateway/Gateway.API/Dockerfile
+      # SỬA Ở ĐÂY: Đặt ngữ cảnh là thư mục gốc của dự án
+      context: .
+      # SỬA Ở ĐÂY: Cung cấp đường dẫn đầy đủ đến Dockerfile
+      dockerfile: ./src/Gateway/Gateway.API/Dockerfile
     container_name: gateway-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
