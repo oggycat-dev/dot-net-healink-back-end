@@ -1,4 +1,6 @@
-name: CI - Build AuthService
+# Tên file: .github/workflows/build-auth-service.yml
+
+name: CI/CD - Build & Deploy AuthService
 
 on:
   push:
@@ -6,38 +8,58 @@ on:
       - main
     paths:
       - 'src/AuthService/**'
-  
   workflow_dispatch:
 
 jobs:
-  build-and-push-image:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
-    
+
     steps:
+      # Bước 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Bước 2: Cấu hình AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink # THAY BẰNG ARN CỦA BẠN
-          aws-region: ap-southeast-2 # Thay bằng region của bạn
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink # ARN Role của bạn
+          aws-region: ap-southeast-2
 
+      # Bước 3: Đăng nhập vào ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Bước 4: Build và push Docker image
       - name: Build and push Docker image
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: healink/auth-service
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Building image for AuthService..."
-          # THAY ĐỔI Ở ĐÂY: Cập nhật đường dẫn đến Dockerfile
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f src/AuthService/AuthService.API/Dockerfile .
-          echo "Pushing image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # --- PHẦN DEPLOY BỊ THIẾU TRƯỚC ĐÂY ---
+      
+      # Bước 5: Cài đặt Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Bước 6: Terraform Init
+      - name: Terraform Init
+        id: init
+        working-directory: ./terraform_healink
+        run: terraform init -reconfigure
+
+      # Bước 7: Terraform Apply
+      - name: Terraform Apply
+        id: apply
+        working-directory: ./terraform_healink
+        run: terraform apply -auto-approve -var="app_image_tag=${{ steps.build-image.outputs.image_tag }}"
