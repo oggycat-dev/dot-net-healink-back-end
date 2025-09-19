@@ -11,6 +11,46 @@ var logger = LoggingConfiguration.CreateStartupLogger("AuthService");
 
 try
 {
+    logger.LogInformation("Starting AuthService API in minimal mode...");
+    
+    var builder = WebApplication.CreateBuilder(args);
+
+    // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH DỊCH VỤ ---
+    // builder.ConfigureServices();
+    // builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
+    // builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+    var app = builder.Build();
+
+    // --- CHỈ GIỮ LẠI CẤU HÌNH PIPELINE CƠ BẢN NHẤT ---
+    // Thêm một endpoint đơn giản để kiểm tra
+    app.MapGet("/", () => "Hello from minimal AuthService!");
+
+    // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH PIPELINE TÙY CHỈNH ---
+    // app.ConfigurePipeline();
+    // await app.ApplyAuthMigrationsAsync(logger); // Vô hiệu hóa vì migration đã chạy rồi
+    // await app.SeedAuthDataAsync(logger);
+    // app.AddRabbitMQEventBus();
+    // var eventBus = app.Services.GetRequiredService<...>();
+    // eventBus.Subscribe<...>();
+    // app.Services.SubscribeToAuthEvents();
+    // eventBus.StartConsuming();
+
+    logger.LogInformation("AuthService API minimal mode configured successfully");
+    
+    app.Run();
+}
+catch (Exception ex)
+{
+    logger.LogCritical(ex, "AuthService API failed to start");
+    throw;
+}
+finally
+{
+    logger.LogInformation("AuthService API shutting down");
+}
+try
+{
     logger.LogInformation("Starting AuthService API...");
 
     var builder = WebApplication.CreateBuilder(args);
