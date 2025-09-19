@@ -263,3 +263,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - CQRS & Event Sourcing patterns
 - Microservices best practices
 # microservices-dot-net-template
+## Test
