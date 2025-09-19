@@ -16,9 +16,9 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH DỊCH VỤ ---
-     builder.ConfigureServices();
-    // builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
-    // builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+    builder.ConfigureServices();
+    builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
+    builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
     var app = builder.Build();
 
