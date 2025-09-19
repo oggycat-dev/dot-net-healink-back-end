@@ -29,7 +29,7 @@ try
     // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH PIPELINE TÙY CHỈNH ---
      app.ConfigurePipeline();
     // await app.ApplyAuthMigrationsAsync(logger); // Vô hiệu hóa vì migration đã chạy rồi
-    // await app.SeedAuthDataAsync(logger);
+    await app.SeedAuthDataAsync(logger);
     // app.AddRabbitMQEventBus();
     // var eventBus = app.Services.GetRequiredService<...>();
     // eventBus.Subscribe<...>();

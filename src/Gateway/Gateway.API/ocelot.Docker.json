@@ -1,6 +1,5 @@
 {
   "Routes": [
-    // AuthService Routes
     {
       "DownstreamPathTemplate": "/api/auth/{everything}",
       "DownstreamScheme": "http",
@@ -19,7 +18,6 @@
       }
     },
     
-    // ProductService Routes - Products
     {
       "DownstreamPathTemplate": "/api/products/{everything}",
       "DownstreamScheme": "http",
@@ -38,7 +36,6 @@
       }
     },
     
-    // ProductService Routes - Categories
     {
       "DownstreamPathTemplate": "/api/categories/{everything}",
       "DownstreamScheme": "http",
@@ -57,7 +54,6 @@
       }
     },
     
-    // Health Check Routes
     {
       "DownstreamPathTemplate": "/health",
       "DownstreamScheme": "http",
