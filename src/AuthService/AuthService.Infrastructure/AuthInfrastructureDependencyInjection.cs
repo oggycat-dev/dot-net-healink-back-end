@@ -20,27 +20,71 @@ public static class AuthInfrastructureDependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // Add database context
-        var connectionConfig = configuration.GetSection("ConnectionConfig").Get<ConnectionConfig>();
-        if (connectionConfig == null || string.IsNullOrEmpty(connectionConfig.DefaultConnection))
+        // var connectionConfig = configuration.GetSection("ConnectionConfig").Get<ConnectionConfig>();
+        // if (connectionConfig == null || string.IsNullOrEmpty(connectionConfig.DefaultConnection))
+        // {
+        //     throw new InvalidOperationException("AuthService database connection string not found");
+        // }
+
+        // // Configure AuthDbContext with PostgreSQL
+        // services.AddDbContext<AuthDbContext>(options =>
+        // {
+        //     options.UseNpgsql(connectionConfig.DefaultConnection, npgsqlOptions =>
+        //     {
+        //         if (connectionConfig.RetryOnFailure)
+        //         {
+        //             npgsqlOptions.EnableRetryOnFailure(
+        //                 maxRetryCount: connectionConfig.MaxRetryCount > 0 ? connectionConfig.MaxRetryCount : 3,
+        //                 maxRetryDelay: TimeSpan.FromSeconds(connectionConfig.MaxRetryDelay > 0 ? connectionConfig.MaxRetryDelay : 30),
+        //                 errorCodesToAdd: null);
+        //         }
+        //         npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
+        //     });
+        // });
+
+         // --- BẮT ĐẦU PHẦN SỬA ---
+
+    // Đọc các biến môi trường được inject từ Terraform/AWS
+    var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+    var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+    var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+    var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+    var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+    // Configure AuthDbContext với logic thông minh
+    services.AddDbContext<AuthDbContext>(options =>
+    {
+        string connectionString;
+        // Kiểm tra xem các biến môi trường có tồn tại không
+        if (string.IsNullOrEmpty(dbHost))
         {
-            throw new InvalidOperationException("AuthService database connection string not found");
+            // Nếu KHÔNG, có nghĩa là đang chạy local -> Dùng connection string từ appsettings.json
+            Console.WriteLine("Using connection string from appsettings.json for local development.");
+            connectionString = configuration.GetConnectionString("DefaultConnection");
+        }
+        else
+        {
+            // Nếu CÓ, có nghĩa là đang chạy trên AWS -> Xây dựng connection string từ biến môi trường
+            Console.WriteLine($"Building connection string for AWS environment with host: {dbHost}");
+            connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};";
         }
 
-        // Configure AuthDbContext with PostgreSQL
-        services.AddDbContext<AuthDbContext>(options =>
+        if (string.IsNullOrEmpty(connectionString))
         {
-            options.UseNpgsql(connectionConfig.DefaultConnection, npgsqlOptions =>
-            {
-                if (connectionConfig.RetryOnFailure)
-                {
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: connectionConfig.MaxRetryCount > 0 ? connectionConfig.MaxRetryCount : 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(connectionConfig.MaxRetryDelay > 0 ? connectionConfig.MaxRetryDelay : 30),
-                        errorCodesToAdd: null);
-                }
-                npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
-            });
+            throw new InvalidOperationException("Database connection string not found");
+        }
+        
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            // Cấu hình retry và migration assembly vẫn giữ nguyên
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorCodesToAdd: null);
+            npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
         });
+    });
+
 
         // Configure Identity
         services.AddIdentity<AppUser, AppRole>(options =>

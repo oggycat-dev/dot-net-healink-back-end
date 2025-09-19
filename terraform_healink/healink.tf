@@ -48,31 +48,33 @@ resource "aws_ecs_task_definition" "auth_service" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "auth-service-container"
-      image     = "${aws_ecr_repository.auth_service_repo.repository_url}:${var.app_image_tag}"
-      essential = true
-      portMappings = [
-        { containerPort = 80, hostPort = 80 }
-      ]
-      # --- PHẦN MỚI ---
-      secrets = [
-        # Biến môi trường DB_PASSWORD sẽ được điền từ secret
-        {
-          name      = "DB_PASSWORD",
-          valueFrom = aws_secretsmanager_secret.db_password.arn
-        }
-      ]
-      environment = [
-        # Tự động xây dựng Connection String hoàn chỉnh
-        {
-          name  = "ConnectionStrings__DefaultConnection",
-          value = "Host=${aws_db_instance.healink_db.address};Database=${aws_db_instance.healink_db.db_name};Username=${aws_db_instance.healink_db.username};Password=${aws_secretsmanager_secret.db_password.arn}"
-        }
-      ]
-    }
-  ])
+  # THAY THẾ HOÀN TOÀN "container_definitions" BẰNG KHỐI NÀY
+container_definitions = jsonencode([
+  {
+    name      = "auth-service-container"
+    image     = "${aws_ecr_repository.auth_service_repo.repository_url}:${var.app_image_tag}"
+    essential = true
+    portMappings = [
+      { containerPort = 80, hostPort = 80 }
+    ]
+    # SỬA LẠI HOÀN TOÀN PHẦN SECRETS VÀ ENVIRONMENT
+    secrets = [
+      # Chỉ lấy mật khẩu và đặt vào biến DB_PASSWORD
+      {
+        name      = "DB_PASSWORD",
+        valueFrom = aws_secretsmanager_secret.db_password.arn
+      }
+    ]
+    environment = [
+      # Truyền các thành phần khác của connection string
+      { name = "DB_HOST", value = aws_db_instance.healink_db.address },
+      { name = "DB_PORT", value = tostring(aws_db_instance.healink_db.port) },
+      { name = "DB_NAME", value = aws_db_instance.healink_db.db_name },
+      { name = "DB_USER", value = aws_db_instance.healink_db.username },
+      { name = "ASPNETCORE_ENVIRONMENT", value = "Docker" }
+    ]
+  }
+])
 }
 
 resource "aws_ecs_service" "auth_service" {
