@@ -15,21 +15,19 @@ variable "app_image_tag" {
   description = "The Docker image tag to deploy."
 }
 
-# --- VPC & SUBNETS (Điền thông tin của bạn ở đây) ---
+# --- VPC & SUBNETS (!!! THAY THẾ BẰNG GIÁ TRỊ CỦA BẠN !!!) ---
 variable "vpc_id" {
   description = "ID of your VPC"
-  default     = "vpc-08fe88c24397c79a9" # !!! THAY BẰNG VPC ID CỦA BẠN
+  default     = "vpc-08fe88c24397c79a9" 
 }
 
 variable "public_subnets" {
-  description = "A list of public subnet IDs"
+  description = "A list of at least 2 public subnet IDs"
   type        = list(string)
-  default     = ["subnet-00d0aabb44d3b86f4", "subnet-0cf7a8a098483c77e"] # !!! THAY BẰNG 2 PUBLIC SUBNET ID CỦA BẠN
+  default     = ["subnet-00d0aabb44d3b86f4", "subnet-0cf7a8a098483c77e"]
 }
 
 # --- SECURITY GROUPS ---
-
-# Security Group cho Application Load Balancer
 resource "aws_security_group" "alb_sg" {
   name        = "healink-alb-sg"
   description = "Allow HTTP inbound traffic for ALB"
@@ -50,13 +48,11 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-# Security Group cho ECS Service và các tài nguyên nội bộ
 resource "aws_security_group" "app_sg" {
   name        = "healink-app-sg"
   description = "Allow traffic from ALB to ECS and from ECS to RDS"
   vpc_id      = var.vpc_id
 
-  # Cho phép traffic từ ALB vào ECS Service trên port 80
   ingress {
     from_port       = 80
     to_port         = 80
@@ -64,7 +60,6 @@ resource "aws_security_group" "app_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
-  # Cho phép traffic từ ECS Service vào RDS trên port 5432
   ingress {
     from_port = 5432
     to_port   = 5432
@@ -72,8 +67,6 @@ resource "aws_security_group" "app_sg" {
     self      = true
   }
 
-  # Cho phép traffic HTTPS bên trong security group
-  # để task có thể nói chuyện với các VPC Endpoints
   ingress {
     from_port = 443
     to_port   = 443
@@ -90,7 +83,6 @@ resource "aws_security_group" "app_sg" {
 }
 
 # --- APPLICATION LOAD BALANCER ---
-
 resource "aws_lb" "main" {
   name               = "healink-alb"
   internal           = false
@@ -121,8 +113,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# --- HẠ TẦNG NỀN (ECR, ECS CLUSTER) ---
-
+# --- ECR & ECS CLUSTER ---
 resource "aws_ecr_repository" "auth_service_repo" {
   name = "healink/auth-service"
 }
@@ -131,8 +122,7 @@ resource "aws_ecs_cluster" "main" {
   name = "healink-cluster"
 }
 
-# --- HẠ TẦNG ỨNG DỤNG (IAM, ECS TASK DEF & SERVICE) ---
-
+# --- ECS TASK DEFINITION & SERVICE ---
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "healink-ecs-task-execution-role"
   assume_role_policy = jsonencode({
@@ -158,9 +148,7 @@ resource "aws_ecs_task_definition" "auth_service" {
       name      = "auth-service-container"
       image     = "${aws_ecr_repository.auth_service_repo.repository_url}:${var.app_image_tag}"
       essential = true
-      portMappings = [
-        { containerPort = 80, hostPort = 80 }
-      ]
+      portMappings = [ { containerPort = 80, hostPort = 80 } ]
       secrets = [
         { name = "DB_PASSWORD", valueFrom = aws_secretsmanager_secret.db_password.arn }
       ]
@@ -181,29 +169,24 @@ resource "aws_ecs_service" "auth_service" {
   task_definition = aws_ecs_task_definition.auth_service.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-
   network_configuration {
     subnets          = var.public_subnets
     security_groups  = [aws_security_group.app_sg.id]
     assign_public_ip = false
   }
-
   load_balancer {
     target_group_arn = aws_lb_target_group.auth_service.arn
     container_name   = "auth-service-container"
     container_port   = 80
   }
-
   depends_on = [aws_lb_listener.http]
 }
 
-# --- SECRETS MANAGER ---
-
+# --- SECRETS & DATABASE ---
 resource "random_password" "db_master_password" {
-  length  = 16
-  special = true
-  override_special = "_%[]{}<>()-!#$&=?" 
-
+  length           = 16
+  special          = true
+  override_special = "_%[]{}<>()-!#$&=?"
 }
 
 resource "aws_secretsmanager_secret" "db_password" {
@@ -216,21 +199,13 @@ resource "aws_secretsmanager_secret_version" "db_password_version" {
 }
 
 resource "aws_iam_role_policy" "ecs_secrets_policy" {
-  name = "ecs-secrets-manager-policy"
-  role = aws_iam_role.ecs_task_execution_role.id
+  name   = "ecs-secrets-manager-policy"
+  role   = aws_iam_role.ecs_task_execution_role.id
   policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = ["secretsmanager:GetSecretValue"],
-        Resource = [aws_secretsmanager_secret.db_password.arn]
-      }
-    ]
+    Version   = "2012-10-17",
+    Statement = [ { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = [aws_secretsmanager_secret.db_password.arn] } ]
   })
 }
-
-# --- AMAZON RDS ---
 
 resource "aws_db_instance" "healink_db" {
   identifier           = "healink-db-instance"
