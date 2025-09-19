@@ -104,4 +104,3 @@ finally
     logger.LogInformation("AuthService API shutting down");
 }
 
-//test

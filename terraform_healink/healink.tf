@@ -48,6 +48,16 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
+# Lấy thông tin về Route Table chính của VPC
+data "aws_route_table" "main" {
+  vpc_id = var.vpc_id
+
+  filter {
+    name   = "association.main"
+    values = ["true"]
+  }
+}
+
 resource "aws_security_group" "app_sg" {
   name        = "healink-app-sg"
   description = "Allow traffic from ALB to ECS and from ECS to RDS"
@@ -172,7 +182,7 @@ resource "aws_ecs_service" "auth_service" {
   network_configuration {
     subnets          = var.public_subnets
     security_groups  = [aws_security_group.app_sg.id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
   load_balancer {
     target_group_arn = aws_lb_target_group.auth_service.arn
@@ -255,4 +265,5 @@ resource "aws_vpc_endpoint" "s3_gateway" {
   vpc_id       = var.vpc_id
   service_name = "com.amazonaws.${data.aws_region.current.id}.s3"
   vpc_endpoint_type = "Gateway"
+  route_table_ids = [data.aws_route_table.main.id]
 }
