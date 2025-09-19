@@ -45,6 +45,16 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # !!! THÊM MỚI RULE NÀY !!!
+  # Cho phép traffic HTTPS bên trong security group
+  # để task có thể nói chuyện với các VPC Endpoints (Secrets Manager, ECR)
+  ingress {
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
+    self      = true # Chỉ cho phép traffic từ chính security group này
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
