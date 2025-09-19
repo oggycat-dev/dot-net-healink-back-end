@@ -27,7 +27,7 @@ try
     app.MapGet("/", () => "Hello from minimal AuthService!");
 
     // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH PIPELINE TÙY CHỈNH ---
-    // app.ConfigurePipeline();
+     app.ConfigurePipeline();
     // await app.ApplyAuthMigrationsAsync(logger); // Vô hiệu hóa vì migration đã chạy rồi
     // await app.SeedAuthDataAsync(logger);
     // app.AddRabbitMQEventBus();
