@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket = "healink-tf-state-2025-oggycatdev" # Tên bucket S3 của bạn
+    bucket = "healink-tf-state-2025-oggycatdev"
     key    = "global/terraform.tfstate"
     region = "ap-southeast-2"
   }
@@ -16,8 +16,6 @@ variable "app_image_tag" {
 }
 
 # --- VPC & SUBNETS (Điền thông tin của bạn ở đây) ---
-# Bạn cần cung cấp ID của VPC và ít nhất 2 Public Subnet
-# để Load Balancer có thể hoạt động ổn định.
 variable "vpc_id" {
   description = "ID of your VPC"
   default     = "vpc-08fe88c24397c79a9" # !!! THAY BẰNG VPC ID CỦA BẠN
@@ -32,7 +30,6 @@ variable "public_subnets" {
 # --- SECURITY GROUPS ---
 
 # Security Group cho Application Load Balancer
-# Chỉ cho phép traffic từ internet vào port 80 (HTTP)
 resource "aws_security_group" "alb_sg" {
   name        = "healink-alb-sg"
   description = "Allow HTTP inbound traffic for ALB"
@@ -45,16 +42,6 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # !!! THÊM MỚI RULE NÀY !!!
-  # Cho phép traffic HTTPS bên trong security group
-  # để task có thể nói chuyện với các VPC Endpoints (Secrets Manager, ECR)
-  ingress {
-    from_port = 443
-    to_port   = 443
-    protocol  = "tcp"
-    self      = true # Chỉ cho phép traffic từ chính security group này
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -63,8 +50,7 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-# Security Group cho ECS Service và RDS Database
-# Chỉ cho phép traffic từ ALB vào ứng dụng và từ ứng dụng vào database
+# Security Group cho ECS Service và các tài nguyên nội bộ
 resource "aws_security_group" "app_sg" {
   name        = "healink-app-sg"
   description = "Allow traffic from ALB to ECS and from ECS to RDS"
@@ -83,7 +69,16 @@ resource "aws_security_group" "app_sg" {
     from_port = 5432
     to_port   = 5432
     protocol  = "tcp"
-    self      = true # Chỉ cho phép các tài nguyên trong cùng SG này giao tiếp với nhau
+    self      = true
+  }
+
+  # Cho phép traffic HTTPS bên trong security group
+  # để task có thể nói chuyện với các VPC Endpoints
+  ingress {
+    from_port = 443
+    to_port   = 443
+    protocol  = "tcp"
+    self      = true
   }
 
   egress {
@@ -110,15 +105,9 @@ resource "aws_lb_target_group" "auth_service" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
-
   health_check {
-    path                = "/health" # Giả định app của bạn có endpoint /health
-    protocol            = "HTTP"
-    matcher             = "200"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
+    path    = "/health"
+    matcher = "200"
   }
 }
 
@@ -126,7 +115,6 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
-
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.auth_service.arn
@@ -146,7 +134,7 @@ resource "aws_ecs_cluster" "main" {
 # --- HẠ TẦNG ỨNG DỤNG (IAM, ECS TASK DEF & SERVICE) ---
 
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name               = "healink-ecs-task-execution-role"
+  name = "healink-ecs-task-execution-role"
   assume_role_policy = jsonencode({
     Version   = "2012-10-17"
     Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
@@ -195,9 +183,9 @@ resource "aws_ecs_service" "auth_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.public_subnets
-    security_groups = [aws_security_group.app_sg.id]
-    assign_public_ip = false # Không cần IP công cộng khi đã có ALB
+    subnets          = var.public_subnets
+    security_groups  = [aws_security_group.app_sg.id]
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -206,16 +194,16 @@ resource "aws_ecs_service" "auth_service" {
     container_port   = 80
   }
 
-  # Đảm bảo listener được tạo trước khi service cố gắng đăng ký với nó
   depends_on = [aws_lb_listener.http]
 }
 
-# --- SECRETS MANAGER: Lưu trữ mật khẩu an toàn ---
+# --- SECRETS MANAGER ---
 
 resource "random_password" "db_master_password" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  length  = 16
+  special = true
+  override_special = "_%[]{}<>()-!#$&=?" 
+
 }
 
 resource "aws_secretsmanager_secret" "db_password" {
@@ -230,7 +218,6 @@ resource "aws_secretsmanager_secret_version" "db_password_version" {
 resource "aws_iam_role_policy" "ecs_secrets_policy" {
   name = "ecs-secrets-manager-policy"
   role = aws_iam_role.ecs_task_execution_role.id
-
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -243,7 +230,7 @@ resource "aws_iam_role_policy" "ecs_secrets_policy" {
   })
 }
 
-# --- AMAZON RDS: Database PostgreSQL ---
+# --- AMAZON RDS ---
 
 resource "aws_db_instance" "healink_db" {
   identifier           = "healink-db-instance"
@@ -254,29 +241,43 @@ resource "aws_db_instance" "healink_db" {
   db_name              = "AuthServiceDB"
   username             = "postgres_admin"
   password             = random_password.db_master_password.result
-  vpc_security_group_ids = [aws_security_group.app_sg.id] # Dùng chung SG với app để dễ giao tiếp
-  
-  # Không cần public access, an toàn hơn
-  publicly_accessible  = false 
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  publicly_accessible  = false
   skip_final_snapshot  = true
 }
 
-# --- VPC ENDPOINT FOR SECRETS MANAGER ---
-# Lấy thông tin region hiện tại để dùng trong service_name
+# --- VPC ENDPOINTS ---
 data "aws_region" "current" {}
 
-# Tạo một lối đi riêng cho phép ECS tasks trong VPC
-# nói chuyện với Secrets Manager mà không cần ra internet.
 resource "aws_vpc_endpoint" "secrets_manager" {
-  vpc_id            = var.vpc_id
-  service_name      = "com.amazonaws.${data.aws_region.current.name}.secretsmanager"
-  vpc_endpoint_type = "Interface"
-
-  # Gắn endpoint vào các subnet của ứng dụng
-  subnet_ids = var.public_subnets
-
-  # Gắn vào security group của ứng dụng để cho phép traffic
-  security_group_ids = [aws_security_group.app_sg.id]
-
+  vpc_id              = var.vpc_id
+  service_name        = "com.amazonaws.${data.aws_region.current.id}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.public_subnets
+  security_group_ids  = [aws_security_group.app_sg.id]
   private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id              = var.vpc_id
+  service_name        = "com.amazonaws.${data.aws_region.current.id}.ecr.api"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.public_subnets
+  security_group_ids  = [aws_security_group.app_sg.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id              = var.vpc_id
+  service_name        = "com.amazonaws.${data.aws_region.current.id}.ecr.dkr"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.public_subnets
+  security_group_ids  = [aws_security_group.app_sg.id]
+  private_dns_enabled = true
+}
+
+resource "aws_vpc_endpoint" "s3_gateway" {
+  vpc_id       = var.vpc_id
+  service_name = "com.amazonaws.${data.aws_region.current.id}.s3"
+  vpc_endpoint_type = "Gateway"
 }
