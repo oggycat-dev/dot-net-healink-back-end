@@ -1,3 +1,8 @@
+# CloudWatch Log Group for ECS
+resource "aws_cloudwatch_log_group" "auth_service" {
+  name              = "/ecs/auth-service"
+  retention_in_days = 7
+}
 terraform {
   backend "s3" {
     bucket = "healink-tf-state-2025-oggycatdev"
@@ -169,6 +174,14 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "DB_USER", value = aws_db_instance.healink_db.username },
         { name = "ASPNETCORE_ENVIRONMENT", value = "Docker" }
       ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.auth_service.name
+          awslogs-region        = "ap-southeast-2"
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
 }
