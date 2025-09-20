@@ -25,9 +25,14 @@ try
     // --- CHỈ GIỮ LẠI CẤU HÌNH PIPELINE CƠ BẢN NHẤT ---
     // Thêm một endpoint đơn giản để kiểm tra
     app.MapGet("/", () => "Hello from minimal AuthService!");
-
+    
+    // Debug Swagger configuration
+    logger.LogInformation("About to configure pipeline with Swagger...");
+    
     // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH PIPELINE TÙY CHỈNH ---
      app.ConfigurePipeline();
+     
+    logger.LogInformation("Pipeline configured. Checking if Swagger is available...");
     await app.ApplyAuthMigrationsAsync(logger); // Enable auto-migration for production
     await app.SeedAuthDataAsync(logger);
     // app.AddRabbitMQEventBus();

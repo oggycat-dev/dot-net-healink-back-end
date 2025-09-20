@@ -1,0 +1,205 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:ap-southeast-2:855160720656:task-definition/auth-service-task:41",
+    "containerDefinitions": [
+        {
+            "name": "auth-service-container",
+            "image": "855160720656.dkr.ecr.ap-southeast-2.amazonaws.com/healink/auth-service:7ae49721b51d0851dd86bb12df061ce00b10faa2",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "JWT_AUDIENCE",
+                    "value": "ProductAuthMicroservice.Users"
+                },
+                {
+                    "name": "RabbitMQ__RoutingKey",
+                    "value": "healink_routing"
+                },
+                {
+                    "name": "ASPNETCORE_ENVIRONMENT",
+                    "value": "Development"
+                },
+                {
+                    "name": "DB_PORT",
+                    "value": "5432"
+                },
+                {
+                    "name": "Redis__InstanceName",
+                    "value": "ProductAuthCache"
+                },
+                {
+                    "name": "DB_USER",
+                    "value": "postgres_admin"
+                },
+                {
+                    "name": "JWT_ISSUER",
+                    "value": "ProductAuthMicroservice"
+                },
+                {
+                    "name": "Redis__ConnectRetry",
+                    "value": "3"
+                },
+                {
+                    "name": "DB_NAME",
+                    "value": "AuthServiceDB"
+                },
+                {
+                    "name": "ALLOWED_ORIGINS",
+                    "value": "https://yourdomain.com,http://localhost:3000"
+                },
+                {
+                    "name": "RabbitMQ__VirtualHost",
+                    "value": "/"
+                },
+                {
+                    "name": "RabbitMQ__HostName",
+                    "value": "amqps://b-86647250-d063-42ec-9fb4-d85de9a2b187.mq.ap-southeast-2.on.aws:5671"
+                },
+                {
+                    "name": "Redis__ConnectTimeout",
+                    "value": "5000"
+                },
+                {
+                    "name": "RabbitMQ__Password",
+                    "value": "HealinkRabbitMQ2025!"
+                },
+                {
+                    "name": "Redis__AbortOnConnectFail",
+                    "value": "false"
+                },
+                {
+                    "name": "RabbitMQ__QueueName",
+                    "value": "healink_events"
+                },
+                {
+                    "name": "RabbitMQ__ExchangeName",
+                    "value": "healink_exchange"
+                },
+                {
+                    "name": "DB_HOST",
+                    "value": "healink-db-instance.c5mgeqmgc9ch.ap-southeast-2.rds.amazonaws.com"
+                },
+                {
+                    "name": "Redis__SyncTimeout",
+                    "value": "5000"
+                },
+                {
+                    "name": "Redis__Enabled",
+                    "value": "true"
+                },
+                {
+                    "name": "Redis__Database",
+                    "value": "0"
+                },
+                {
+                    "name": "JWT_EXPIRE_MINUTES",
+                    "value": "60"
+                },
+                {
+                    "name": "RabbitMQ__Port",
+                    "value": "5672"
+                },
+                {
+                    "name": "RabbitMQ__Enabled",
+                    "value": "true"
+                },
+                {
+                    "name": "Redis__ConnectionString",
+                    "value": "healink-redis.6d33je.0001.apse2.cache.amazonaws.com:6379"
+                },
+                {
+                    "name": "ADMIN_EMAIL",
+                    "value": "admin@productauth.com"
+                },
+                {
+                    "name": "RabbitMQ__UserName",
+                    "value": "admin"
+                }
+            ],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "DB_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:855160720656:secret:healink/db_password-OsFLnL"
+                },
+                {
+                    "name": "JWT_SECRET_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:855160720656:secret:healink/jwt_secret_key-IjJUDC"
+                },
+                {
+                    "name": "REDIS_CONNECTION_STRING",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:855160720656:secret:healink/redis_connection_string-8cVSJx"
+                },
+                {
+                    "name": "ADMIN_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:855160720656:secret:healink/admin_password-NvY67H"
+                },
+                {
+                    "name": "RABBITMQ_CONNECTION_STRING",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:855160720656:secret:healink/rabbitmq_connection_string-IX9mn1"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/auth-service",
+                    "awslogs-region": "ap-southeast-2",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "auth-service-task",
+    "executionRoleArn": "arn:aws:iam::855160720656:role/healink-ecs-task-execution-role",
+    "networkMode": "awsvpc",
+    "revision": 41,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "ecs.capability.secrets.asm.environment-variables"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "registeredAt": "2025-09-20T15:40:26.602000+07:00",
+    "registeredBy": "arn:aws:iam::855160720656:user/healink"
+}
