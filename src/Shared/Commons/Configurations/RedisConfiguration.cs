@@ -27,6 +27,14 @@ public static class RedisConfiguration
             throw new ArgumentNullException(nameof(redisConfig), "Redis configuration not found or connection string is empty");
         }
 
+        // Check if Redis is enabled
+        if (!redisConfig.Enabled)
+        {
+            // Register a null Redis cache when disabled
+            services.AddSingleton<IConnectionMultiplexer>(provider => null!);
+            return services;
+        }
+
         // Add Redis distributed cache
         services.AddStackExchangeRedisCache(options =>
         {

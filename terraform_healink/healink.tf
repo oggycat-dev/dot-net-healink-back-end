@@ -178,7 +178,8 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "Redis__ConnectTimeout", value = "5000" },
         { name = "Redis__SyncTimeout", value = "5000" },
         { name = "Redis__AbortOnConnectFail", value = "false" },
-        { name = "Redis__ConnectRetry", value = "3" }
+        { name = "Redis__ConnectRetry", value = "3" },
+        { name = "Redis__Enabled", value = "false" }
       ]
       logConfiguration = {
         logDriver = "awslogs"
