@@ -183,7 +183,7 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "Redis__ConnectRetry", value = "3" },
         { name = "Redis__Enabled", value = "true" },
         # RabbitMQ Configuration (use Amazon MQ endpoint)
-        { name = "RabbitMQ__HostName", value = aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0] },
+        { name = "RabbitMQ__HostName", value = replace(replace(aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0], "amqps://", ""), ":5671", "") },
         { name = "RabbitMQ__Port", value = "5672" },
         { name = "RabbitMQ__UserName", value = "admin" },
         { name = "RabbitMQ__Password", value = "HealinkRabbitMQ2025!" },
