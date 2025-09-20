@@ -116,7 +116,16 @@ public static class AuthInfrastructureDependencyInjection
             var context = provider.GetRequiredService<AuthDbContext>();
             
             // Try to get EventBus, use null if not available (RabbitMQ disabled)
-            var eventBus = provider.GetService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
+            ProductAuthMicroservice.Commons.EventBus.IEventBus? eventBus = null;
+            try
+            {
+                eventBus = provider.GetService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
+            }
+            catch (Exception)
+            {
+                // RabbitMQ not available, continue with null EventBus
+                eventBus = null;
+            }
             
             var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork>>();
             return new ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork(context, eventBus, logger);

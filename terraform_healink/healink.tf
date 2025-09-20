@@ -159,7 +159,8 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "DB_PASSWORD", valueFrom = aws_secretsmanager_secret.db_password.arn },
         { name = "JWT_SECRET_KEY", valueFrom = aws_secretsmanager_secret.jwt_secret_key.arn },
         { name = "REDIS_CONNECTION_STRING", valueFrom = aws_secretsmanager_secret.redis_connection_string.arn },
-        { name = "ADMIN_PASSWORD", valueFrom = aws_secretsmanager_secret.admin_password.arn }
+        { name = "ADMIN_PASSWORD", valueFrom = aws_secretsmanager_secret.admin_password.arn },
+        { name = "RABBITMQ_CONNECTION_STRING", valueFrom = aws_secretsmanager_secret.rabbitmq_connection_string.arn }
       ]
       environment = [
         { name = "DB_HOST", value = aws_db_instance.healink_db.address },
@@ -172,14 +173,25 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "JWT_EXPIRE_MINUTES", value = tostring(var.jwt_expire_minutes) },
         { name = "ADMIN_EMAIL", value = var.admin_email },
         { name = "ALLOWED_ORIGINS", value = var.allowed_origins },
-        { name = "Redis__ConnectionString", value = "localhost:6379" },
+        # Redis Configuration (use ElastiCache endpoint)
+        { name = "Redis__ConnectionString", value = "${aws_elasticache_cluster.healink_redis.cache_nodes[0].address}:${aws_elasticache_cluster.healink_redis.cache_nodes[0].port}" },
         { name = "Redis__InstanceName", value = "ProductAuthCache" },
         { name = "Redis__Database", value = "0" },
         { name = "Redis__ConnectTimeout", value = "5000" },
         { name = "Redis__SyncTimeout", value = "5000" },
         { name = "Redis__AbortOnConnectFail", value = "false" },
         { name = "Redis__ConnectRetry", value = "3" },
-        { name = "Redis__Enabled", value = "false" }
+        { name = "Redis__Enabled", value = "true" },
+        # RabbitMQ Configuration (use Amazon MQ endpoint)
+        { name = "RabbitMQ__HostName", value = aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0] },
+        { name = "RabbitMQ__Port", value = "5672" },
+        { name = "RabbitMQ__UserName", value = "admin" },
+        { name = "RabbitMQ__Password", value = "HealinkRabbitMQ2025!" },
+        { name = "RabbitMQ__VirtualHost", value = "/" },
+        { name = "RabbitMQ__QueueName", value = "healink_events" },
+        { name = "RabbitMQ__ExchangeName", value = "healink_exchange" },
+        { name = "RabbitMQ__RoutingKey", value = "healink_routing" },
+        { name = "RabbitMQ__Enabled", value = "true" }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -239,7 +251,7 @@ resource "aws_secretsmanager_secret" "redis_connection_string" {
 }
 resource "aws_secretsmanager_secret_version" "redis_connection_string_version" {
   secret_id     = aws_secretsmanager_secret.redis_connection_string.id
-  secret_string = var.redis_connection_string
+  secret_string = "${aws_elasticache_cluster.healink_redis.cache_nodes[0].address}:${aws_elasticache_cluster.healink_redis.cache_nodes[0].port}"
 }
 
 resource "aws_secretsmanager_secret" "admin_password" {
@@ -248,6 +260,15 @@ resource "aws_secretsmanager_secret" "admin_password" {
 resource "aws_secretsmanager_secret_version" "admin_password_version" {
   secret_id     = aws_secretsmanager_secret.admin_password.id
   secret_string = var.admin_password
+}
+
+# RabbitMQ connection string
+resource "aws_secretsmanager_secret" "rabbitmq_connection_string" {
+  name = "healink/rabbitmq_connection_string"
+}
+resource "aws_secretsmanager_secret_version" "rabbitmq_connection_string_version" {
+  secret_id     = aws_secretsmanager_secret.rabbitmq_connection_string.id
+  secret_string = "amqp://admin:HealinkRabbitMQ2025!@${aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0]}:5672/"
 }
 
 resource "aws_iam_role_policy" "ecs_secrets_policy" {
@@ -263,6 +284,7 @@ resource "aws_iam_role_policy" "ecs_secrets_policy" {
         aws_secretsmanager_secret.jwt_secret_key.arn,
         aws_secretsmanager_secret.redis_connection_string.arn,
         aws_secretsmanager_secret.admin_password.arn,
+        aws_secretsmanager_secret.rabbitmq_connection_string.arn,
       ]
     } ]
   })
@@ -322,6 +344,110 @@ resource "aws_vpc_endpoint" "cloudwatch_logs" {
   private_dns_enabled = true
 }
 
+# --- RABBITMQ (Amazon MQ) ---
+resource "aws_mq_broker" "healink_rabbitmq" {
+  broker_name                = "healink-rabbitmq"
+  engine_type               = "RabbitMQ"
+  engine_version           = "3.13"
+  auto_minor_version_upgrade = true
+  host_instance_type       = "mq.t3.micro"  # Cheapest option for dev/test
+  deployment_mode          = "SINGLE_INSTANCE"  # For development, use ACTIVE_STANDBY_MULTI_AZ for production
+  
+  user {
+    username = "admin"
+    password = "HealinkRabbitMQ2025!"  # In production, use AWS Secrets Manager
+  }
+  
+  subnet_ids         = [var.public_subnets[0]]  # Single AZ for development
+  security_groups    = [aws_security_group.rabbitmq_sg.id]
+  publicly_accessible = false
+  
+  tags = {
+    Name = "healink-rabbitmq"
+    Environment = "development"
+  }
+}
+
+resource "aws_security_group" "rabbitmq_sg" {
+  name        = "healink-rabbitmq-sg"
+  description = "Security group for RabbitMQ (Amazon MQ)"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "RabbitMQ AMQP from ECS"
+    from_port   = 5672
+    to_port     = 5672
+    protocol    = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  ingress {
+    description = "RabbitMQ Management Console from ECS"
+    from_port   = 15672
+    to_port     = 15672
+    protocol    = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "healink-rabbitmq-sg"
+  }
+}
+
+# --- REDIS (ElastiCache) ---
+resource "aws_elasticache_subnet_group" "healink_redis" {
+  name       = "healink-redis-subnet-group"
+  subnet_ids = var.public_subnets
+}
+
+resource "aws_elasticache_cluster" "healink_redis" {
+  cluster_id           = "healink-redis"
+  engine               = "redis"
+  node_type            = "cache.t3.micro"  # Cheapest option for dev/test
+  num_cache_nodes      = 1
+  parameter_group_name = "default.redis7"
+  port                 = 6379
+  subnet_group_name    = aws_elasticache_subnet_group.healink_redis.name
+  security_group_ids   = [aws_security_group.redis_sg.id]
+
+  tags = {
+    Name = "healink-redis"
+    Environment = "development"
+  }
+}
+
+resource "aws_security_group" "redis_sg" {
+  name        = "healink-redis-sg"
+  description = "Security group for Redis (ElastiCache)"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Redis from ECS"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "healink-redis-sg"
+  }
+}
+
 # --- OUTPUTS ---
 output "db_endpoint" {
   description = "RDS instance endpoint"
@@ -336,4 +462,24 @@ output "db_name" {
 output "alb_dns_name" {
   description = "ALB DNS name"
   value       = aws_lb.main.dns_name
+}
+
+output "rabbitmq_endpoint" {
+  description = "RabbitMQ broker endpoint"
+  value       = aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0]
+}
+
+output "rabbitmq_console_url" {
+  description = "RabbitMQ management console URL"
+  value       = aws_mq_broker.healink_rabbitmq.instances[0].console_url
+}
+
+output "redis_endpoint" {
+  description = "Redis cluster endpoint"
+  value       = aws_elasticache_cluster.healink_redis.cache_nodes[0].address
+}
+
+output "redis_port" {
+  description = "Redis port"
+  value       = aws_elasticache_cluster.healink_redis.cache_nodes[0].port
 }

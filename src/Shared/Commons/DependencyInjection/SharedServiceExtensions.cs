@@ -75,10 +75,8 @@ public static class SharedServiceExtensions
     {
         var environment = app.Environment;
         
-        if (environment.IsDevelopment())
-        {
-            app.UseSwaggerConfiguration(serviceName);
-        }
+        // Always enable Swagger for now - debugging
+        app.UseSwaggerConfiguration(serviceName);
 
         app.UseHttpsRedirection();
         
