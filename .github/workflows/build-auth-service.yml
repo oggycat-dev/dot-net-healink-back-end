@@ -58,8 +58,13 @@ jobs:
         working-directory: ./terraform_healink
         run: terraform init -reconfigure
 
-      # Bước 7: Terraform Apply
-      - name: Terraform Apply
+     - name: Terraform Apply
         id: apply
         working-directory: ./terraform_healink
-        run: terraform apply -auto-approve -var="app_image_tag=${{ steps.build-image.outputs.image_tag }}"
+        run: >
+          terraform apply -auto-approve 
+          -var="app_image_tag=${{ steps.build-image.outputs.image_tag }}"
+          -var="jwt_issuer=${{ secrets.JWT_ISSUER }}"
+          -var="jwt_audience=${{ secrets.JWT_AUDIENCE }}"
+          -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}"
+          -var="redis_connection_string=${{ secrets.REDIS_CONNECTION_STRING }}"

@@ -214,7 +214,7 @@ resource "aws_ecs_service" "auth_service" {
   network_configuration {
     subnets          = var.public_subnets
     security_groups  = [aws_security_group.app_sg.id]
-    assign_public_ip = false # Sửa lại thành false cho đúng kiến trúc
+    assign_public_ip = true # Temporary fix to allow RabbitMQ connection
   }
   load_balancer {
     target_group_arn = aws_lb_target_group.auth_service.arn
@@ -359,8 +359,8 @@ resource "aws_mq_broker" "healink_rabbitmq" {
   }
   
   subnet_ids         = [var.public_subnets[0]]  # Single AZ for development
-  security_groups    = [aws_security_group.rabbitmq_sg.id]
-  publicly_accessible = false
+  # security_groups    = [aws_security_group.rabbitmq_sg.id]  # Cannot use custom SG with publicly_accessible = true
+  publicly_accessible = true  # Allow access from ECS in public subnet
   
   tags = {
     Name = "healink-rabbitmq"
