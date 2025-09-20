@@ -110,11 +110,14 @@ public static class AuthInfrastructureDependencyInjection
             return new ProductAuthMicroservice.Commons.Repositories.UnitOfWork(context);
         });
         
-        // Register OutboxUnitOfWork for AuthService
+        // Register OutboxUnitOfWork for AuthService (conditional on RabbitMQ availability)
         services.AddScoped<ProductAuthMicroservice.Commons.Outbox.IOutboxUnitOfWork>(provider =>
         {
             var context = provider.GetRequiredService<AuthDbContext>();
-            var eventBus = provider.GetRequiredService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
+            
+            // Try to get EventBus, use null if not available (RabbitMQ disabled)
+            var eventBus = provider.GetService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
+            
             var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork>>();
             return new ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork(context, eventBus, logger);
         });
