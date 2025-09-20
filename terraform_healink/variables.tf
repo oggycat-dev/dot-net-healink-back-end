@@ -7,16 +7,19 @@ variable "jwt_secret_key" {
   type        = string
   description = "The secret key used for signing JWT tokens."
   sensitive   = true # Đánh dấu là biến nhạy cảm, sẽ bị ẩn trong log
+  default     = "ProductAuthMicroserviceSecretKeyIsLongEnoughToBeUsedWithJWT"
 }
 
 variable "jwt_issuer" {
   type        = string
   description = "The issuer for JWT tokens."
+  default     = "ProductAuthMicroservice"
 }
 
 variable "jwt_audience" {
   type        = string
   description = "The audience for JWT tokens."
+  default     = "ProductAuthMicroservice.Users"
 }
 
 variable "jwt_expire_minutes" {
@@ -30,24 +33,28 @@ variable "redis_connection_string" {
   type        = string
   description = "The full connection string for the Redis instance."
   sensitive   = true
+  default     = "redis://:ProductAuth@123@localhost:6379"
 }
 
 # --- Admin Account Configuration ---
 variable "admin_email" {
   type        = string
   description = "Default admin email for data seeding."
+  default     = "admin@productauth.com"
 }
 
 variable "admin_password" {
   type        = string
   description = "Default admin password for data seeding."
   sensitive   = true
+  default     = "admin@123"
 }
 
 # --- CORS Configuration ---
 variable "allowed_origins" {
   type        = string
   description = "Comma-separated list of allowed origins for CORS."
+  default     = "https://yourdomain.com,http://localhost:3000"
 }
 
 # --- Biến cho CI/CD ---

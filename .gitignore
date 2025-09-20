@@ -33,6 +33,9 @@ appsettings.Development.json
 !**/appsettings.Example.json
 !**/appsettings.Template.json
 
+# Migration configuration with sensitive data
+migrations-appsettings.json
+
 # Environment files
 .env
 .env.local
