@@ -35,11 +35,23 @@ try
     logger.LogInformation("Pipeline configured. Checking if Swagger is available...");
     await app.ApplyAuthMigrationsAsync(logger); // Enable auto-migration for production
     await app.SeedAuthDataAsync(logger);
-    // app.AddRabbitMQEventBus();
-    // var eventBus = app.Services.GetRequiredService<...>();
-    // eventBus.Subscribe<...>();
-    // app.Services.SubscribeToAuthEvents();
-    // eventBus.StartConsuming();
+    
+    // Enable RabbitMQ Event Bus for inter-service communication
+    logger.LogInformation("Configuring RabbitMQ Event Bus...");
+    app.AddRabbitMQEventBus();
+
+    // Subscribe to Product Events from ProductService
+    var eventBus = app.Services.GetRequiredService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
+    eventBus.Subscribe<ProductCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductCreatedEventHandler>();
+    eventBus.Subscribe<ProductUpdatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductUpdatedEventHandler>();
+    eventBus.Subscribe<ProductInventoryCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductInventoryCreatedEventHandler>();
+
+    // Subscribe to auth events for distributed authentication
+    app.Services.SubscribeToAuthEvents();
+
+    // Start consuming events
+    eventBus.StartConsuming();
+    logger.LogInformation("RabbitMQ Event Bus configured successfully");
 
     logger.LogInformation("AuthService API minimal mode configured successfully");
     
@@ -109,3 +121,4 @@ finally
 //     logger.LogInformation("AuthService API shutting down");
 // }
 
+//test

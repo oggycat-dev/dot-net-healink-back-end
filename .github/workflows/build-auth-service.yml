@@ -13,6 +13,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Skip CI if commit message contains skip keywords
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') && !contains(github.event.head_commit.message, '[no ci]') && !contains(github.event.head_commit.message, '[skip actions]')"
     permissions:
       id-token: write
       contents: read
@@ -42,8 +44,16 @@ jobs:
           ECR_REPOSITORY: healink/auth-service
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          # Build image with commit hash tag
           docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f src/AuthService/AuthService.API/Dockerfile .
+          
+          # Also tag as latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          # Push both tags
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       # --- PHẦN DEPLOY BỊ THIẾU TRƯỚC ĐÂY ---
@@ -62,4 +72,10 @@ jobs:
       - name: Terraform Apply
         id: apply
         working-directory: ./terraform_healink
-        run: terraform apply -auto-approve -var="app_image_tag=${{ steps.build-image.outputs.image_tag }}"
+        run: >
+          terraform apply -auto-approve 
+          -var="app_image_tag=${{ steps.build-image.outputs.image_tag }}"
+          -var="jwt_issuer=${{ secrets.JWT_ISSUER }}"
+          -var="jwt_audience=${{ secrets.JWT_AUDIENCE }}"
+          -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}"
+          -var="redis_connection_string=${{ secrets.REDIS_CONNECTION_STRING }}"

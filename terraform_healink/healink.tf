@@ -1,3 +1,6 @@
+# Healink Infrastructure with Terraform Modules
+# This demonstrates the new modular approach for microservices
+
 terraform {
   backend "s3" {
     bucket = "healink-tf-state-2025-oggycatdev"
@@ -10,11 +13,7 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-# --- BIẾN ĐẦU VÀO ---
-# Các biến này được định nghĩa trong file variables.tf
-# và được truyền giá trị từ terraform.tfvars hoặc CI/CD
-
-# --- VPC & SUBNETS (!!! THAY THẾ BẰNG GIÁ TRỊ CỦA BẠN !!!) ---
+# --- NETWORK VARIABLES ---
 variable "vpc_id" {
   description = "ID of your VPC"
   default     = "vpc-08fe88c24397c79a9"
@@ -24,6 +23,84 @@ variable "public_subnets" {
   description = "A list of at least 2 public subnet IDs"
   type        = list(string)
   default     = ["subnet-00d0aabb44d3b86f4", "subnet-0cf7a8a098483c77e"]
+}
+
+# --- PROJECT VARIABLES ---
+variable "project_name" {
+  description = "Project name prefix"
+  type        = string
+  default     = "healink"
+}
+
+# --- DATABASE VARIABLES ---
+variable "db_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "db_allocated_storage" {
+  description = "RDS allocated storage in GB"
+  type        = number
+  default     = 20
+}
+
+variable "db_max_allocated_storage" {
+  description = "RDS max allocated storage in GB"
+  type        = number
+  default     = 100
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+  default     = "healink_db"
+}
+
+variable "db_username" {
+  description = "Database username"
+  type        = string
+  default     = "healink_user"
+}
+
+variable "db_password" {
+  description = "Database password"
+  type        = string
+  sensitive   = true
+  default     = "HealinkSecure2024!"
+}
+
+variable "db_backup_retention" {
+  description = "RDS backup retention period in days"
+  type        = number
+  default     = 1
+}
+
+# --- REDIS VARIABLES ---
+variable "redis_node_type" {
+  description = "ElastiCache node type"
+  type        = string
+  default     = "cache.t4g.micro"
+}
+
+# --- RABBITMQ VARIABLES ---
+variable "rabbitmq_instance_type" {
+  description = "Amazon MQ instance type"
+  type        = string
+  default     = "mq.t3.micro"
+}
+
+variable "rabbitmq_username" {
+  description = "RabbitMQ username"
+  type        = string
+  default     = "healink_mq"
+}
+
+variable "rabbitmq_password" {
+  description = "RabbitMQ password"
+  type        = string
+  sensitive   = true
+  default     = "HealinkMQ2024!"
 }
 
 # --- DATA SOURCES ---
@@ -37,449 +114,410 @@ data "aws_route_table" "main" {
   }
 }
 
-# --- LOGGING ---
-resource "aws_cloudwatch_log_group" "auth_service" {
-  name              = "/ecs/auth-service"
-  retention_in_days = 7 # Tự động xóa log sau 7 ngày để tiết kiệm chi phí
-}
-
-# --- SECURITY GROUPS ---
-resource "aws_security_group" "alb_sg" {
-  name        = "healink-alb-sg"
-  description = "Allow traffic from ALB to ECS and from ECS to RDS"
-  vpc_id      = var.vpc_id
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "app_sg" {
-  name        = "healink-app-sg"
-  description = "Allow traffic from ALB to ECS and from ECS to RDS"
-  vpc_id      = var.vpc_id
-  ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
-  }
-  ingress {
-    from_port = 5432
-    to_port   = 5432
-    protocol  = "tcp"
-    self      = true
-  }
-  ingress {
-    from_port = 443
-    to_port   = 443
-    protocol  = "tcp"
-    self      = true
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# --- APPLICATION LOAD BALANCER ---
-resource "aws_lb" "main" {
-  name               = "healink-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = var.public_subnets
-}
-resource "aws_lb_target_group" "auth_service" {
-  name        = "tg-auth-service"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip"
-  health_check {
-    path    = "/health"
-    matcher = "200"
-  }
-}
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = "80"
-  protocol          = "HTTP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.auth_service.arn
-  }
-}
-
-# --- ECR & ECS CLUSTER ---
-resource "aws_ecr_repository" "auth_service_repo" {
-  name = "healink/auth-service"
-}
-resource "aws_ecs_cluster" "main" {
-  name = "healink-cluster"
-}
-
-# --- IAM & ECS TASK ---
+# --- IAM ROLE FOR ECS TASKS ---
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "healink-ecs-task-execution-role"
+  name = "${var.project_name}-ecs-task-execution-role-${terraform.workspace}"
+
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
-    Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
   })
 }
+
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_ecs_task_definition" "auth_service" {
-  family                   = "auth-service-task"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  container_definitions    = jsonencode([
-    {
-      name      = "auth-service-container"
-      image     = "${aws_ecr_repository.auth_service_repo.repository_url}:${var.app_image_tag}"
-      essential = true
-      portMappings = [ { containerPort = 80, hostPort = 80 } ]
-      secrets = [
-        { name = "DB_PASSWORD", valueFrom = aws_secretsmanager_secret.db_password.arn },
-        { name = "JWT_SECRET_KEY", valueFrom = aws_secretsmanager_secret.jwt_secret_key.arn },
-        { name = "REDIS_CONNECTION_STRING", valueFrom = aws_secretsmanager_secret.redis_connection_string.arn },
-        { name = "ADMIN_PASSWORD", valueFrom = aws_secretsmanager_secret.admin_password.arn },
-        { name = "RABBITMQ_CONNECTION_STRING", valueFrom = aws_secretsmanager_secret.rabbitmq_connection_string.arn }
-      ]
-      environment = [
-        { name = "DB_HOST", value = aws_db_instance.healink_db.address },
-        { name = "DB_PORT", value = tostring(aws_db_instance.healink_db.port) },
-        { name = "DB_NAME", value = aws_db_instance.healink_db.db_name },
-        { name = "DB_USER", value = aws_db_instance.healink_db.username },
-        { name = "ASPNETCORE_ENVIRONMENT", value = "Development" },
-        { name = "JWT_ISSUER", value = var.jwt_issuer },
-        { name = "JWT_AUDIENCE", value = var.jwt_audience },
-        { name = "JWT_EXPIRE_MINUTES", value = tostring(var.jwt_expire_minutes) },
-        { name = "ADMIN_EMAIL", value = var.admin_email },
-        { name = "ALLOWED_ORIGINS", value = var.allowed_origins },
-        # Redis Configuration (use ElastiCache endpoint)
-        { name = "Redis__ConnectionString", value = "${aws_elasticache_cluster.healink_redis.cache_nodes[0].address}:${aws_elasticache_cluster.healink_redis.cache_nodes[0].port}" },
-        { name = "Redis__InstanceName", value = "ProductAuthCache" },
-        { name = "Redis__Database", value = "0" },
-        { name = "Redis__ConnectTimeout", value = "5000" },
-        { name = "Redis__SyncTimeout", value = "5000" },
-        { name = "Redis__AbortOnConnectFail", value = "false" },
-        { name = "Redis__ConnectRetry", value = "3" },
-        { name = "Redis__Enabled", value = "true" },
-        # RabbitMQ Configuration (use Amazon MQ endpoint)
-        { name = "RabbitMQ__HostName", value = aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0] },
-        { name = "RabbitMQ__Port", value = "5672" },
-        { name = "RabbitMQ__UserName", value = "admin" },
-        { name = "RabbitMQ__Password", value = "HealinkRabbitMQ2025!" },
-        { name = "RabbitMQ__VirtualHost", value = "/" },
-        { name = "RabbitMQ__QueueName", value = "healink_events" },
-        { name = "RabbitMQ__ExchangeName", value = "healink_exchange" },
-        { name = "RabbitMQ__RoutingKey", value = "healink_routing" },
-        { name = "RabbitMQ__Enabled", value = "true" }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = "/ecs/auth-service"
-          awslogs-region        = "ap-southeast-2"
-          awslogs-stream-prefix = "ecs"
-        }
-      }
-    }
-  ])
-}
+resource "aws_iam_role_policy" "ecs_task_execution_role_cloudwatch" {
+  name = "${var.project_name}-ecs-task-execution-cloudwatch-${terraform.workspace}"
+  role = aws_iam_role.ecs_task_execution_role.id
 
-resource "aws_ecs_service" "auth_service" {
-  name            = "auth-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.auth_service.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
-  network_configuration {
-    subnets          = var.public_subnets
-    security_groups  = [aws_security_group.app_sg.id]
-    assign_public_ip = false # Sửa lại thành false cho đúng kiến trúc
-  }
-  load_balancer {
-    target_group_arn = aws_lb_target_group.auth_service.arn
-    container_name   = "auth-service-container"
-    container_port   = 80
-  }
-  depends_on = [aws_lb_listener.http]
-}
-
-# --- SECRETS & DATABASE ---
-resource "random_password" "db_master_password" {
-  length           = 16
-  special          = true
-  override_special = "_%[]{}<>()-!#$&=?"
-}
-resource "aws_secretsmanager_secret" "db_password" {
-  name = "healink/db_password"
-}
-resource "aws_secretsmanager_secret_version" "db_password_version" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
-  secret_string = random_password.db_master_password.result
-}
-
-resource "aws_secretsmanager_secret" "jwt_secret_key" {
-  name = "healink/jwt_secret_key"
-}
-resource "aws_secretsmanager_secret_version" "jwt_secret_key_version" {
-  secret_id     = aws_secretsmanager_secret.jwt_secret_key.id
-  secret_string = var.jwt_secret_key
-}
-
-resource "aws_secretsmanager_secret" "redis_connection_string" {
-  name = "healink/redis_connection_string"
-}
-resource "aws_secretsmanager_secret_version" "redis_connection_string_version" {
-  secret_id     = aws_secretsmanager_secret.redis_connection_string.id
-  secret_string = "${aws_elasticache_cluster.healink_redis.cache_nodes[0].address}:${aws_elasticache_cluster.healink_redis.cache_nodes[0].port}"
-}
-
-resource "aws_secretsmanager_secret" "admin_password" {
-  name = "healink/admin_password"
-}
-resource "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id     = aws_secretsmanager_secret.admin_password.id
-  secret_string = var.admin_password
-}
-
-# RabbitMQ connection string
-resource "aws_secretsmanager_secret" "rabbitmq_connection_string" {
-  name = "healink/rabbitmq_connection_string"
-}
-resource "aws_secretsmanager_secret_version" "rabbitmq_connection_string_version" {
-  secret_id     = aws_secretsmanager_secret.rabbitmq_connection_string.id
-  secret_string = "amqp://admin:HealinkRabbitMQ2025!@${aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0]}:5672/"
-}
-
-resource "aws_iam_role_policy" "ecs_secrets_policy" {
-  name   = "ecs-secrets-manager-policy"
-  role   = aws_iam_role.ecs_task_execution_role.id
   policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = [ {
-      Effect   = "Allow",
-      Action   = ["secretsmanager:GetSecretValue"],
-      Resource = [
-        aws_secretsmanager_secret.db_password.arn,
-        aws_secretsmanager_secret.jwt_secret_key.arn,
-        aws_secretsmanager_secret.redis_connection_string.arn,
-        aws_secretsmanager_secret.admin_password.arn,
-        aws_secretsmanager_secret.rabbitmq_connection_string.arn,
-      ]
-    } ]
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
   })
 }
 
-resource "aws_db_instance" "healink_db" {
-  identifier           = "healink-db-instance"
-  allocated_storage    = 20
-  instance_class       = "db.t3.micro"
-  engine               = "postgres"
-  engine_version       = "15"
-  db_name              = "AuthServiceDB"
-  username             = "postgres_admin"
-  password             = random_password.db_master_password.result
-  vpc_security_group_ids = [aws_security_group.app_sg.id]
-  publicly_accessible  = false
-  skip_final_snapshot  = true
-}
+# --- ECS CLUSTER ---
+resource "aws_ecs_cluster" "healink_cluster" {
+  name = "${var.project_name}-cluster-${terraform.workspace}"
 
-# --- VPC ENDPOINTS ---
-resource "aws_vpc_endpoint" "secrets_manager" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.${data.aws_region.current.id}.secretsmanager"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.public_subnets
-  security_group_ids  = [aws_security_group.app_sg.id]
-  private_dns_enabled = true
-}
-resource "aws_vpc_endpoint" "ecr_api" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.${data.aws_region.current.id}.ecr.api"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.public_subnets
-  security_group_ids  = [aws_security_group.app_sg.id]
-  private_dns_enabled = true
-}
-resource "aws_vpc_endpoint" "ecr_dkr" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.${data.aws_region.current.id}.ecr.dkr"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.public_subnets
-  security_group_ids  = [aws_security_group.app_sg.id]
-  private_dns_enabled = true
-}
-resource "aws_vpc_endpoint" "s3_gateway" {
-  vpc_id            = var.vpc_id
-  service_name      = "com.amazonaws.${data.aws_region.current.id}.s3"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = [data.aws_route_table.main.id]
-}
-resource "aws_vpc_endpoint" "cloudwatch_logs" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.${data.aws_region.current.id}.logs"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.public_subnets
-  security_group_ids  = [aws_security_group.app_sg.id]
-  private_dns_enabled = true
-}
-
-# --- RABBITMQ (Amazon MQ) ---
-resource "aws_mq_broker" "healink_rabbitmq" {
-  broker_name                = "healink-rabbitmq"
-  engine_type               = "RabbitMQ"
-  engine_version           = "3.13"
-  auto_minor_version_upgrade = true
-  host_instance_type       = "mq.t3.micro"  # Cheapest option for dev/test
-  deployment_mode          = "SINGLE_INSTANCE"  # For development, use ACTIVE_STANDBY_MULTI_AZ for production
-  
-  user {
-    username = "admin"
-    password = "HealinkRabbitMQ2025!"  # In production, use AWS Secrets Manager
-  }
-  
-  subnet_ids         = [var.public_subnets[0]]  # Single AZ for development
-  security_groups    = [aws_security_group.rabbitmq_sg.id]
-  publicly_accessible = false
-  
   tags = {
-    Name = "healink-rabbitmq"
-    Environment = "development"
+    Name        = "${var.project_name}-cluster-${terraform.workspace}"
+    Environment = terraform.workspace
   }
 }
 
-resource "aws_security_group" "rabbitmq_sg" {
-  name        = "healink-rabbitmq-sg"
-  description = "Security group for RabbitMQ (Amazon MQ)"
+# --- DATABASE (RDS PostgreSQL) ---
+resource "aws_db_subnet_group" "healink_db_subnet_group" {
+  name       = "${var.project_name}-db-subnet-group-${terraform.workspace}"
+  subnet_ids = var.public_subnets
+
+  tags = {
+    Name        = "${var.project_name}-db-subnet-group-${terraform.workspace}"
+    Environment = terraform.workspace
+  }
+}
+
+resource "aws_security_group" "rds_sg" {
+  name_prefix = "${var.project_name}-rds-sg-${terraform.workspace}"
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "RabbitMQ AMQP from ECS"
-    from_port   = 5672
-    to_port     = 5672
+    from_port   = 5432
+    to_port     = 5432
     protocol    = "tcp"
-    security_groups = [aws_security_group.app_sg.id]
-  }
-
-  ingress {
-    description = "RabbitMQ Management Console from ECS"
-    from_port   = 15672
-    to_port     = 15672
-    protocol    = "tcp"
-    security_groups = [aws_security_group.app_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/16"]
   }
 
   tags = {
-    Name = "healink-rabbitmq-sg"
+    Name        = "${var.project_name}-rds-sg-${terraform.workspace}"
+    Environment = terraform.workspace
+  }
+}
+
+resource "aws_db_instance" "healink_db" {
+  identifier     = "${var.project_name}-db-${terraform.workspace}"
+  engine         = "postgres"
+  engine_version = "15.4"
+  instance_class = var.db_instance_class
+
+  allocated_storage     = var.db_allocated_storage
+  max_allocated_storage = var.db_max_allocated_storage
+  storage_encrypted     = true
+
+  db_name  = var.db_name
+  username = var.db_username
+  password = var.db_password
+
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.healink_db_subnet_group.name
+
+  backup_retention_period = var.db_backup_retention
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "sun:04:00-sun:05:00"
+
+  skip_final_snapshot = true
+  deletion_protection = false
+
+  tags = {
+    Name        = "${var.project_name}-db-${terraform.workspace}"
+    Environment = terraform.workspace
   }
 }
 
 # --- REDIS (ElastiCache) ---
-resource "aws_elasticache_subnet_group" "healink_redis" {
-  name       = "healink-redis-subnet-group"
+resource "aws_elasticache_subnet_group" "healink_redis_subnet_group" {
+  name       = "${var.project_name}-redis-subnet-group-${terraform.workspace}"
   subnet_ids = var.public_subnets
-}
-
-resource "aws_elasticache_cluster" "healink_redis" {
-  cluster_id           = "healink-redis"
-  engine               = "redis"
-  node_type            = "cache.t3.micro"  # Cheapest option for dev/test
-  num_cache_nodes      = 1
-  parameter_group_name = "default.redis7"
-  port                 = 6379
-  subnet_group_name    = aws_elasticache_subnet_group.healink_redis.name
-  security_group_ids   = [aws_security_group.redis_sg.id]
 
   tags = {
-    Name = "healink-redis"
-    Environment = "development"
+    Name        = "${var.project_name}-redis-subnet-group-${terraform.workspace}"
+    Environment = terraform.workspace
   }
 }
 
 resource "aws_security_group" "redis_sg" {
-  name        = "healink-redis-sg"
-  description = "Security group for Redis (ElastiCache)"
+  name_prefix = "${var.project_name}-redis-sg-${terraform.workspace}"
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "Redis from ECS"
     from_port   = 6379
     to_port     = 6379
     protocol    = "tcp"
-    security_groups = [aws_security_group.app_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["10.0.0.0/16"]
   }
 
   tags = {
-    Name = "healink-redis-sg"
+    Name        = "${var.project_name}-redis-sg-${terraform.workspace}"
+    Environment = terraform.workspace
   }
 }
 
-# --- OUTPUTS ---
-output "db_endpoint" {
-  description = "RDS instance endpoint"
-  value       = aws_db_instance.healink_db.endpoint
+resource "aws_elasticache_replication_group" "healink_redis" {
+  replication_group_id       = "${var.project_name}-redis-${terraform.workspace}"
+  description                = "Redis cluster for ${var.project_name}"
+  
+  node_type                  = var.redis_node_type
+  port                      = 6379
+  parameter_group_name      = "default.redis7"
+  
+  num_cache_clusters         = 1
+  
+  subnet_group_name         = aws_elasticache_subnet_group.healink_redis_subnet_group.name
+  security_group_ids        = [aws_security_group.redis_sg.id]
+  
+  at_rest_encryption_enabled = false
+  transit_encryption_enabled = false
+  
+  tags = {
+    Name        = "${var.project_name}-redis-${terraform.workspace}"
+    Environment = terraform.workspace
+  }
 }
 
-output "db_name" {
-  description = "Database name"
-  value       = aws_db_instance.healink_db.db_name
+# --- RABBITMQ (Amazon MQ) ---
+resource "aws_security_group" "rabbitmq_sg" {
+  name_prefix = "${var.project_name}-rabbitmq-sg-${terraform.workspace}"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 5671
+    to_port     = 5671
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  ingress {
+    from_port   = 15671
+    to_port     = 15671
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-rabbitmq-sg-${terraform.workspace}"
+    Environment = terraform.workspace
+  }
 }
 
-output "alb_dns_name" {
-  description = "ALB DNS name"
-  value       = aws_lb.main.dns_name
+resource "aws_mq_broker" "healink_rabbitmq" {
+  broker_name        = "${var.project_name}-rabbitmq-${terraform.workspace}"
+  engine_type        = "RabbitMQ"
+  engine_version     = "3.11.20"
+  host_instance_type = var.rabbitmq_instance_type
+  security_groups    = [aws_security_group.rabbitmq_sg.id]
+  subnet_ids         = [var.public_subnets[0]]
+
+  user {
+    username = var.rabbitmq_username
+    password = var.rabbitmq_password
+  }
+
+  logs {
+    general = true
+  }
+
+  tags = {
+    Name        = "${var.project_name}-rabbitmq-${terraform.workspace}"
+    Environment = terraform.workspace
+  }
 }
 
-output "rabbitmq_endpoint" {
-  description = "RabbitMQ broker endpoint"
-  value       = aws_mq_broker.healink_rabbitmq.instances[0].endpoints[0]
+# --- ECR REPOSITORIES ---
+resource "aws_ecr_repository" "auth_service" {
+  name                 = "${var.project_name}/auth-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-auth-service-ecr"
+    Environment = terraform.workspace
+  }
 }
 
-output "rabbitmq_console_url" {
-  description = "RabbitMQ management console URL"
-  value       = aws_mq_broker.healink_rabbitmq.instances[0].console_url
+resource "aws_ecr_repository" "product_service" {
+  name                 = "${var.project_name}/product-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-product-service-ecr"
+    Environment = terraform.workspace
+  }
 }
 
-output "redis_endpoint" {
-  description = "Redis cluster endpoint"
-  value       = aws_elasticache_cluster.healink_redis.cache_nodes[0].address
+# --- GATEWAY MODULE ---
+module "gateway" {
+  source = "./modules/microservice"
+
+  service_name     = "gateway"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
+  
+  docker_image     = "${aws_ecr_repository.gateway.repository_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    }
+  ]
+  
+  vpc_id                    = var.vpc_id
+  subnet_ids               = var.public_subnets
+  alb_subnet_ids           = var.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200"
 }
 
-output "redis_port" {
-  description = "Redis port"
-  value       = aws_elasticache_cluster.healink_redis.cache_nodes[0].port
+# --- AUTH SERVICE MODULE ---
+module "auth_service" {
+  source = "./modules/microservice"
+
+  service_name     = "auth-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "512"
+  task_memory      = "1024"
+  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  
+  docker_image     = "${aws_ecr_repository.auth_service.repository_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    },
+    {
+      name  = "ConnectionStrings__DefaultConnection"
+      value = "Host=${aws_db_instance.healink_db.endpoint};Port=5432;Database=${var.db_name};Username=${var.db_username};Password=${var.db_password};"
+    },
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${aws_elasticache_replication_group.healink_redis.configuration_endpoint_address}:6379"
+    },
+    {
+      name  = "RabbitMQ__Host"
+      value = "${replace(aws_mq_broker.healink_rabbitmq.instances[0].endpoints[1], "amqps://", "")}"
+    },
+    {
+      name  = "RabbitMQ__Port"
+      value = "5671"
+    },
+    {
+      name  = "RabbitMQ__Username"
+      value = var.rabbitmq_username
+    },
+    {
+      name  = "RabbitMQ__Password"
+      value = var.rabbitmq_password
+    },
+    {
+      name  = "RabbitMQ__UseSsl"
+      value = "true"
+    }
+  ]
+  
+  vpc_id                    = var.vpc_id
+  subnet_ids               = var.public_subnets
+  alb_subnet_ids           = var.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200,405"
+}
+
+# --- PRODUCT SERVICE MODULE ---
+module "product_service" {
+  source = "./modules/microservice"
+
+  service_name     = "product-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "512"
+  task_memory      = "1024"
+  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  
+  docker_image     = "${aws_ecr_repository.product_service.repository_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    },
+    {
+      name  = "ConnectionStrings__DefaultConnection"
+      value = "Host=${aws_db_instance.healink_db.endpoint};Port=5432;Database=${var.db_name};Username=${var.db_username};Password=${var.db_password};"
+    },
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${aws_elasticache_replication_group.healink_redis.configuration_endpoint_address}:6379"
+    },
+    {
+      name  = "RabbitMQ__Host"
+      value = "${replace(aws_mq_broker.healink_rabbitmq.instances[0].endpoints[1], "amqps://", "")}"
+    },
+    {
+      name  = "RabbitMQ__Port"
+      value = "5671"
+    },
+    {
+      name  = "RabbitMQ__Username"
+      value = var.rabbitmq_username
+    },
+    {
+      name  = "RabbitMQ__Password"
+      value = var.rabbitmq_password
+    },
+    {
+      name  = "RabbitMQ__UseSsl"
+      value = "true"
+    }
+  ]
+  
+  vpc_id                    = var.vpc_id
+  subnet_ids               = var.public_subnets
+  alb_subnet_ids           = var.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200,405"
+}
+
+# --- ECR FOR GATEWAY ---
+resource "aws_ecr_repository" "gateway" {
+  name                 = "${var.project_name}/gateway"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-gateway-ecr"
+    Environment = terraform.workspace
+  }
 }
