@@ -305,3 +305,11 @@ resource "aws_vpc_endpoint" "s3_gateway" {
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [data.aws_route_table.main.id]
 }
+resource "aws_vpc_endpoint" "cloudwatch_logs" {
+  vpc_id              = var.vpc_id
+  service_name        = "com.amazonaws.${data.aws_region.current.id}.logs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.public_subnets
+  security_group_ids  = [aws_security_group.app_sg.id]
+  private_dns_enabled = true
+}

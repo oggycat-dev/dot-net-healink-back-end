@@ -1,14 +1,8 @@
 #!/bin/bash
 set -e
 
-echo "Running EF Core database migrations..."
-
-# Chạy lệnh update database của EF Core
-dotnet ef database update
-
-echo "Migrations completed. Starting application..."
+echo "Starting application..."
+echo "Note: Database migrations should be run separately in production"
 
 # Dòng này sẽ thực thi lệnh gốc của Dockerfile (chính là lệnh khởi động app)
-# exec "$@"
-
-echo "Migration step finished. Exiting for debug purposes."
+exec "$@"
