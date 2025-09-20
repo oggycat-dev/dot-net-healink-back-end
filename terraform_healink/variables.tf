@@ -2,6 +2,25 @@
 # Các giá trị thực tế sẽ được cung cấp qua file .tfvars (cho local) 
 # hoặc qua GitHub Secrets (cho CI/CD).
 
+# --- MICROSERVICES CONFIGURATION ---
+variable "app_image_tag" {
+  type        = string
+  description = "The Docker image tag to deploy."
+  default     = "latest"
+}
+
+variable "auth_service_enabled" {
+  type        = bool
+  description = "Enable AuthService deployment"
+  default     = true
+}
+
+variable "product_service_enabled" {
+  type        = bool
+  description = "Enable ProductService deployment"
+  default     = false
+}
+
 # --- JWT Configuration ---
 variable "jwt_secret_key" {
   type        = string
