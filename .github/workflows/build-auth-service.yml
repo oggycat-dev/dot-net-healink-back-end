@@ -42,8 +42,16 @@ jobs:
           ECR_REPOSITORY: healink/auth-service
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          # Build image with commit hash tag
           docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f src/AuthService/AuthService.API/Dockerfile .
+          
+          # Also tag as latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          # Push both tags
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       # --- PHẦN DEPLOY BỊ THIẾU TRƯỚC ĐÂY ---
