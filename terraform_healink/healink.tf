@@ -166,7 +166,7 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "DB_PORT", value = tostring(aws_db_instance.healink_db.port) },
         { name = "DB_NAME", value = aws_db_instance.healink_db.db_name },
         { name = "DB_USER", value = aws_db_instance.healink_db.username },
-        { name = "ASPNETCORE_ENVIRONMENT", value = "Docker" },
+        { name = "ASPNETCORE_ENVIRONMENT", value = "Development" },
         { name = "JWT_ISSUER", value = var.jwt_issuer },
         { name = "JWT_AUDIENCE", value = var.jwt_audience },
         { name = "JWT_EXPIRE_MINUTES", value = tostring(var.jwt_expire_minutes) },
