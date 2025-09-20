@@ -3,12 +3,6 @@
 # hoặc qua GitHub Secrets (cho CI/CD).
 
 # --- MICROSERVICES CONFIGURATION ---
-variable "app_image_tag" {
-  type        = string
-  description = "The Docker image tag to deploy."
-  default     = "latest"
-}
-
 variable "auth_service_enabled" {
   type        = bool
   description = "Enable AuthService deployment"
@@ -77,9 +71,10 @@ variable "allowed_origins" {
 }
 
 # --- Biến cho CI/CD ---
-# Biến này đã có, dùng để truyền image tag từ pipeline
+# App image tag for deployments
 variable "app_image_tag" {
   type        = string
   description = "The Docker image tag to deploy."
+  default     = "latest"
 }
 
