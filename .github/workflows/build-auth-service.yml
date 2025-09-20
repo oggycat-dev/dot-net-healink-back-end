@@ -58,7 +58,8 @@ jobs:
         working-directory: ./terraform_healink
         run: terraform init -reconfigure
 
-     - name: Terraform Apply
+      # Bước 7: Terraform Apply
+      - name: Terraform Apply
         id: apply
         working-directory: ./terraform_healink
         run: >
