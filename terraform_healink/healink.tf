@@ -171,7 +171,14 @@ resource "aws_ecs_task_definition" "auth_service" {
         { name = "JWT_AUDIENCE", value = var.jwt_audience },
         { name = "JWT_EXPIRE_MINUTES", value = tostring(var.jwt_expire_minutes) },
         { name = "ADMIN_EMAIL", value = var.admin_email },
-        { name = "ALLOWED_ORIGINS", value = var.allowed_origins }
+        { name = "ALLOWED_ORIGINS", value = var.allowed_origins },
+        { name = "Redis__ConnectionString", value = "localhost:6379" },
+        { name = "Redis__InstanceName", value = "ProductAuthCache" },
+        { name = "Redis__Database", value = "0" },
+        { name = "Redis__ConnectTimeout", value = "5000" },
+        { name = "Redis__SyncTimeout", value = "5000" },
+        { name = "Redis__AbortOnConnectFail", value = "false" },
+        { name = "Redis__ConnectRetry", value = "3" }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -312,4 +319,20 @@ resource "aws_vpc_endpoint" "cloudwatch_logs" {
   subnet_ids          = var.public_subnets
   security_group_ids  = [aws_security_group.app_sg.id]
   private_dns_enabled = true
+}
+
+# --- OUTPUTS ---
+output "db_endpoint" {
+  description = "RDS instance endpoint"
+  value       = aws_db_instance.healink_db.endpoint
+}
+
+output "db_name" {
+  description = "Database name"
+  value       = aws_db_instance.healink_db.db_name
+}
+
+output "alb_dns_name" {
+  description = "ALB DNS name"
+  value       = aws_lb.main.dns_name
 }

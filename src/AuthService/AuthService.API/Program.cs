@@ -8,8 +8,7 @@ using ProductAuthMicroservice.Commons.Services;
 
 // Create startup logger
 var logger = LoggingConfiguration.CreateStartupLogger("AuthService");
-// Load environment variables from .env file
-DotNetEnv.Env.Load(".env");
+DotNetEnv.Env.Load();
 try
 {
     logger.LogInformation("Starting AuthService API in minimal mode...");
@@ -29,7 +28,7 @@ try
 
     // --- TẠM THỜI VÔ HIỆU HÓA TẤT CẢ CẤU HÌNH PIPELINE TÙY CHỈNH ---
      app.ConfigurePipeline();
-    // await app.ApplyAuthMigrationsAsync(logger); // Vô hiệu hóa vì migration đã chạy rồi
+    await app.ApplyAuthMigrationsAsync(logger); // Enable auto-migration for production
     await app.SeedAuthDataAsync(logger);
     // app.AddRabbitMQEventBus();
     // var eventBus = app.Services.GetRequiredService<...>();

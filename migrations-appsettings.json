@@ -1,0 +1,27 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=healink-db-instance.c5mgeqmgc9ch.ap-southeast-2.rds.amazonaws.com;Port=5432;Database=AuthServiceDB;Username=postgres_admin;Password=kwEItE&7xn1VuTSg"
+  },
+  "RedisConfiguration": {
+    "ConnectionString": "localhost:6379",
+    "Database": 0,
+    "InstanceName": "AuthService",
+    "Enabled": false
+  },
+  "JwtSettings": {
+    "Issuer": "AuthService",
+    "Audience": "AuthServiceUsers", 
+    "SecretKey": "dummy-key-for-migrations",
+    "ExpireMinutes": 60
+  },
+  "AdminUser": {
+    "Email": "admin@healink.com",
+    "Password": "dummy-password"
+  },
+  "AllowedOrigins": "http://localhost:3000",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}
