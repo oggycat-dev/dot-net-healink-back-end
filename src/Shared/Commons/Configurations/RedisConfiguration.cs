@@ -30,8 +30,12 @@ public static class RedisConfiguration
         // Check if Redis is enabled
         if (!redisConfig.Enabled)
         {
-            // Register a null Redis cache when disabled
+            // Register memory cache as fallback when Redis is disabled
+            services.AddMemoryCache();
             services.AddSingleton<IConnectionMultiplexer>(provider => null!);
+            
+            // Add in-memory distributed cache as fallback
+            services.AddDistributedMemoryCache();
             return services;
         }
 

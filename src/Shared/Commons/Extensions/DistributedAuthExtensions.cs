@@ -44,8 +44,12 @@ public static class DistributedAuthExtensions
         services.AddTransient<RefreshTokenRevokedEventHandler>();
         services.AddTransient<UserSessionsInvalidatedEventHandler>();
         
-        // Register background service for user state sync
-        services.AddHostedService<UserStateSyncService>();
+        // Register background service for user state sync only if Redis is enabled
+        var redisConfig = configuration.GetSection("Redis").Get<RedisConfig>();
+        if (redisConfig?.Enabled == true)
+        {
+            services.AddHostedService<UserStateSyncService>();
+        }
         
         return services;
     }
