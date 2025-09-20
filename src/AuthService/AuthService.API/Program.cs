@@ -8,7 +8,8 @@ using ProductAuthMicroservice.Commons.Services;
 
 // Create startup logger
 var logger = LoggingConfiguration.CreateStartupLogger("AuthService");
-
+// Load environment variables from .env file
+DotNetEnv.Env.Load(".env");
 try
 {
     logger.LogInformation("Starting AuthService API in minimal mode...");

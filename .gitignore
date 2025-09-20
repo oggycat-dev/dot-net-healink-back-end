@@ -127,3 +127,5 @@ launchSettings.json
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+*.tfvars
+*.tfstate.backup

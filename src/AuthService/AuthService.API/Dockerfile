@@ -3,6 +3,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 
+# Copy .env file from root project
+COPY [".env", ".env"]
+
 # Copy các file .csproj trước để tận dụng Docker layer caching
 COPY ["src/AuthService/AuthService.API/AuthService.API.csproj", "AuthService/AuthService.API/"]
 COPY ["src/AuthService/AuthService.Application/AuthService.Application.csproj", "AuthService/AuthService.Application/"]
@@ -31,11 +34,29 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=publish /app/publish .
 
+# Copy .env file to final image
+COPY [".env", ".env"]
+
 ENV ASPNETCORE_ENVIRONMENT=Docker
 ENV ASPNETCORE_URLS=http://+:80
 
 EXPOSE 80
+
+# --- CÁC THAY ĐỔI BẮT ĐẦU TỪ ĐÂY ---
+
+# 1. Sao chép file entrypoint.sh của anh vào trong image.
+#    Lưu ý: Đường dẫn "src/AuthService/AuthService.API/entrypoint.sh" là đường dẫn từ gốc repo.
+COPY ["src/AuthService/AuthService.API/entrypoint.sh", "."]
+
+# 2. Cấp quyền thực thi cho file script. Đây là bước bắt buộc trên Linux.
+RUN chmod +x ./entrypoint.sh
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost/health || exit 1
 
-ENTRYPOINT ["dotnet", "AuthService.API.dll"]
+# 3. Đặt script này làm lệnh khởi động chính của container.
+ENTRYPOINT ["./entrypoint.sh"]
+
+# 4. Lệnh khởi động ứng dụng của anh bây giờ trở thành CMD.
+#    Script entrypoint.sh sẽ gọi lệnh này sau khi đã chạy migration xong.
+CMD ["dotnet", "AuthService.API.dll"]
