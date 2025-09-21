@@ -176,5 +176,8 @@ public class UserDbContext : DbContext
 
         // Apply shared configurations
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
+        
+        // Add Saga entities for MassTransit
+        builder.AddSagaEntities();
     }
 }

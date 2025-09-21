@@ -1,6 +1,8 @@
 using AuthService.Application.Commons.DTOs;
 using AuthService.Application.Features.Auth.Commands.Login;
 using AuthService.Application.Features.Auth.Commands.Logout;
+using AuthService.Application.Features.Auth.Commands.Register;
+using AuthService.Application.Features.Auth.Commands.VerifyOtp;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Commons.Attributes;
@@ -10,7 +12,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace AuthService.API.Controllers.User;
 
-// <summary>
+/// <summary>
 /// Controller quản lý xác thực cho website User
 /// </summary>
 [ApiController]
@@ -25,6 +27,64 @@ public class AuthController : ControllerBase
     public AuthController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    /// <summary>
+    /// Register new user - starts the registration saga
+    /// </summary>
+    /// <param name="request">Registration request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Registration result</returns>
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [SwaggerOperation(
+        Summary = "Register new user",
+        Description = "Starts the registration workflow with OTP verification",
+        OperationId = "Register",
+        Tags = new[] { "User", "User_Auth" }
+    )]
+    public async Task<ActionResult<Result>> Register(
+        [FromBody] RegisterRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var command = new RegisterCommand(request);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.GetHttpStatusCode(), result);
+        }
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Verify OTP - continues the registration saga
+    /// </summary>
+    /// <param name="request">OTP verification request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Verification result</returns>
+    [HttpPost("verify-otp")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [SwaggerOperation(
+        Summary = "Verify OTP",
+        Description = "Verifies OTP for user registration or password reset",
+        OperationId = "VerifyOtp", 
+        Tags = new[] { "User", "User_Auth" }
+    )]
+    public async Task<ActionResult<Result>> VerifyOtp(
+        [FromBody] VerifyOtpRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var command = new VerifyOtpCommand(request);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.GetHttpStatusCode(), result);
+        }
+        return Ok(result);
     }
 
     /// <summary>
@@ -91,7 +151,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Logout failed (not authorized)</response>
     /// <response code="403">No access (user is not a User member)</response>
     [HttpPost("logout")]
-    [AuthorizeRoles("Admin", "Staff")]
+    [AuthorizeRoles("User")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]

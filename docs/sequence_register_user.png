@@ -1,0 +1,213 @@
+# Registration Saga Flow Diagram
+
+## Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthAPI as Auth API
+    participant Saga as Registration Saga
+    participant Cache as OTP Cache (Redis)
+    participant NotificationSvc as Notification Service
+    participant UserSvc as User Service
+    participant DB as Database
+
+    Note over Client, DB: Registration Flow with Saga Pattern
+
+    %% Step 1: Registration Request
+    Client->>AuthAPI: POST /api/auth/register
+    Note right of Client: { email, password, fullName, phoneNumber }
+    
+    AuthAPI->>Cache: Generate & Store OTP
+    Cache-->>AuthAPI: OTP Code + Expiration
+    
+    AuthAPI->>Saga: Publish RegistrationStarted
+    Note right of AuthAPI: { correlationId, userData, otpCode }
+    
+    AuthAPI-->>Client: 200 OK - Registration started
+    
+    %% Step 2: Send OTP Notification
+    Note over Saga: State: Started
+    Saga->>NotificationSvc: Send SendOtpNotification
+    Note right of Saga: { contact, otpCode, channel }
+    
+    NotificationSvc->>NotificationSvc: Send Email/SMS
+    NotificationSvc->>Saga: Publish OtpSent (Success)
+    
+    Note over Saga: State: OtpSent
+    
+    %% Step 3: OTP Verification
+    Client->>AuthAPI: POST /api/auth/verify-otp
+    Note right of Client: { contact, otpCode, channel }
+    
+    AuthAPI->>Cache: Verify OTP
+    Cache-->>AuthAPI: Verification Success
+    
+    AuthAPI->>Saga: Publish OtpVerified
+    Note right of AuthAPI: { correlationId, contact }
+    
+    AuthAPI-->>Client: 200 OK - OTP verified
+    
+    %% Step 4: Create User
+    Note over Saga: State: OtpVerified
+    Saga->>UserSvc: Send CreateUser
+    Note right of Saga: { email, encryptedPassword, fullName }
+    
+    UserSvc->>DB: Create User Record
+    DB-->>UserSvc: User Created
+    
+    UserSvc->>Saga: Publish UserCreated (Success)
+    Note right of UserSvc: { userId, success }
+    
+    %% Step 5: Send Welcome Notification
+    Note over Saga: State: UserCreated
+    Saga->>NotificationSvc: Send SendWelcomeNotification
+    NotificationSvc->>NotificationSvc: Send Welcome Email
+    
+    Saga->>Saga: Publish RegistrationCompleted
+    Note over Saga: State: Completed (Finalized)
+    
+    Note over Client, DB: Registration Successfully Completed
+```
+
+## Error Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthAPI as Auth API
+    participant Saga as Registration Saga
+    participant Cache as OTP Cache
+    participant NotificationSvc as Notification Service
+
+    Note over Client, NotificationSvc: Error Scenarios
+
+    %% OTP Send Failure
+    Client->>AuthAPI: POST /api/auth/register
+    AuthAPI->>Cache: Generate & Store OTP
+    AuthAPI->>Saga: Publish RegistrationStarted
+    
+    Saga->>NotificationSvc: Send SendOtpNotification
+    NotificationSvc->>Saga: Publish OtpSent (Failed)
+    Note right of NotificationSvc: { success: false, errorMessage }
+    
+    Note over Saga: State: Failed
+    Saga->>Saga: Publish RegistrationFailed
+    
+    %% OTP Timeout
+    Note over Saga: Alternative: OTP Timeout
+    Saga->>Saga: OtpTimeout (after 10 minutes)
+    Note over Saga: State: Failed
+    Saga->>Saga: Publish RegistrationFailed
+    
+    %% User Creation Failure
+    Note over Saga: Alternative: User Creation Fails
+    Saga->>UserSvc: Send CreateUser
+    UserSvc->>Saga: Publish UserCreated (Failed)
+    Note over Saga: State: Failed
+    Saga->>Saga: Publish RegistrationFailed
+```
+
+## State Transition Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Started : RegistrationStarted
+    
+    Started --> OtpSent : OtpSent(Success)
+    Started --> Failed : OtpSent(Failed)
+    
+    OtpSent --> OtpVerified : OtpVerified
+    OtpSent --> Failed : OtpTimeout
+    
+    OtpVerified --> UserCreated : UserCreated(Success)
+    OtpVerified --> Failed : UserCreated(Failed)
+    
+    UserCreated --> [*] : RegistrationCompleted
+    
+    Failed --> [*] : RegistrationFailed
+    
+    note right of Started
+        - Store user data
+        - Send OTP notification
+        - Schedule timeout
+    end note
+    
+    note right of OtpSent
+        - Wait for OTP verification
+        - Handle timeout
+    end note
+    
+    note right of OtpVerified
+        - Create user account
+        - Handle user creation result
+    end note
+    
+    note right of UserCreated
+        - Send welcome notification
+        - Complete saga
+    end note
+```
+
+## Implementation Architecture
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        WebApp[Web Application]
+        MobileApp[Mobile App]
+    end
+    
+    subgraph "API Gateway"
+        Gateway[API Gateway]
+    end
+    
+    subgraph "Auth Service"
+        AuthAPI[Auth API]
+        AuthHandler[Command Handlers]
+    end
+    
+    subgraph "Saga Orchestrator"
+        Saga[Registration Saga]
+        SagaDB[(Saga State Store)]
+    end
+    
+    subgraph "Notification Service"
+        NotifAPI[Notification API]
+        NotifConsumer[OTP Consumer]
+        WelcomeConsumer[Welcome Consumer]
+        EmailSvc[Email Service]
+    end
+    
+    subgraph "User Service"
+        UserAPI[User API]
+        UserConsumer[Create User Consumer]
+        UserDB[(User Database)]
+    end
+    
+    subgraph "Shared Infrastructure"
+        Redis[(OTP Cache)]
+        RabbitMQ[Message Broker]
+    end
+    
+    WebApp --> Gateway
+    MobileApp --> Gateway
+    Gateway --> AuthAPI
+    
+    AuthAPI --> AuthHandler
+    AuthHandler --> Redis
+    AuthHandler --> RabbitMQ
+    
+    RabbitMQ --> Saga
+    Saga --> SagaDB
+    
+    RabbitMQ --> NotifConsumer
+    RabbitMQ --> WelcomeConsumer
+    NotifConsumer --> EmailSvc
+    WelcomeConsumer --> EmailSvc
+    
+    RabbitMQ --> UserConsumer
+    UserConsumer --> UserDB
+    
+    Saga --> RabbitMQ
+```

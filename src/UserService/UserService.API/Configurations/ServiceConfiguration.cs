@@ -1,4 +1,5 @@
 using SharedLibrary.Commons.DependencyInjection;
+using SharedLibrary.Commons.Configurations;
 using UserService.Application;
 using UserService.Infrastructure;
 
@@ -13,6 +14,12 @@ public static class ServiceConfiguration
     {
         // Configure microservice with shared services (includes RabbitMQ EventBus)
         builder.ConfigureMicroserviceServices("UserService");
+
+        // Add MassTransit with consumers for User creation workflow
+        builder.Services.AddMassTransitWithConsumers(builder.Configuration, x =>
+        {
+            x.AddConsumer<UserService.Infrastructure.Consumers.CreateUserProfileConsumer>();
+        });
 
         // Application & Infrastructure layers
         builder.Services.AddApplication();

@@ -120,11 +120,11 @@ public class OutboxUnitOfWork : UnitOfWork, IOutboxUnitOfWork
                 // Save domain changes and outbox events
                 await SaveChangesAsync(cancellationToken);
 
-                // Publish events after successful save
-                await PublishPendingEventsAsync();
-
                 // Commit the transaction
                 await transaction.CommitAsync(cancellationToken);
+                
+                 // Publish events after successful save
+                await PublishPendingEventsAsync();
             }
             catch (Exception ex)
             {
