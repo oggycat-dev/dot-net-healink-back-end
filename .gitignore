@@ -133,6 +133,17 @@ launchSettings.json
 *.tfvars
 *.tfstate.backup
 
+# Terraform layers state files
+terraform_healink/stateful-infra/.terraform/
+terraform_healink/stateful-infra/*.tfstate
+terraform_healink/stateful-infra/*.tfstate.*
+terraform_healink/stateful-infra/.terraform.lock.hcl
+
+terraform_healink/app-infra/.terraform/
+terraform_healink/app-infra/*.tfstate
+terraform_healink/app-infra/*.tfstate.*
+terraform_healink/app-infra/.terraform.lock.hcl
+
 # Ignore PodcastRecommendation files
 collaborative_filtering_model.h5
 mappings.pkl
