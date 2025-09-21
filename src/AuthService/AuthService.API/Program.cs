@@ -40,7 +40,7 @@ try
     app.AddRabbitMQEventBus();
 
     // Subscribe to Product Events from ProductService
-    // var eventBus = app.Services.GetRequiredService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
+    var eventBus = app.Services.GetRequiredService<IEventBus>();
     // eventBus.Subscribe<ProductCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductCreatedEventHandler>();
     // eventBus.Subscribe<ProductUpdatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductUpdatedEventHandler>();
     // eventBus.Subscribe<ProductInventoryCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductInventoryCreatedEventHandler>();
