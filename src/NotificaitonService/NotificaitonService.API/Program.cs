@@ -15,10 +15,19 @@ try
     // Configure all services
     builder.ConfigureServices();
 
+    // TODO: Add distributed authentication later when building notification management UI
+    // builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
+
     var app = builder.Build();
 
     // Configure the application pipeline
     app.ConfigurePipeline();
+
+    // Add RabbitMQ Event Bus
+    app.AddRabbitMQEventBus();
+    
+    // TODO: Subscribe to auth events later when building notification management UI
+    // app.Services.SubscribeToAuthEvents();
     
     logger.LogInformation("NotificationService API configured successfully");
 

@@ -55,11 +55,9 @@ public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result>
                 return Result.Failure("Registration session not found. Please restart registration.", ErrorCodeEnum.NotFound);
             }
 
-            // Extract correlation ID from userData (assuming it was stored during registration)
-            // We need to modify the OTP cache to store saga correlation ID
-            // For now, we'll search for active saga by contact email
-            var correlationId = ExtractCorrelationId(otpData.userData, request.Contact);
-            if (correlationId == Guid.Empty)
+            // Extract correlation data - now strongly typed!
+            var correlationData = ExtractCorrelationData(otpData.userData, request.Contact);
+            if (correlationData?.CorrelationId == Guid.Empty || correlationData == null)
             {
                 _logger.LogError("Invalid correlation ID extracted for contact: {Contact}", request.Contact);
                 return Result.Failure("Invalid registration session. Please restart registration.", ErrorCodeEnum.ValidationFailed);
@@ -68,7 +66,7 @@ public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result>
             // Publish OtpVerified event to continue saga
             await _publishEndpoint.Publish<OtpVerified>(new
             {
-                CorrelationId = correlationId,
+                CorrelationId = correlationData.CorrelationId,
                 Contact = request.Contact,
                 Type = OtpTypeEnum.Registration,
                 VerifiedAt = DateTime.UtcNow
@@ -84,41 +82,27 @@ public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result>
         }
     }
 
-    private Guid ExtractCorrelationId(object userData, string contact)
+    private RegistrationCorrelationData? ExtractCorrelationData(object userData, string contact)
     {
         try
         {
-            // Try to extract correlation ID from userData
+            // Direct deserialization for strongly-typed object
             if (userData != null)
             {
-                // Convert userData to JsonElement first
                 var json = JsonSerializer.Serialize(userData);
-                var jsonDocument = JsonDocument.Parse(json);
-
-                // Check if userData has CorrelationId property
-                if (jsonDocument.RootElement.TryGetProperty("CorrelationId", out var correlationIdElement))
+                var correlationData = JsonSerializer.Deserialize<RegistrationCorrelationData>(json);
+                
+                if (correlationData?.CorrelationId != Guid.Empty)
                 {
-                    if (correlationIdElement.TryGetGuid(out var correlationId))
-                    {
-                        return correlationId;
-                    }
-                }
-
-                // Check if userData has OriginalRequest wrapper
-                if (jsonDocument.RootElement.TryGetProperty("CorrelationId", out var wrapperCorrelationId))
-                {
-                    if (wrapperCorrelationId.TryGetGuid(out var wrappedId))
-                    {
-                        return wrappedId;
-                    }
+                    return correlationData;
                 }
             }
-            return Guid.Empty;
+            return null;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to extract correlation ID from userData for contact: {Contact}", contact);
-            return Guid.Empty;
+            _logger.LogWarning(ex, "Failed to extract correlation data from userData for contact: {Contact}", contact);
+            return null;
         }
     }
 }

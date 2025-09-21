@@ -26,6 +26,21 @@ public record GenerateOtp
     public string Contact { get; init; } = string.Empty; // Email hoặc Phone
     public NotificationChannelEnum Channel { get; init; }
     public string Purpose { get; init; } = string.Empty;
-    public OtpTypeEnum OtpType { get; init; }
+    public OtpTypeEnum OtpType { get; init; } = OtpTypeEnum.Registration;
     public int ExpiryMinutes { get; init; } = 5;
+}
+
+/// <summary>
+/// Event để bắt đầu registration saga workflow
+/// </summary>
+public record RegistrationStarted
+{
+    public Guid CorrelationId { get; init; }
+    public string Email { get; init; } = string.Empty;
+    public string EncryptedPassword { get; init; } = string.Empty;
+    public string FullName { get; init; } = string.Empty;
+    public string PhoneNumber { get; init; } = string.Empty;
+    public string OtpCode { get; init; } = string.Empty;
+    public NotificationChannelEnum Channel { get; init; }
+    public int ExpiresInMinutes { get; init; } = 5;
 }

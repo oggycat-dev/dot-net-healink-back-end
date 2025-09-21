@@ -100,7 +100,7 @@ namespace UserService.Infrastructure.Migrations
 
                     b.HasIndex("ProcessedAt", "NextRetryAt", "RetryCount");
 
-                    b.ToTable("OutboxEvents");
+                    b.ToTable("OutboxEvents", (string)null);
                 });
 
             modelBuilder.Entity("UserService.Domain.Entities.BusinessRole", b =>

@@ -59,9 +59,6 @@ public static class UserInfrastructureDependencyInjection
             return new OutboxUnitOfWork(context, eventBus, logger);
         });
 
-        // Add product-specific infrastructure services
-        // services.AddScoped<IProductRepository, ProductRepository>();
-
         return services;
     }
 }

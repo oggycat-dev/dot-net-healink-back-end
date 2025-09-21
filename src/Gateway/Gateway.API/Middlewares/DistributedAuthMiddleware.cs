@@ -136,9 +136,12 @@ public class DistributedAuthMiddleware
         var publicPaths = new[]
         {
             "/health",
-            "/api/auth/login",
-            "/api/auth/register",
-            "/api/auth/refresh-token",
+            "/api/auth/health",
+            "/api/users/health",
+            "/api/user/auth/register",
+            "/api/user/auth/verify-otp", 
+            "/api/user/auth/login",
+            "/api/cms/auth/login",
             "/swagger",
             "/api-docs"
         };

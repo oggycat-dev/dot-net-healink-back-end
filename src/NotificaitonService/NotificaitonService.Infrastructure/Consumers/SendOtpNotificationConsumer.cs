@@ -1,5 +1,6 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
 using NotificationService.Application.Commons.Enums;
 using NotificationService.Application.Commons.Interfaces;
 using NotificationService.Application.Commons.Models;
@@ -14,21 +15,46 @@ public class SendOtpNotificationConsumer : IConsumer<SendOtpNotification>
 {
     private readonly INotificationFactory _notificationFactory;
     private readonly ILogger<SendOtpNotificationConsumer> _logger;
+    private readonly IMemoryCache _cache;
+    private static readonly TimeSpan IdempotencyWindow = TimeSpan.FromMinutes(10);
 
     public SendOtpNotificationConsumer(
         INotificationFactory notificationFactory,
-        ILogger<SendOtpNotificationConsumer> logger)
+        ILogger<SendOtpNotificationConsumer> logger,
+        IMemoryCache cache)
     {
         _notificationFactory = notificationFactory;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task Consume(ConsumeContext<SendOtpNotification> context)
     {
         var message = context.Message;
+        var idempotencyKey = $"otp_notification_{message.CorrelationId}_{message.Contact}";
         
         try
         {
+            // Check for duplicate processing using idempotency
+            if (_cache.TryGetValue(idempotencyKey, out _))
+            {
+                _logger.LogInformation("Duplicate SendOtpNotification detected for contact: {Contact}, CorrelationId: {CorrelationId}. Skipping processing.", 
+                    message.Contact, message.CorrelationId);
+                
+                // Publish success response as this was already processed
+                await context.Publish<OtpSent>(new
+                {
+                    CorrelationId = message.CorrelationId,
+                    Success = true,
+                    ErrorMessage = (string?)null,
+                    SentAt = DateTime.UtcNow
+                });
+                return;
+            }
+            
+            // Mark as processing to prevent duplicates
+            _cache.Set(idempotencyKey, DateTime.UtcNow, IdempotencyWindow);
+            
             _logger.LogInformation("Processing SendOtpNotification for contact: {Contact}, CorrelationId: {CorrelationId}", 
                 message.Contact, message.CorrelationId);
 

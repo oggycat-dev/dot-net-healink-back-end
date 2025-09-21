@@ -177,7 +177,8 @@ public class UserDbContext : DbContext
         // Apply shared configurations
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
         
-        // Add Saga entities for MassTransit
-        builder.AddSagaEntities();
+        // UserService không cần Saga entities - chỉ là consumer
+        // Saga tables chỉ có ở AuthService (Saga orchestrator)
+        //builder.AddSagaEntities();
     }
 }

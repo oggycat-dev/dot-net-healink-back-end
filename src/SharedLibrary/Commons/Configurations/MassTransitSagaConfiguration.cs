@@ -19,11 +19,15 @@ public static class MassTransitSagaConfiguration
     public static IServiceCollection AddMassTransitWithSaga<TDbContext>(
         this IServiceCollection services, 
         IConfiguration configuration,
+        Action<IRegistrationConfigurator>? configureConsumers = null,
         string connectionStringKey = "DefaultConnection")
         where TDbContext : DbContext
     {
         var rabbitMQConfig = configuration.GetSection("RabbitMQ").Get<RabbitMQConfig>();
-        var connectionString = configuration.GetConnectionString(connectionStringKey);
+        
+        // Sử dụng ConnectionConfig thay vì GetConnectionString để tương thích với infrastructure
+        var connectionConfig = configuration.GetSection("ConnectionConfig").Get<ConnectionConfig>();
+        var connectionString = connectionConfig?.DefaultConnection;
         
         if (rabbitMQConfig == null)
         {
@@ -32,18 +36,29 @@ public static class MassTransitSagaConfiguration
         
         if (string.IsNullOrEmpty(connectionString))
         {
-            throw new ArgumentNullException(nameof(connectionString), "Database connection string not found");
+            throw new ArgumentNullException(nameof(connectionString), "Database connection string not found in ConnectionConfig");
         }
 
         services.AddMassTransit(x =>
         {
-            // Add Registration Saga
+            // Add Registration Saga with optimized configuration
             x.AddSagaStateMachine<RegistrationSaga, RegistrationSagaState>()
                 .EntityFrameworkRepository(r =>
                 {
                     r.ExistingDbContext<TDbContext>();
                     r.UsePostgres();
+                    
+                    // CRITICAL: Use pessimistic concurrency for data integrity
+                    // Prevents duplicate key violations during concurrent saga creation
+                    r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
+                    
+                    // ReadCommitted isolation - Serializable was causing deadlocks/retries
+                    // This allows proper saga creation without blocking on concurrent access
+                    r.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;
                 });
+
+            // Configure consumers (e.g., for AuthService consumers)
+            configureConsumers?.Invoke(x);
 
             // Configure RabbitMQ transport
             x.UsingRabbitMq((context, cfg) =>
@@ -62,17 +77,32 @@ public static class MassTransitSagaConfiguration
                     }
                 });
 
-                // Configure message retry
-                cfg.UseMessageRetry(r => r.Interval(rabbitMQConfig.RetryCount, TimeSpan.FromSeconds(rabbitMQConfig.RetryDelaySeconds)));
+                // Disable global retry for AuthService - prioritize data integrity
+                cfg.UseMessageRetry(r => r.None());
+                
+                // TODO: Configure proper message scheduler when RabbitMQ delayed message plugin is available
+                // For now, remove scheduling to avoid plugin dependency
                 
                 // Configure endpoints
                 cfg.ConfigureEndpoints(context);
                 
-                // Configure saga endpoint
+                // Configure saga endpoint with proper fault handling
                 cfg.ReceiveEndpoint("registration-saga", e =>
                 {
                     e.ConfigureSaga<RegistrationSagaState>(context);
-                    e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+                    
+                    // CRITICAL: Disable ALL retry mechanisms
+                    e.UseMessageRetry(r => r.None());
+                    
+                    // CRITICAL: Handle faults without retrying
+                    e.DiscardFaultedMessages();
+                    e.DiscardSkippedMessages();
+                    
+                    // Single threaded processing to prevent race conditions
+                    e.ConcurrentMessageLimit = 1;
+                    
+                    // Minimal prefetch to reduce duplicate processing  
+                    e.PrefetchCount = 1;
                 });
             });
         });
@@ -126,34 +156,5 @@ public static class MassTransitSagaConfiguration
         });
 
         return services;
-    }
-
-    /// <summary>
-    /// Add Database configuration for Saga persistence
-    /// </summary>
-    public static void AddSagaTables(this ModelBuilder modelBuilder)
-    {
-        // Configure RegistrationSagaState table
-        modelBuilder.Entity<RegistrationSagaState>(entity =>
-        {
-            entity.HasKey(x => x.CorrelationId);
-            entity.Property(x => x.CurrentState).HasMaxLength(64);
-            entity.Property(x => x.Email).HasMaxLength(256);
-            entity.Property(x => x.EncryptedPassword).HasMaxLength(512);
-            entity.Property(x => x.FullName).HasMaxLength(256);
-            entity.Property(x => x.PhoneNumber).HasMaxLength(20);
-            entity.Property(x => x.OtpCode).HasMaxLength(10);
-            entity.Property(x => x.ErrorMessage).HasMaxLength(1000);
-            entity.Property(x => x.Channel).HasConversion<string>();
-            
-            entity.Property(x => x.AuthUserId);
-            entity.Property(x => x.UserProfileId);
-            entity.Property(x => x.AuthUserCreatedAt);
-            entity.Property(x => x.UserProfileCreatedAt);
-            
-            entity.HasIndex(x => x.Email);
-            entity.HasIndex(x => x.CreatedAt);
-            entity.HasIndex(x => x.CurrentState);
-        });
     }
 }

@@ -6,6 +6,7 @@ using NotificationService.Application.Commons.Interfaces;
 using NotificationService.Application.Commons.Models;
 using NotificationService.Infrastructure.Helpers;
 using SharedLibrary.Commons.Enums;
+using SharedLibrary.Commons.Models.Otp;
 
 namespace NotificationService.Infrastructure.Services;
 

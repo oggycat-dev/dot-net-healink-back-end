@@ -6,11 +6,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SharedLibrary.Commons.EventBus;
 using SharedLibrary.Commons.Outbox;
 using SharedLibrary.Commons.Repositories;
 using SharedLibrary.Commons.Services;
 using SharedLibrary.Commons.Configs;
+using SharedLibrary.Commons.Cache;
+using SharedLibrary.Commons.Models.Otp;
 
 namespace AuthService.Infrastructure;
 
@@ -28,18 +31,13 @@ public static class AuthInfrastructureDependencyInjection
             throw new InvalidOperationException("AuthService database connection string not found");
         }
 
-        // Configure AuthDbContext with PostgreSQL
+        // Configure AuthDbContext with PostgreSQL - No retry to support TransactionScope
         services.AddDbContext<AuthDbContext>(options =>
         {
             options.UseNpgsql(connectionConfig.DefaultConnection, npgsqlOptions =>
             {
-                if (connectionConfig.RetryOnFailure)
-                {
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: connectionConfig.MaxRetryCount > 0 ? connectionConfig.MaxRetryCount : 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(connectionConfig.MaxRetryDelay > 0 ? connectionConfig.MaxRetryDelay : 30),
-                        errorCodesToAdd: null);
-                }
+                // Disable retry on failure to support TransactionScope usage
+                // TransactionScope conflicts with connection retry mechanisms
                 npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
             });
         });
@@ -136,6 +134,20 @@ public static class AuthInfrastructureDependencyInjection
         // Add auth-specific infrastructure services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthJwtService, AuthJwtService>();
+        
+        // Configure OtpSettings from appsettings.json
+        services.Configure<OtpSettings>(configuration.GetSection("OtpSettings"));
+
+        // Add Redis cache
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis");
+        });
+        
+        // Register OTP cache service
+        services.AddScoped<IOtpCacheService, OtpCacheService>();
+
+        // MassTransit consumers are automatically registered via AddMassTransitWithSaga
 
         return services;
     }

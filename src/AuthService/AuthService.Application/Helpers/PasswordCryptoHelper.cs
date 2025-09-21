@@ -24,22 +24,47 @@ public static class PasswordCryptoHelper
 
     public static string Decrypt(string cipherText, string encryptKey)
     {
-        var fullCipher = Convert.FromBase64String(cipherText);
-        using var aes = Aes.Create();
-        aes.Key = Encoding.UTF8.GetBytes(encryptKey);
+        if (string.IsNullOrEmpty(cipherText))
+            throw new ArgumentException("Cipher text cannot be null or empty", nameof(cipherText));
+        
+        if (string.IsNullOrEmpty(encryptKey))
+            throw new ArgumentException("Encryption key cannot be null or empty", nameof(encryptKey));
 
-        var iv = new byte[aes.BlockSize / 8];
-        var cipher = new byte[fullCipher.Length - iv.Length];
+        try
+        {
+            var fullCipher = Convert.FromBase64String(cipherText);
+            using var aes = Aes.Create();
+            aes.Key = Encoding.UTF8.GetBytes(encryptKey);
 
-        Array.Copy(fullCipher, iv, iv.Length);
-        Array.Copy(fullCipher, iv.Length, cipher, 0, cipher.Length);
+            var ivLength = aes.BlockSize / 8;
+            
+            // Validate that we have enough data for IV + encrypted content
+            if (fullCipher.Length < ivLength)
+            {
+                throw new ArgumentException($"Invalid cipher text: length {fullCipher.Length} is less than required IV length {ivLength}");
+            }
 
-        aes.IV = iv;
+            var iv = new byte[ivLength];
+            var cipher = new byte[fullCipher.Length - ivLength];
 
-        using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-        using var ms = new MemoryStream(cipher);
-        using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-        using var sr = new StreamReader(cs);
-        return sr.ReadToEnd();
+            Array.Copy(fullCipher, iv, ivLength);
+            Array.Copy(fullCipher, ivLength, cipher, 0, cipher.Length);
+
+            aes.IV = iv;
+
+            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+            using var ms = new MemoryStream(cipher);
+            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+            using var sr = new StreamReader(cs);
+            return sr.ReadToEnd();
+        }
+        catch (FormatException ex)
+        {
+            throw new ArgumentException("Invalid Base64 cipher text format", nameof(cipherText), ex);
+        }
+        catch (CryptographicException ex)
+        {
+            throw new ArgumentException("Failed to decrypt password - invalid key or corrupted data", nameof(cipherText), ex);
+        }
     }
 }

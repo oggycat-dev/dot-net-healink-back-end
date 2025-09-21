@@ -19,6 +19,7 @@ public static class ServiceConfiguration
         builder.Services.AddMassTransitWithConsumers(builder.Configuration, x =>
         {
             x.AddConsumer<UserService.Infrastructure.Consumers.CreateUserProfileConsumer>();
+            x.AddConsumer<UserService.Infrastructure.Consumers.DeleteUserProfileConsumer>();
         });
 
         // Application & Infrastructure layers

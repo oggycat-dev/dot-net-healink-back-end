@@ -70,8 +70,9 @@ public static class RedisConfiguration
         // Add Redis configuration first
         services.AddRedisConfiguration(configuration);
         
-        // Register IUserStateCache as Scoped - Redis connections are thread-safe
-        services.AddScoped<IUserStateCache, RedisUserStateCache>();
+        // Register IUserStateCache as Singleton - needed for middleware injection
+        // Redis connections are thread-safe and can be used as singleton
+        services.AddSingleton<IUserStateCache, RedisUserStateCache>();
 
         return services;
     }

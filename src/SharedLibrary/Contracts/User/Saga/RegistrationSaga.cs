@@ -19,50 +19,98 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
         
         InstanceState(x => x.CurrentState);
         
-        // Cấu hình Events
-        Event(() => RegistrationStartedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+        // Configure Events with proper correlation strategy
+        // CRITICAL: Each event correlates by unique CorrelationId - allows multiple sagas per email
+        Event(() => RegistrationStartedEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            // OPTIMIZED: Let MassTransit handle saga creation automatically
+            // This prevents race conditions and duplicate key violations
+        });
+        
         Event(() => OtpSentEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
         Event(() => OtpVerifiedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
         Event(() => AuthUserCreatedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
         Event(() => UserProfileCreatedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
         
-        // Cấu hình Timeout Schedule
-        Schedule(() => OtpTimeoutSchedule, instance => instance.OtpTimeoutTokenId, s =>
-        {
-            s.Delay = TimeSpan.FromMinutes(5); // OTP hết hạn sau 5 phút
-            s.Received = e => e.CorrelateById(context => context.Message.CorrelationId);
-        });
+        // Compensating Events
+        Event(() => AuthUserDeletedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+        Event(() => UserProfileDeletedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
         
-        // Định nghĩa workflow
+        // TODO: Re-enable timeout scheduling when RabbitMQ delayed message plugin is available
+        // Schedule(() => OtpTimeoutSchedule, instance => instance.OtpTimeoutTokenId, s =>
+        // {
+        //     s.Delay = TimeSpan.FromMinutes(5); // OTP hết hạn sau 5 phút
+        //     s.Received = e => e.CorrelateById(context => context.Message.CorrelationId);
+        // });
+        
+        // Định nghĩa workflow với idempotency check
         Initially(
             When(RegistrationStartedEvent)
-                .Then(context =>
-                {
-                    context.Saga.CorrelationId = context.Message.CorrelationId;
-                    context.Saga.Email = context.Message.Email;
-                    context.Saga.FullName = context.Message.FullName;
-                    context.Saga.Channel = context.Message.Channel;
-                    context.Saga.StartedAt = DateTime.UtcNow;
+                .IfElse(context => context.Saga.CorrelationId == Guid.Empty,
+                    // ✅ First time - create new saga
+                    x => x.Then(context =>
+                    {
+                        var timestamp = DateTime.UtcNow;
+                        
+                        // Log incoming message for debugging
+                        _logger.LogInformation("NEW RegistrationSaga instance created - Email: {Email}, CorrelationId: {CorrelationId}, Timestamp: {Timestamp}", 
+                            context.Message.Email, context.Message.CorrelationId, timestamp);
+                        
+                        // COMPREHENSIVE STATE INITIALIZATION - Each saga instance is completely independent
+                        context.Saga.CorrelationId = context.Message.CorrelationId;
+                        context.Saga.Email = context.Message.Email;
+                        context.Saga.EncryptedPassword = context.Message.EncryptedPassword;
+                        context.Saga.FullName = context.Message.FullName;
+                        context.Saga.PhoneNumber = context.Message.PhoneNumber;
+                        context.Saga.Channel = context.Message.Channel;
+                        context.Saga.OtpCode = context.Message.OtpCode;
+                        context.Saga.ExpiresInMinutes = context.Message.ExpiresInMinutes;
+                        
+                        // Timestamps
+                        context.Saga.CreatedAt = timestamp;
+                        context.Saga.StartedAt = timestamp;
+                        
+                        // Status flags
+                        context.Saga.IsCompleted = false;
+                        context.Saga.IsFailed = false;
+                        context.Saga.RetryCount = 0;
+                        
+                        // Clear any potential residual data
+                        context.Saga.OtpSentAt = null;
+                        context.Saga.OtpVerifiedAt = null;
+                        context.Saga.AuthUserCreatedAt = null;
+                        context.Saga.UserProfileCreatedAt = null;
+                        context.Saga.CompletedAt = null;
+                        context.Saga.AuthUserId = null;
+                        context.Saga.UserProfileId = null;
+                        context.Saga.ErrorMessage = null;
+                        context.Saga.OtpTimeoutTokenId = null;
+                        
+                        _logger.LogInformation("Saga {CorrelationId} initialized successfully - Email: {Email}, FullName: {FullName}, Channel: {Channel}", 
+                            context.Saga.CorrelationId, context.Saga.Email, context.Saga.FullName, context.Saga.Channel);
+                    })
+                    .PublishAsync(context => context.Init<SendOtpNotification>(new
+                    {
+                        CorrelationId = context.Saga.CorrelationId,
+                        Contact = context.Message.Channel == NotificationChannelEnum.Email 
+                            ? context.Message.Email 
+                            : context.Message.PhoneNumber,
+                        OtpCode = context.Message.OtpCode,
+                        Channel = context.Message.Channel,
+                        OtpType = OtpTypeEnum.Registration,
+                        FullName = context.Message.FullName,
+                        ExpiresInMinutes = context.Message.ExpiresInMinutes
+                    }))
+                    .TransitionTo(Started),
                     
-                    _logger.LogInformation("Registration saga started for {Email}", context.Message.Email);
-                })
-                .PublishAsync(context => context.Init<GenerateOtp>(new
-                {
-                    CorrelationId = context.Saga.CorrelationId,
-                    UserId = context.Saga.CorrelationId, // Dùng CorrelationId làm UserId tạm
-                    Contact = context.Message.Channel == NotificationChannelEnum.Email 
-                        ? context.Message.Email 
-                        : context.Message.PhoneNumber,
-                    Channel = context.Message.Channel,
-                    Purpose = "Registration Verification",
-                    OtpType = OtpTypeEnum.Registration,
-                    ExpiryMinutes = 5
-                }))
-                .Schedule(OtpTimeoutSchedule, context => context.Init<OtpTimeout>(new
-                {
-                    CorrelationId = context.Saga.CorrelationId
-                }))
-                .TransitionTo(Started)
+                    // ❌ Duplicate - ignore safely
+                    x => x.Then(context =>
+                    {
+                        _logger.LogWarning("DUPLICATE RegistrationStarted ignored - Email: {Email}, CorrelationId: {CorrelationId}, Current State: {State}", 
+                            context.Message.Email, context.Message.CorrelationId, context.Saga.CurrentState);
+                    })
+                )
         );
         
         During(Started,
@@ -74,89 +122,139 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                 })
                 .TransitionTo(OtpSent),
                 
-            When(OtpTimeoutSchedule.Received)
-                .Then(context =>
-                {
-                    context.Saga.ErrorMessage = "OTP generation timeout";
-                    _logger.LogWarning("OTP generation timeout for {Email}", context.Saga.Email);
-                })
-                .TransitionTo(Failed)
+            // Ignore duplicate events
+            Ignore(RegistrationStartedEvent)
         );
         
         During(OtpSent,
             When(OtpVerifiedEvent)
-                .Then(context =>
-                {
-                    context.Saga.OtpVerifiedAt = DateTime.UtcNow;
-                    _logger.LogInformation("OTP verified for registration {Email}", context.Saga.Email);
-                })
-                .Unschedule(OtpTimeoutSchedule)
-                .PublishAsync(context => context.Init<CreateAuthUser>(new
-                {
-                    CorrelationId = context.Saga.CorrelationId,
-                    Email = context.Saga.Email,
-                    FullName = context.Saga.FullName
-                }))
-                .TransitionTo(OtpVerified),
+                .IfElse(context => !string.IsNullOrEmpty(context.Saga.Email), 
+                    // ✅ Success path - saga state is valid
+                    x => x.Then(context =>
+                    {
+                        context.Saga.OtpVerifiedAt = DateTime.UtcNow;
+                        _logger.LogInformation("OTP verified for registration {Email}. Saga state - CorrelationId: {CorrelationId}, Email: {SagaEmail}, FullName: {SagaFullName}", 
+                            context.Saga.Email, context.Saga.CorrelationId, context.Saga.Email, context.Saga.FullName);
+                    })
+                    .PublishAsync(context => 
+                    {
+                        _logger.LogInformation("Publishing CreateAuthUser for email: {Email}, CorrelationId: {CorrelationId}", 
+                            context.Saga.Email, context.Saga.CorrelationId);
+                        
+                        return context.Init<CreateAuthUser>(new
+                        {
+                            CorrelationId = context.Saga.CorrelationId,
+                            Email = context.Saga.Email,
+                            EncryptedPassword = context.Saga.EncryptedPassword,
+                            FullName = context.Saga.FullName,
+                            PhoneNumber = context.Saga.PhoneNumber
+                        });
+                    }).TransitionTo(OtpVerified),
+                    
+                    // ❌ Failure path - saga state is corrupted  
+                    x => x.Then(context =>
+                    {
+                        _logger.LogError("CRITICAL: Saga state corrupted on OtpVerified - Email is empty! CorrelationId: {CorrelationId}. Transitioning to Failed state.", 
+                            context.Saga.CorrelationId);
+                        
+                        context.Saga.ErrorMessage = "Saga state corrupted: Email is empty during OTP verification";
+                        context.Saga.IsFailed = true;
+                        context.Saga.CompletedAt = DateTime.UtcNow;
+                    })
+                    .PublishAsync(context => context.Init<RegistrationFailed>(new
+                    {
+                        CorrelationId = context.Saga.CorrelationId,
+                        Email = context.Saga.Email ?? "unknown",
+                        ErrorMessage = context.Saga.ErrorMessage ?? "Saga state corrupted",
+                        FailureReason = "Email empty during OTP verification",
+                        FailedAt = DateTime.UtcNow
+                    }))
+                    .TransitionTo(Failed)),
                 
-            When(OtpTimeoutSchedule.Received)
-                .Then(context =>
-                {
-                    context.Saga.ErrorMessage = "OTP verification timeout";
-                    _logger.LogWarning("OTP verification timeout for {Email}", context.Saga.Email);
-                })
-                .TransitionTo(Failed)
+            // Ignore duplicate events
+            Ignore(RegistrationStartedEvent),
+            Ignore(OtpSentEvent)
         );
         
         During(OtpVerified,
             When(AuthUserCreatedEvent)
-                .Then(context =>
-                {
-                    context.Saga.AuthUserId = context.Message.UserId;
-                    context.Saga.AuthUserCreatedAt = DateTime.UtcNow;
-                    _logger.LogInformation("Auth user created for {Email} with ID {UserId}", 
-                        context.Saga.Email, context.Message.UserId);
-                })
-                .PublishAsync(context => context.Init<CreateUserProfile>(new
-                {
-                    CorrelationId = context.Saga.CorrelationId,
-                    UserId = context.Saga.AuthUserId, // UserId từ AuthService
-                    Email = context.Saga.Email,
-                    FullName = context.Saga.FullName
-                }))
-                .TransitionTo(AuthUserCreated),
+                .If(context => context.Message.Success, x => x // Success case
+                    .Then(context =>
+                    {
+                        context.Saga.AuthUserId = context.Message.UserId;
+                        context.Saga.AuthUserCreatedAt = DateTime.UtcNow;
+                        _logger.LogInformation("Auth user created for {Email} with ID {UserId}", 
+                            context.Saga.Email, context.Message.UserId);
+                    })
+                    .PublishAsync(context => context.Init<CreateUserProfile>(new
+                    {
+                        CorrelationId = context.Saga.CorrelationId,
+                        UserId = context.Saga.AuthUserId, // UserId từ AuthService
+                        Email = context.Saga.Email,
+                        FullName = context.Saga.FullName,
+                        PhoneNumber = context.Saga.PhoneNumber
+                    }))
+                    .TransitionTo(AuthUserCreated))
+                .If(context => !context.Message.Success, x => x // Failure case
+                    .Then(context =>
+                    {
+                        context.Saga.ErrorMessage = $"Auth user creation failed: {context.Message.ErrorMessage}";
+                        _logger.LogError("Auth user creation failed for {Email}: {Error}", 
+                            context.Saga.Email, context.Message.ErrorMessage);
+                    })
+                    .TransitionTo(Failed)),
                 
-            When(OtpTimeoutSchedule.Received)
-                .Then(context =>
-                {
-                    context.Saga.ErrorMessage = "Auth user creation timeout";
-                    _logger.LogWarning("Auth user creation timeout for {Email}", context.Saga.Email);
-                })
-                .TransitionTo(Failed)
+            // Ignore duplicate events
+            Ignore(RegistrationStartedEvent),
+            Ignore(OtpSentEvent),
+            Ignore(OtpVerifiedEvent)
         );
         
         During(AuthUserCreated,
             When(UserProfileCreatedEvent)
-                .Then(context =>
-                {
-                    context.Saga.UserProfileId = context.Message.UserProfileId;
-                    context.Saga.UserProfileCreatedAt = DateTime.UtcNow;
-                    context.Saga.CompletedAt = DateTime.UtcNow;
-                    _logger.LogInformation("User profile created for {Email} with ProfileID {ProfileId}", 
-                        context.Saga.Email, context.Message.UserProfileId);
-                })
-                .TransitionTo(UserProfileCreated),
+                .If(context => context.Message.Success, x => x // Success case
+                    .Then(context =>
+                    {
+                        context.Saga.UserProfileId = context.Message.UserProfileId;
+                        context.Saga.UserProfileCreatedAt = DateTime.UtcNow;
+                        context.Saga.CompletedAt = DateTime.UtcNow;
+                        context.Saga.IsCompleted = true;
+                        context.Saga.IsFailed = false;
+                        
+                        _logger.LogInformation("Registration COMPLETED successfully for {Email} - CorrelationId: {CorrelationId}, AuthUserId: {AuthUserId}, ProfileId: {ProfileId}", 
+                            context.Saga.Email, context.Saga.CorrelationId, context.Saga.AuthUserId, context.Message.UserProfileId);
+                    })
+                    .PublishAsync(context => context.Init<SendWelcomeNotification>(new
+                    {
+                        CorrelationId = context.Saga.CorrelationId,
+                        Email = context.Saga.Email,
+                        FullName = context.Saga.FullName
+                    }))
+                    .Finalize())
+                .If(context => !context.Message.Success, x => x // Failure case - need to rollback AuthUser
+                    .Then(context =>
+                    {
+                        context.Saga.ErrorMessage = $"User profile creation failed: {context.Message.ErrorMessage}";
+                        _logger.LogError("User profile creation failed for {Email}: {Error}. Rolling back AuthUser {UserId}", 
+                            context.Saga.Email, context.Message.ErrorMessage, context.Saga.AuthUserId);
+                    })
+                    .PublishAsync(context => context.Init<DeleteAuthUser>(new
+                    {
+                        CorrelationId = context.Saga.CorrelationId,
+                        UserId = context.Saga.AuthUserId,
+                        Reason = "UserProfile creation failed"
+                    }))
+                    .TransitionTo(RollingBack)),
                 
-            When(OtpTimeoutSchedule.Received)
-                .Then(context =>
-                {
-                    context.Saga.ErrorMessage = "User profile creation timeout";
-                    _logger.LogWarning("User profile creation timeout for {Email}", context.Saga.Email);
-                })
-                .TransitionTo(Failed)
+            // Ignore duplicate events
+            Ignore(RegistrationStartedEvent),
+            Ignore(OtpSentEvent),
+            Ignore(OtpVerifiedEvent),
+            Ignore(AuthUserCreatedEvent)
         );
         
         During(UserProfileCreated,
+            // Ignore all events since workflow is complete - saga will auto-finalize
             Ignore(RegistrationStartedEvent),
             Ignore(OtpSentEvent),
             Ignore(OtpVerifiedEvent),
@@ -164,23 +262,48 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(UserProfileCreatedEvent)
         );
         
+        // Handle rollback process
+        During(RollingBack,
+            When(AuthUserDeletedEvent)
+                .If(context => context.Message.Success, x => x
+                    .Then(context =>
+                    {
+                        _logger.LogInformation("AuthUser {UserId} successfully deleted during rollback for {Email}", 
+                            context.Message.UserId, context.Saga.Email);
+                    })
+                    .TransitionTo(RolledBack))
+                .If(context => !context.Message.Success, x => x
+                    .Then(context =>
+                    {
+                        context.Saga.ErrorMessage += $" | AuthUser deletion failed: {context.Message.ErrorMessage}";
+                        _logger.LogError("Failed to delete AuthUser {UserId} during rollback for {Email}: {Error}", 
+                            context.Message.UserId, context.Saga.Email, context.Message.ErrorMessage);
+                    })
+                    .TransitionTo(Failed))
+        );
+        
         During(Failed,
+            // Ignore all events in Failed state - saga will auto-finalize
             Ignore(RegistrationStartedEvent),
             Ignore(OtpSentEvent),
             Ignore(OtpVerifiedEvent),
             Ignore(AuthUserCreatedEvent),
             Ignore(UserProfileCreatedEvent),
-            Ignore(OtpTimeoutSchedule.Received)
+            Ignore(AuthUserDeletedEvent),
+            Ignore(UserProfileDeletedEvent)
         );
         
-        DuringAny(
-            When(RegistrationStartedEvent)
-                .Then(context =>
-                {
-                    _logger.LogWarning("Duplicate registration attempt for {Email} in state {State}",
-                        context.Message.Email, context.Saga.CurrentState);
-                })
+        During(RolledBack,
+            // Ignore all events in RolledBack state - saga will auto-finalize
+            Ignore(RegistrationStartedEvent),
+            Ignore(OtpSentEvent),
+            Ignore(OtpVerifiedEvent),
+            Ignore(AuthUserCreatedEvent),
+            Ignore(UserProfileCreatedEvent),
+            Ignore(AuthUserDeletedEvent),
+            Ignore(UserProfileDeletedEvent)
         );
+        
         
         // Cấu hình xóa completed sagas
         SetCompletedWhenFinalized();
@@ -193,6 +316,8 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
     public State AuthUserCreated { get; private set; } = null!;
     public State UserProfileCreated { get; private set; } = null!;
     public State Failed { get; private set; } = null!;
+    public State RollingBack { get; private set; } = null!;
+    public State RolledBack { get; private set; } = null!;
     
     // Events - Đổi tên để tránh conflict với States
     public Event<RegistrationStarted> RegistrationStartedEvent { get; private set; } = null!;
@@ -201,14 +326,19 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
     public Event<AuthUserCreated> AuthUserCreatedEvent { get; private set; } = null!;
     public Event<UserProfileCreated> UserProfileCreatedEvent { get; private set; } = null!;
     
-    // Schedules
-    public Schedule<RegistrationSagaState, OtpTimeout> OtpTimeoutSchedule { get; private set; } = null!;
+    // Compensating Events
+    public Event<AuthUserDeleted> AuthUserDeletedEvent { get; private set; } = null!;
+    public Event<UserProfileDeleted> UserProfileDeletedEvent { get; private set; } = null!;
+    
+    // TODO: Re-enable when RabbitMQ delayed message plugin is available
+    // public Schedule<RegistrationSagaState, OtpTimeout> OtpTimeoutSchedule { get; private set; } = null!;
 }
 
-/// <summary>
-/// Timeout event cho OTP verification
-/// </summary>
-public record OtpTimeout
-{
-    public Guid CorrelationId { get; init; }
-}
+// TODO: Re-enable when RabbitMQ delayed message plugin is available
+// /// <summary>
+// /// Timeout event cho OTP verification
+// /// </summary>
+// public record OtpTimeout
+// {
+//     public Guid CorrelationId { get; init; }
+// }

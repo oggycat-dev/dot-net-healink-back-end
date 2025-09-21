@@ -1,9 +1,11 @@
+using System.Transactions;
 using AuthService.Application.Commons.Interfaces;
 using AuthService.Application.Helpers;
 using AuthService.Domain.Entities;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using SharedLibrary.Commons.Entities;
 using SharedLibrary.Commons.Enums;
 using SharedLibrary.Contracts.User.Saga;
 
@@ -34,8 +36,41 @@ public class CreateAuthUserConsumer : IConsumer<CreateAuthUser>
         
         try
         {
-            _logger.LogInformation("Processing CreateAuthUser for email: {Email}, CorrelationId: {CorrelationId}", 
-                message.Email, message.CorrelationId);
+            // Validate message data
+            if (string.IsNullOrEmpty(message.Email))
+            {
+                _logger.LogError("CreateAuthUser message has empty email. CorrelationId: {CorrelationId}, FullName: {FullName}", 
+                    message.CorrelationId, message.FullName);
+                
+                await context.Publish<AuthUserCreated>(new
+                {
+                    CorrelationId = message.CorrelationId,
+                    UserId = Guid.Empty,
+                    Success = false,
+                    ErrorMessage = "Invalid message: Email is required",
+                    CreatedAt = DateTime.UtcNow
+                });
+                return;
+            }
+
+            if (string.IsNullOrEmpty(message.EncryptedPassword))
+            {
+                _logger.LogError("CreateAuthUser message has empty encrypted password for email: {Email}, CorrelationId: {CorrelationId}", 
+                    message.Email, message.CorrelationId);
+                
+                await context.Publish<AuthUserCreated>(new
+                {
+                    CorrelationId = message.CorrelationId,
+                    UserId = Guid.Empty,
+                    Success = false,
+                    ErrorMessage = "Invalid message: Encrypted password is required",
+                    CreatedAt = DateTime.UtcNow
+                });
+                return;
+            }
+
+            _logger.LogInformation("Processing CreateAuthUser for email: {Email}, CorrelationId: {CorrelationId}, PasswordLength: {PasswordLength}", 
+                message.Email, message.CorrelationId, message.EncryptedPassword?.Length ?? 0);
 
             // Check if user already exists
             var existingUser = await _identityService.GetUserByFirstOrDefaultAsync(
@@ -67,47 +102,103 @@ public class CreateAuthUserConsumer : IConsumer<CreateAuthUser>
                 PhoneNumber = message.PhoneNumber,
                 PhoneNumberConfirmed = !string.IsNullOrEmpty(message.PhoneNumber),
                 Status = EntityStatusEnum.Active,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
             };
 
-            // Decrypt password
-            var decryptedPassword = PasswordCryptoHelper.Decrypt(message.EncryptedPassword, _passwordEncryptionKey);
-            var result = await _identityService.CreateUserAsync(newUser, "");
-            
-            if (result.Succeeded)
+            newUser.InitializeEntity(newUser.Id);
+
+            // Decrypt password with error handling
+            string decryptedPassword;
+            try
             {
-                // Add user to default role
-                await _identityService.AddUserToRoleAsync(newUser, RoleEnum.User.ToString());
-
-                _logger.LogInformation("Auth user created successfully for email: {Email}, UserId: {UserId}, CorrelationId: {CorrelationId}", 
-                    message.Email, newUser.Id, message.CorrelationId);
-
-                // Publish success response
-                await context.Publish<AuthUserCreated>(new
-                {
-                    CorrelationId = message.CorrelationId,
-                    UserId = newUser.Id,
-                    Success = true,
-                    ErrorMessage = (string?)null,
-                    CreatedAt = DateTime.UtcNow
-                });
+                _logger.LogDebug("Attempting to decrypt password for email: {Email}, EncryptionKeyLength: {KeyLength}", 
+                    message.Email, _passwordEncryptionKey?.Length ?? 0);
+                
+                decryptedPassword = PasswordCryptoHelper.Decrypt(message.EncryptedPassword, _passwordEncryptionKey);
+                
+                _logger.LogDebug("Password decrypted successfully for email: {Email}", message.Email);
             }
-            else
+            catch (ArgumentException ex)
             {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to create auth user for email: {Email}, CorrelationId: {CorrelationId}, Errors: {Errors}", 
-                    message.Email, message.CorrelationId, errors);
-
-                // Publish failure response
+                _logger.LogError(ex, "Failed to decrypt password for email: {Email}, CorrelationId: {CorrelationId}. Error: {Error}", 
+                    message.Email, message.CorrelationId, ex.Message);
+                
                 await context.Publish<AuthUserCreated>(new
                 {
                     CorrelationId = message.CorrelationId,
                     UserId = Guid.Empty,
                     Success = false,
-                    ErrorMessage = errors,
+                    ErrorMessage = $"Password decryption failed: {ex.Message}",
                     CreatedAt = DateTime.UtcNow
                 });
+                return;
+            }
+
+            // Using transaction scope to ensure atomicity without DB retry conflicts
+            using (var transaction = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions
+                {
+                    IsolationLevel = IsolationLevel.ReadCommitted,
+                    Timeout = TimeSpan.FromMinutes(1) // Reduced timeout since no retries
+                },
+                TransactionScopeAsyncFlowOption.Enabled))
+            {
+                var result = await _identityService.CreateUserAsync(newUser, decryptedPassword);
+
+                if (result.Succeeded)
+                {
+                    // Add user to default role
+                    var roleResult = await _identityService.AddUserToRoleAsync(newUser, RoleEnum.User.ToString());
+                    
+                    if (!roleResult.Succeeded)
+                    {
+                        var roleErrors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                        _logger.LogError("Failed to add role for user {Email}: {Errors}", message.Email, roleErrors);
+                        
+                        // Don't complete transaction - will rollback automatically
+                        await context.Publish<AuthUserCreated>(new
+                        {
+                            CorrelationId = message.CorrelationId,
+                            UserId = Guid.Empty,
+                            Success = false,
+                            ErrorMessage = $"User created but role assignment failed: {roleErrors}",
+                            CreatedAt = DateTime.UtcNow
+                        });
+                        return;
+                    }
+
+                    // Complete transaction only if everything succeeded
+                    transaction.Complete();
+
+                    _logger.LogInformation("Auth user created successfully for email: {Email}, UserId: {UserId}, CorrelationId: {CorrelationId}", 
+                        message.Email, newUser.Id, message.CorrelationId);
+
+                    // Publish success response
+                    await context.Publish<AuthUserCreated>(new
+                    {
+                        CorrelationId = message.CorrelationId,
+                        UserId = newUser.Id,
+                        Success = true,
+                        ErrorMessage = (string?)null,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+                else
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to create auth user for email: {Email}, CorrelationId: {CorrelationId}, Errors: {Errors}", 
+                        message.Email, message.CorrelationId, errors);
+
+                    // Don't complete transaction - will rollback automatically
+                    await context.Publish<AuthUserCreated>(new
+                    {
+                        CorrelationId = message.CorrelationId,
+                        UserId = Guid.Empty,
+                        Success = false,
+                        ErrorMessage = errors,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
             }
         }
         catch (Exception ex)

@@ -21,4 +21,5 @@ public interface IIdentityService
     Task<IdentityResult> ResetUserPasswordAsync(Expression<Func<AppUser, bool>> contactPredicate, string token, string newPassword);
     Task<string> GeneratePasswordResetToken(AppUser user);
     Task<IdentityResult> ChangePasswordAsync(AppUser user, string currentPassword, string newPassword);
+    Task<IdentityResult> DeleteUserAsync(Guid userId);
 }

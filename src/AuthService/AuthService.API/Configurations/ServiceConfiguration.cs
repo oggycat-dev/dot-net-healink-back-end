@@ -20,7 +20,12 @@ public static class ServiceConfiguration
 
         // Add MassTransit with Saga for registration workflow
         builder.Services.AddMassTransitWithSaga<AuthService.Infrastructure.Context.AuthDbContext>(
-            builder.Configuration);
+            builder.Configuration, x =>
+            {
+                // Register consumers for AuthService
+                x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserConsumer>();
+            });
 
         // Application & Infrastructure layers
         builder.Services.AddApplication();

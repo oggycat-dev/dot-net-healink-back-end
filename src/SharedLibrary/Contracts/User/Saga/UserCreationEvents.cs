@@ -70,3 +70,57 @@ public record SendWelcomeNotification : IntegrationEvent
     
     public SendWelcomeNotification() : base("RegistrationSaga") { }
 }
+
+/// <summary>
+/// Compensating action to delete AuthUser when UserProfile creation fails
+/// </summary>
+public record DeleteAuthUser : IntegrationEvent
+{
+    public Guid CorrelationId { get; init; }
+    public Guid UserId { get; init; }
+    public string Reason { get; init; } = string.Empty;
+    
+    public DeleteAuthUser() : base("RegistrationSaga") { }
+}
+
+/// <summary>
+/// Response event after AuthUser deletion (compensating action)
+/// </summary>
+public record AuthUserDeleted : IntegrationEvent
+{
+    public Guid CorrelationId { get; init; }
+    public Guid UserId { get; init; }
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public DateTime DeletedAt { get; init; } = DateTime.UtcNow;
+    
+    public AuthUserDeleted() : base("AuthService") { }
+}
+
+/// <summary>
+/// Compensating action to delete UserProfile when necessary
+/// </summary>
+public record DeleteUserProfile : IntegrationEvent
+{
+    public Guid CorrelationId { get; init; }
+    public Guid UserProfileId { get; init; }
+    public Guid UserId { get; init; }
+    public string Reason { get; init; } = string.Empty;
+    
+    public DeleteUserProfile() : base("RegistrationSaga") { }
+}
+
+/// <summary>
+/// Response event after UserProfile deletion (compensating action)
+/// </summary>
+public record UserProfileDeleted : IntegrationEvent
+{
+    public Guid CorrelationId { get; init; }
+    public Guid UserProfileId { get; init; }
+    public Guid UserId { get; init; }
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public DateTime DeletedAt { get; init; } = DateTime.UtcNow;
+    
+    public UserProfileDeleted() : base("UserService") { }
+}

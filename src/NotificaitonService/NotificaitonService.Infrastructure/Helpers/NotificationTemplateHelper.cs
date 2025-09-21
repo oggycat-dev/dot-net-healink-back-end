@@ -39,8 +39,8 @@ public static class NotificationTemplateHelper
         {
             ["fullName"] = fullName,
             ["contact"] = contact,
-            ["appName"] = appName ?? "NekoVi",
-            ["supportEmail"] = supportEmail ?? "support@nekovi.com"
+            ["appName"] = appName?? "NotificationService",
+            ["supportEmail"] = supportEmail ?? "Unknown"
         };
 
         var htmlContent = ProcessWelcomeTemplate(templateData);
@@ -64,9 +64,9 @@ public static class NotificationTemplateHelper
             ["otpCode"] = otpCode,
             ["contact"] = contact,
             ["otpType"] = otpType.ToString(),
-            ["appName"] = appName ?? "NekoVi",
+            ["appName"] = appName ?? "NotificationService",
             ["expirationMinutes"] = expirationMinutes.ToString(),
-            ["supportEmail"] = supportEmail ?? ""
+            ["supportEmail"] = supportEmail ?? "Unknown"
         };
 
         // Set default fullName from contact (email or phone)

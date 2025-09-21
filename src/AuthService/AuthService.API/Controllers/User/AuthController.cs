@@ -4,6 +4,7 @@ using AuthService.Application.Features.Auth.Commands.Logout;
 using AuthService.Application.Features.Auth.Commands.Register;
 using AuthService.Application.Features.Auth.Commands.VerifyOtp;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Commons.Attributes;
 using SharedLibrary.Commons.Extensions;
@@ -36,6 +37,7 @@ public class AuthController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Registration result</returns>
     [HttpPost("register")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
     [SwaggerOperation(

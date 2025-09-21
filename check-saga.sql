@@ -1,0 +1,1 @@
+SELECT "CorrelationId", "CurrentState", "Email", "StartedAt" FROM "RegistrationSagaStates" ORDER BY "StartedAt" DESC LIMIT 5;
