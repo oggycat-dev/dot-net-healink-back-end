@@ -44,11 +44,11 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
         //     s.Received = e => e.CorrelateById(context => context.Message.CorrelationId);
         // });
         
-        // Định nghĩa workflow với idempotency check
+        // Định nghĩa workflow với proper idempotency check
         Initially(
             When(RegistrationStartedEvent)
-                .IfElse(context => context.Saga.CorrelationId == Guid.Empty,
-                    // ✅ First time - create new saga
+                .IfElse(context => string.IsNullOrEmpty(context.Saga.Email),
+                    // ✅ First time - email is empty, so initialize saga
                     x => x.Then(context =>
                     {
                         var timestamp = DateTime.UtcNow;
@@ -104,11 +104,11 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                     }))
                     .TransitionTo(Started),
                     
-                    // ❌ Duplicate - ignore safely
+                    // ❌ Duplicate - saga already initialized, ignore safely
                     x => x.Then(context =>
                     {
-                        _logger.LogWarning("DUPLICATE RegistrationStarted ignored - Email: {Email}, CorrelationId: {CorrelationId}, Current State: {State}", 
-                            context.Message.Email, context.Message.CorrelationId, context.Saga.CurrentState);
+                        _logger.LogWarning("DUPLICATE RegistrationStarted ignored - Saga already initialized. Email: {Email}, CorrelationId: {CorrelationId}, Current State: {State}", 
+                            context.Saga.Email, context.Message.CorrelationId, context.Saga.CurrentState);
                     })
                 )
         );
