@@ -25,6 +25,17 @@ bld/
 *.userosscache
 *.sln.docstates
 
+# Sensitive configuration files
+# appsettings.Production.json
+# appsettings.Local.json
+# appsettings.Development.json
+# **/appsettings.*.json
+# !**/appsettings.Example.json
+# !**/appsettings.Template.json
+
+# Migration configuration with sensitive data
+migrations-appsettings.json
+
 # Environment files
 .env
 .env.local
@@ -109,3 +120,23 @@ healink_accessKeys.csv
 # Local development overrides
 docker-compose.override.yml
 launchSettings.json
+
+# Installer packages
+*.pkg
+*.dmg
+*.exe
+*.msi
+
+# Credentials & Sensitive Files
+*.csv
+*.pem
+*keys.csv
+.env
+
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+*.tfvars
+*.tfstate.backup

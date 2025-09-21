@@ -39,6 +39,17 @@ public class RabbitMQConnection : IRabbitMQConnection
                 VirtualHost = _config.VirtualHost
             };
 
+            // Configure SSL if enabled
+            if (_config.UseSsl)
+            {
+                factory.Ssl.Enabled = true;
+                factory.Ssl.ServerName = _config.HostName;
+                factory.Ssl.AcceptablePolicyErrors = System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable |
+                                                   System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch |
+                                                   System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors;
+                _logger.LogInformation("SSL enabled for RabbitMQ connection to {HostName}:{Port}", _config.HostName, _config.Port);
+            }
+
             try
             {
                 _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();

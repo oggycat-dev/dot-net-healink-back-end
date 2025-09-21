@@ -35,7 +35,22 @@ ENV ASPNETCORE_ENVIRONMENT=Docker
 ENV ASPNETCORE_URLS=http://+:80
 
 EXPOSE 80
+
+# --- CÁC THAY ĐỔI BẮT ĐẦU TỪ ĐÂY ---
+
+# 1. Sao chép file entrypoint.sh từ build stage
+COPY --from=build /src/AuthService/AuthService.API/entrypoint.sh ./entrypoint.sh
+
+# 2. Cấp quyền thực thi cho file script và đảm bảo line endings đúng
+RUN chmod +x ./entrypoint.sh && \
+    sed -i 's/\r$//' ./entrypoint.sh
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost/health || exit 1
 
-ENTRYPOINT ["dotnet", "AuthService.API.dll"]
+# 3. Đặt script này làm lệnh khởi động chính của container.
+ENTRYPOINT ["./entrypoint.sh"]
+
+# 4. Lệnh khởi động ứng dụng của anh bây giờ trở thành CMD.
+#    Script entrypoint.sh sẽ gọi lệnh này sau khi đã chạy migration xong.
+CMD ["dotnet", "AuthService.API.dll"]

@@ -135,7 +135,8 @@ public static class SwaggerConfiguration
     {
         var environment = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
         
-        if (environment.IsDevelopment())
+        // Always enable Swagger for now (Development, Docker, or any environment)
+        if (environment.IsDevelopment() || environment.EnvironmentName == "Docker" || environment.EnvironmentName == "Production")
         {
             app.UseSwagger(c =>
             {

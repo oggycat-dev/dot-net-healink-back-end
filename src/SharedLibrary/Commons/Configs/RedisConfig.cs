@@ -11,7 +11,8 @@ public class RedisConfig
     public bool AbortOnConnectFail { get; set; } = false;
     public int ConnectRetry { get; set; } = 3;
     public string InstanceName { get; set; } = "HealinkMicroservices";
-
+    public bool Enabled { get; set; } = true;
+    
     // Cache expiration settings
     public int DefaultExpirationMinutes { get; set; } = 60;
     public int UserStateCacheMinutes { get; set; } = 120;

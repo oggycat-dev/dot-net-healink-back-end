@@ -44,6 +44,50 @@ public static class AuthInfrastructureDependencyInjection
             });
         });
 
+         // --- BẮT ĐẦU PHẦN SỬA ---
+
+    // Đọc các biến môi trường được inject từ Terraform/AWS
+    // var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+    // var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+    // var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+    // var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+    // var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+    // // Configure AuthDbContext với logic thông minh
+    // services.AddDbContext<AuthDbContext>(options =>
+    // {
+    //     string connectionString;
+    //     // Kiểm tra xem các biến môi trường có tồn tại không
+    //     if (string.IsNullOrEmpty(dbHost))
+    //     {
+    //         // Nếu KHÔNG, có nghĩa là đang chạy local -> Dùng connection string từ appsettings.json
+    //         Console.WriteLine("Using connection string from appsettings.json for local development.");
+    //         connectionString = configuration.GetConnectionString("DefaultConnection");
+    //     }
+    //     else
+    //     {
+    //         // Nếu CÓ, có nghĩa là đang chạy trên AWS -> Xây dựng connection string từ biến môi trường
+    //         Console.WriteLine($"Building connection string for AWS environment with host: {dbHost}");
+    //         connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};";
+    //     }
+
+    //     if (string.IsNullOrEmpty(connectionString))
+    //     {
+    //         throw new InvalidOperationException("Database connection string not found");
+    //     }
+        
+    //     options.UseNpgsql(connectionString, npgsqlOptions =>
+    //     {
+    //         // Cấu hình retry và migration assembly vẫn giữ nguyên
+    //         npgsqlOptions.EnableRetryOnFailure(
+    //             maxRetryCount: 3,
+    //             maxRetryDelay: TimeSpan.FromSeconds(30),
+    //             errorCodesToAdd: null);
+    //         npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
+    //     });
+    // });
+
+
         // Configure Identity
         services.AddIdentity<AppUser, AppRole>(options =>
         {

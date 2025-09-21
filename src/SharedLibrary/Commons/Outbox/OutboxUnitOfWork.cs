@@ -9,11 +9,11 @@ namespace SharedLibrary.Commons.Outbox;
 
 public class OutboxUnitOfWork : UnitOfWork, IOutboxUnitOfWork
 {
-    private readonly IEventBus _eventBus;
+    private readonly IEventBus? _eventBus;
     private readonly ILogger<OutboxUnitOfWork> _logger;
     private readonly List<OutboxEvent> _pendingEvents = new();
 
-    public OutboxUnitOfWork(DbContext context, IEventBus eventBus, ILogger<OutboxUnitOfWork> logger) : base(context)
+    public OutboxUnitOfWork(DbContext context, IEventBus? eventBus, ILogger<OutboxUnitOfWork> logger) : base(context)
     {
         _eventBus = eventBus;
         _logger = logger;
@@ -137,6 +137,14 @@ public class OutboxUnitOfWork : UnitOfWork, IOutboxUnitOfWork
 
     private async Task PublishPendingEventsAsync()
     {
+        // Skip publishing if EventBus is not available (RabbitMQ disabled)
+        if (_eventBus == null)
+        {
+            _logger.LogInformation("EventBus is not available, skipping outbox event publishing");
+            _pendingEvents.Clear();
+            return;
+        }
+
         foreach (var outboxEvent in _pendingEvents)
         {
             try
