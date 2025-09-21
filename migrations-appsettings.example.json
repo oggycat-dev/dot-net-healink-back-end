@@ -1,0 +1,27 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=YOUR_RDS_ENDPOINT;Port=5432;Database=AuthServiceDB;Username=YOUR_USERNAME;Password=YOUR_PASSWORD"
+  },
+  "RedisConfiguration": {
+    "ConnectionString": "localhost:6379",
+    "Database": 0,
+    "InstanceName": "AuthService",
+    "Enabled": false
+  },
+  "JwtSettings": {
+    "Issuer": "AuthService",
+    "Audience": "AuthServiceUsers", 
+    "SecretKey": "YOUR_JWT_SECRET_KEY",
+    "ExpireMinutes": 60
+  },
+  "AdminUser": {
+    "Email": "admin@healink.com",
+    "Password": "YOUR_ADMIN_PASSWORD"
+  },
+  "AllowedOrigins": "http://localhost:3000",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}

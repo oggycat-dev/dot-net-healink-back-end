@@ -29,6 +29,13 @@ public class OutboxEventProcessorService : BackgroundService
     {
         _logger.LogInformation("Outbox Event Processor Service started");
 
+        // Check if outbox processing is enabled
+        if (!_config.Enabled)
+        {
+            _logger.LogInformation("Outbox Event Processor Service is disabled via configuration");
+            return;
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

@@ -75,11 +75,14 @@ public static class SharedServiceExtensions
     public static WebApplication ConfigureSharedPipeline(this WebApplication app, string serviceName)
     {
         var environment = app.Environment;
+        var logger = app.Services.GetRequiredService<ILogger<WebApplication>>();
         
-        if (environment.IsDevelopment())
-        {
-            app.UseSwaggerConfiguration(serviceName);
-        }
+        logger.LogInformation($"Configuring pipeline for service: {serviceName}, Environment: {environment.EnvironmentName}");
+        
+        // Always enable Swagger for now - debugging
+        logger.LogInformation("About to configure Swagger...");
+        app.UseSwaggerConfiguration(serviceName);
+        logger.LogInformation("Swagger configuration completed");
 
         app.UseHttpsRedirection();
         
