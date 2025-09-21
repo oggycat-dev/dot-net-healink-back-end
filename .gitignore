@@ -132,3 +132,9 @@ launchSettings.json
 .terraform.lock.hcl
 *.tfvars
 *.tfstate.backup
+
+# Ignore PodcastRecommendation files
+collaborative_filtering_model.h5
+mappings.pkl
+podcasts.pkl
+ratings.pkl
