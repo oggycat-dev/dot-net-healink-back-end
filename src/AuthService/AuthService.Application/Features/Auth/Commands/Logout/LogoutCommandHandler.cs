@@ -1,14 +1,13 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using ProductAuthMicroservice.Commons.Enums;
+using SharedLibrary.Commons.Enums;
 using AuthService.Application.Commons.Interfaces;
-using ProductAuthMicroservice.Commons.Models;
-using ProductAuthMicroservice.Commons.Services;
-using ProductAuthMicroservice.Commons.Entities;
-using ProductAuthMicroservice.Commons.Cache;
-using ProductAuthMicroservice.Shared.Contracts.Events;
-using ProductAuthMicroservice.Commons.EventBus;
-using ProductAuthMicroservice.Commons.Outbox;
+using SharedLibrary.Commons.Models;
+using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Entities;
+using SharedLibrary.Commons.Cache;
+using SharedLibrary.SharedLibrary.Contracts.Events;
+using SharedLibrary.Commons.Outbox;
 
 namespace AuthService.Application.Features.Auth.Commands.Logout;
 
@@ -51,6 +50,7 @@ public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result>
             var user = result;
             user.RefreshToken = null;
             user.RefreshTokenExpiryTime = null;
+            user.LastLogoutAt = DateTime.UtcNow;
             user.UpdateEntity(Guid.Parse(userId));
             await _identityService.UpdateUserAsync(user);
             

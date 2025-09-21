@@ -1,14 +1,16 @@
+using AuthService.Application.Commons.Interfaces;
+using AuthService.Domain.Entities;
+using AuthService.Infrastructure.Context;
+using AuthService.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ProductAuthMicroservice.Commons.DependencyInjection;
-using ProductAuthMicroservice.Commons.Configs;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using AuthService.Infrastructure.Context;
-using AuthService.Application.Commons.Interfaces;
-using AuthService.Infrastructure.Services;
-using ProductAuthMicroservice.Commons.Configurations;
+using SharedLibrary.Commons.EventBus;
+using SharedLibrary.Commons.Outbox;
+using SharedLibrary.Commons.Repositories;
+using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Configs;
 
 namespace AuthService.Infrastructure;
 
@@ -20,70 +22,70 @@ public static class AuthInfrastructureDependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // Add database context
-        // var connectionConfig = configuration.GetSection("ConnectionConfig").Get<ConnectionConfig>();
-        // if (connectionConfig == null || string.IsNullOrEmpty(connectionConfig.DefaultConnection))
-        // {
-        //     throw new InvalidOperationException("AuthService database connection string not found");
-        // }
+        var connectionConfig = configuration.GetSection("ConnectionConfig").Get<ConnectionConfig>();
+        if (connectionConfig == null || string.IsNullOrEmpty(connectionConfig.DefaultConnection))
+        {
+            throw new InvalidOperationException("AuthService database connection string not found");
+        }
 
-        // // Configure AuthDbContext with PostgreSQL
-        // services.AddDbContext<AuthDbContext>(options =>
-        // {
-        //     options.UseNpgsql(connectionConfig.DefaultConnection, npgsqlOptions =>
-        //     {
-        //         if (connectionConfig.RetryOnFailure)
-        //         {
-        //             npgsqlOptions.EnableRetryOnFailure(
-        //                 maxRetryCount: connectionConfig.MaxRetryCount > 0 ? connectionConfig.MaxRetryCount : 3,
-        //                 maxRetryDelay: TimeSpan.FromSeconds(connectionConfig.MaxRetryDelay > 0 ? connectionConfig.MaxRetryDelay : 30),
-        //                 errorCodesToAdd: null);
-        //         }
-        //         npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
-        //     });
-        // });
+        // Configure AuthDbContext with PostgreSQL
+        services.AddDbContext<AuthDbContext>(options =>
+        {
+            options.UseNpgsql(connectionConfig.DefaultConnection, npgsqlOptions =>
+            {
+                if (connectionConfig.RetryOnFailure)
+                {
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: connectionConfig.MaxRetryCount > 0 ? connectionConfig.MaxRetryCount : 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(connectionConfig.MaxRetryDelay > 0 ? connectionConfig.MaxRetryDelay : 30),
+                        errorCodesToAdd: null);
+                }
+                npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
+            });
+        });
 
          // --- BẮT ĐẦU PHẦN SỬA ---
 
     // Đọc các biến môi trường được inject từ Terraform/AWS
-    var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
-    var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
-    var dbName = Environment.GetEnvironmentVariable("DB_NAME");
-    var dbUser = Environment.GetEnvironmentVariable("DB_USER");
-    var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+    // var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+    // var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+    // var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+    // var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+    // var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
 
-    // Configure AuthDbContext với logic thông minh
-    services.AddDbContext<AuthDbContext>(options =>
-    {
-        string connectionString;
-        // Kiểm tra xem các biến môi trường có tồn tại không
-        if (string.IsNullOrEmpty(dbHost))
-        {
-            // Nếu KHÔNG, có nghĩa là đang chạy local -> Dùng connection string từ appsettings.json
-            Console.WriteLine("Using connection string from appsettings.json for local development.");
-            connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
-        else
-        {
-            // Nếu CÓ, có nghĩa là đang chạy trên AWS -> Xây dựng connection string từ biến môi trường
-            Console.WriteLine($"Building connection string for AWS environment with host: {dbHost}");
-            connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};";
-        }
+    // // Configure AuthDbContext với logic thông minh
+    // services.AddDbContext<AuthDbContext>(options =>
+    // {
+    //     string connectionString;
+    //     // Kiểm tra xem các biến môi trường có tồn tại không
+    //     if (string.IsNullOrEmpty(dbHost))
+    //     {
+    //         // Nếu KHÔNG, có nghĩa là đang chạy local -> Dùng connection string từ appsettings.json
+    //         Console.WriteLine("Using connection string from appsettings.json for local development.");
+    //         connectionString = configuration.GetConnectionString("DefaultConnection");
+    //     }
+    //     else
+    //     {
+    //         // Nếu CÓ, có nghĩa là đang chạy trên AWS -> Xây dựng connection string từ biến môi trường
+    //         Console.WriteLine($"Building connection string for AWS environment with host: {dbHost}");
+    //         connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};";
+    //     }
 
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("Database connection string not found");
-        }
+    //     if (string.IsNullOrEmpty(connectionString))
+    //     {
+    //         throw new InvalidOperationException("Database connection string not found");
+    //     }
         
-        options.UseNpgsql(connectionString, npgsqlOptions =>
-        {
-            // Cấu hình retry và migration assembly vẫn giữ nguyên
-            npgsqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 3,
-                maxRetryDelay: TimeSpan.FromSeconds(30),
-                errorCodesToAdd: null);
-            npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
-        });
-    });
+    //     options.UseNpgsql(connectionString, npgsqlOptions =>
+    //     {
+    //         // Cấu hình retry và migration assembly vẫn giữ nguyên
+    //         npgsqlOptions.EnableRetryOnFailure(
+    //             maxRetryCount: 3,
+    //             maxRetryDelay: TimeSpan.FromSeconds(30),
+    //             errorCodesToAdd: null);
+    //         npgsqlOptions.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
+    //     });
+    // });
 
 
         // Configure Identity
@@ -104,49 +106,37 @@ public static class AuthInfrastructureDependencyInjection
         .AddDefaultTokenProviders();
 
         // Add shared repositories with Outbox support (with specific DbContext)
-        services.AddScoped<ProductAuthMicroservice.Commons.Repositories.IUnitOfWork>(provider =>
+        services.AddScoped<IUnitOfWork>(provider =>
         {
             var context = provider.GetRequiredService<AuthDbContext>();
-            return new ProductAuthMicroservice.Commons.Repositories.UnitOfWork(context);
+            return new UnitOfWork(context);
         });
-        
-        // Register OutboxUnitOfWork for AuthService (conditional on RabbitMQ availability)
-        services.AddScoped<ProductAuthMicroservice.Commons.Outbox.IOutboxUnitOfWork>(provider =>
+
+        // Register OutboxUnitOfWork for AuthService
+        services.AddScoped<IOutboxUnitOfWork>(provider =>
         {
             var context = provider.GetRequiredService<AuthDbContext>();
-            
-            // Try to get EventBus, use null if not available (RabbitMQ disabled)
-            ProductAuthMicroservice.Commons.EventBus.IEventBus? eventBus = null;
-            try
-            {
-                eventBus = provider.GetService<ProductAuthMicroservice.Commons.EventBus.IEventBus>();
-            }
-            catch (Exception)
-            {
-                // RabbitMQ not available, continue with null EventBus
-                eventBus = null;
-            }
-            
-            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork>>();
-            return new ProductAuthMicroservice.Commons.Outbox.OutboxUnitOfWork(context, eventBus, logger);
+            var eventBus = provider.GetRequiredService<IEventBus>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<OutboxUnitOfWork>>();
+            return new OutboxUnitOfWork(context, eventBus, logger);
         });
-        
+
         // Add Memory Cache for Token Blocklist
         services.AddMemoryCache();
-        
+
         // Add Token Blocklist Service
-        
+
         // Add HTTP Client Factory for CurrentUserService
         services.AddHttpClient();
-        
+
         // Add Current User Service
-        services.AddScoped<ProductAuthMicroservice.Commons.Services.ICurrentUserService, ProductAuthMicroservice.Commons.Services.CurrentUserService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddHttpContextAccessor();
-        
+
         // Add auth-specific infrastructure services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthJwtService, AuthJwtService>();
-        
+
         return services;
     }
 }

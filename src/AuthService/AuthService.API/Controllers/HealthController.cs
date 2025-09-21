@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace ProductAuthMicroservice.AuthService.API.Controllers;
+namespace AuthService.API.Controllers;
 
 /// <summary>
 /// Health check controller for Auth Service
@@ -41,7 +41,6 @@ public class HealthController : ControllerBase
                 "JWT Token Management",
                 "User Validation",
                 "Role Management",
-                "User Action Logging",
                 "Event Handling"
             }
         });

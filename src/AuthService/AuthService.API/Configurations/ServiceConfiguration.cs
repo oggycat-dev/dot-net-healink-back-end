@@ -1,6 +1,6 @@
 using AuthService.Application;
 using AuthService.Infrastructure;
-using ProductAuthMicroservice.Commons.DependencyInjection;
+using SharedLibrary.Commons.DependencyInjection;
 
 namespace AuthService.API.Configurations;
 

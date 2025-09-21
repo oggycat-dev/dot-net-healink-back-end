@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using AuthService.Infrastructure.Context;
-using ProductAuthMicroservice.Commons.Extensions;
+using SharedLibrary.Commons.Extensions;
 
 namespace AuthService.Infrastructure.Extensions;
 

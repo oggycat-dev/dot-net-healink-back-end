@@ -3,13 +3,13 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy csproj files and restore dependencies
-COPY ["Gateway/Gateway.API/Gateway.API.csproj", "Gateway/Gateway.API/"]
-COPY ["Shared/Shared.csproj", "Shared/"]
+COPY ["src/Gateway/Gateway.API/Gateway.API.csproj", "Gateway/Gateway.API/"]
+COPY ["src/SharedLibrary/SharedLibrary.csproj", "SharedLibrary/"]
 
 RUN dotnet restore "Gateway/Gateway.API/Gateway.API.csproj"
 
 # Copy everything else and build
-COPY . .
+COPY ["src/", "."]
 WORKDIR "/src/Gateway/Gateway.API"
 RUN dotnet build "Gateway.API.csproj" -c Release -o /app/build
 
