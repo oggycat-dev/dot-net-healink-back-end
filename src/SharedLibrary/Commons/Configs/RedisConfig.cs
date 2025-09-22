@@ -3,7 +3,7 @@ namespace SharedLibrary.Commons.Configs;
 public class RedisConfig
 {
     public const string SectionName = "Redis";
-    
+
     public string ConnectionString { get; set; } = string.Empty;
     public int Database { get; set; } = 0;
     public int ConnectTimeout { get; set; } = 5000;

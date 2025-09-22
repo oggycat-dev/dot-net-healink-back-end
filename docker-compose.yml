@@ -142,6 +142,45 @@ services:
       retries: 3
       start_period: 40s
 
+  # NotificationService API
+  notificationservice-api:
+    build:
+      context: .
+      dockerfile: ./src/NotificaitonService/NotificaitonService.API/Dockerfile
+    container_name: notificationservice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
+      JwtConfig__Key: ${JWT_SECRET_KEY}
+      JwtConfig__Issuer: ${JWT_ISSUER}
+      JwtConfig__Audience: ${JWT_AUDIENCE}
+      EmailSettings__SmtpServer: ${EMAIL_SMTP_SERVER}
+      EmailSettings__Port: ${EMAIL_PORT}
+      EmailSettings__Username: ${EMAIL_USERNAME}
+      EmailSettings__Password: ${EMAIL_PASSWORD}
+      EmailSettings__FromEmail: ${EMAIL_FROM}
+      EmailSettings__FromName: ${EMAIL_FROM_NAME}
+      FirebaseSettings__ServerKey: ${FIREBASE_SERVER_KEY}
+      FirebaseSettings__SenderId: ${FIREBASE_SENDER_ID}
+    ports:
+      - "5003:80"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - healink-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   # Gateway API
   gateway-api:
     build:

@@ -70,10 +70,41 @@ public static class RedisConfiguration
         // Add Redis configuration first
         services.AddRedisConfiguration(configuration);
         
-        // Register IUserStateCache as Singleton for middleware compatibility
-        // Redis connections are thread-safe and can be shared across requests
+        // Register IUserStateCache as Singleton - needed for middleware injection
+        // Redis connections are thread-safe and can be used as singleton
         services.AddSingleton<IUserStateCache, RedisUserStateCache>();
 
         return services;
     }
+
+    /// <summary>
+    /// Add Redis-based OtpCacheService
+    /// </summary>
+    public static IServiceCollection AddRedisOtpCacheService(this IServiceCollection services, 
+        IConfiguration configuration)
+    {
+        // Add Redis configuration first
+        services.AddRedisConfiguration(configuration);
+        
+        // Register IOtpCacheService as Scoped for per-request use
+        services.AddScoped<IOtpCacheService, OtpCacheService>();
+
+        return services;
+    }
+
+    // /// <summary>
+    // /// Add all Redis-based cache services (UserState + OTP)
+    // /// </summary>
+    // public static IServiceCollection AddRedisCacheServices(this IServiceCollection services,
+    //     IConfiguration configuration)
+    // {
+    //     // Add Redis configuration first
+    //     services.AddRedisConfiguration(configuration);
+        
+    //     // Register cache services - both as Scoped for consistency
+    //     services.AddScoped<IUserStateCache, RedisUserStateCache>();
+    //     services.AddScoped<IOtpCacheService, OtpCacheService>();
+
+    //     return services;
+    // }
 }

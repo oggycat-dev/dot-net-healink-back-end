@@ -246,4 +246,23 @@ public class IdentityService : IIdentityService
             throw;
         }
     }
+
+    public async Task<IdentityResult> DeleteUserAsync(Guid userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+            {
+                return IdentityResult.Failed(new IdentityError { Code = "UserNotFound", Description = "User not found" });
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+            return result;
+        }
+        catch
+        {
+            throw;
+        }
+    }
 }

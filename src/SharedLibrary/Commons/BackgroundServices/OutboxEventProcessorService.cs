@@ -88,14 +88,14 @@ public class OutboxEventProcessorService : BackgroundService
     }
 
     private async Task ProcessSingleEventAsync(
-        OutboxEvent outboxEvent, 
-        IEventBus eventBus, 
+        OutboxEvent outboxEvent,
+        IEventBus eventBus,
         IOutboxUnitOfWork unitOfWork,
         CancellationToken cancellationToken)
     {
         try
         {
-            _logger.LogDebug("Processing outbox event: {EventId} of type {EventType}", 
+            _logger.LogDebug("Processing outbox event: {EventId} of type {EventType}",
                 outboxEvent.Id, outboxEvent.EventType);
 
             // Attempt to resolve event type
@@ -143,30 +143,35 @@ public class OutboxEventProcessorService : BackgroundService
 
     private Type? ResolveEventType(string eventTypeName)
     {
-        try
-        {
-            // Try to find the type in loaded assemblies
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            
-            foreach (var assembly in assemblies)
-            {
-                var type = assembly.GetTypes()
-                    .FirstOrDefault(t => t.Name == eventTypeName && 
-                                   typeof(IntegrationEvent).IsAssignableFrom(t));
-                
-                if (type != null)
-                {
-                    return type;
-                }
-            }
-
-            _logger.LogWarning("Could not resolve event type: {EventTypeName}", eventTypeName);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error resolving event type: {EventTypeName}", eventTypeName);
-            return null;
-        }
+        return Type.GetType(eventTypeName); // dùng AssemblyQualifiedName
     }
+
+    // private Type? ResolveEventType(string eventTypeName)
+    // {
+    //     try
+    //     {
+    //         // Try to find the type in loaded assemblies
+    //         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+    //         foreach (var assembly in assemblies)
+    //         {
+    //             var type = assembly.GetTypes()
+    //                 .FirstOrDefault(t => t.Name == eventTypeName && 
+    //                                typeof(IntegrationEvent).IsAssignableFrom(t));
+
+    //             if (type != null)
+    //             {
+    //                 return type;
+    //             }
+    //         }
+
+    //         _logger.LogWarning("Could not resolve event type: {EventTypeName}", eventTypeName);
+    //         return null;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _logger.LogError(ex, "Error resolving event type: {EventTypeName}", eventTypeName);
+    //         return null;
+    //     }
+    // }
 }

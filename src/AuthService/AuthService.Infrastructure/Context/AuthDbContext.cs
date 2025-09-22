@@ -92,5 +92,8 @@ public class AuthDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         });
 
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
+        
+        // Add Saga entities for MassTransit
+        builder.AddSagaEntities();
     }
 }
