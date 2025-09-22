@@ -70,10 +70,10 @@ public class CreateUserProfileConsumer : IConsumer<CreateUserProfile>
             {
                 baseEntity.InitializeEntity(newUserProfile.UserId);
             }
-
+         
             // Add user profile to repository (single atomic operation)
             await _unitOfWork.Repository<UserProfile>().AddAsync(newUserProfile);
-            
+
             // Save changes
             await _unitOfWork.SaveChangesAsync();
 

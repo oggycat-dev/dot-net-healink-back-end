@@ -28,14 +28,38 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             // This prevents race conditions and duplicate key violations
         });
         
-        Event(() => OtpSentEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
-        Event(() => OtpVerifiedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
-        Event(() => AuthUserCreatedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
-        Event(() => UserProfileCreatedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+        Event(() => OtpSentEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            x.OnMissingInstance(m => m.Discard()); // Don't create new saga for OtpSent
+        });
+        Event(() => OtpVerifiedEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            x.OnMissingInstance(m => m.Discard()); // Don't create new saga for OtpVerified
+        });
+        Event(() => AuthUserCreatedEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            x.OnMissingInstance(m => m.Discard()); // Don't create new saga for AuthUserCreated
+        });
+        Event(() => UserProfileCreatedEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            x.OnMissingInstance(m => m.Discard()); // Don't create new saga for UserProfileCreated
+        });
         
         // Compensating Events
-        Event(() => AuthUserDeletedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
-        Event(() => UserProfileDeletedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+        Event(() => AuthUserDeletedEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            x.OnMissingInstance(m => m.Discard()); // Don't create new saga for compensating events
+        });
+        Event(() => UserProfileDeletedEvent, x => 
+        {
+            x.CorrelateById(context => context.Message.CorrelationId);
+            x.OnMissingInstance(m => m.Discard()); // Don't create new saga for compensating events
+        });
         
         // TODO: Re-enable timeout scheduling when RabbitMQ delayed message plugin is available
         // Schedule(() => OtpTimeoutSchedule, instance => instance.OtpTimeoutTokenId, s =>
@@ -90,6 +114,9 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                         _logger.LogInformation("Saga {CorrelationId} initialized successfully - Email: {Email}, FullName: {FullName}, Channel: {Channel}", 
                             context.Saga.CorrelationId, context.Saga.Email, context.Saga.FullName, context.Saga.Channel);
                     })
+
+                    /* publish SendOtpNotification event to NotificationService 
+                     after saga initialized (otp cache redis successffly) */
                     .PublishAsync(context => context.Init<SendOtpNotification>(new
                     {
                         CorrelationId = context.Saga.CorrelationId,
@@ -112,13 +139,17 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                     })
                 )
         );
-        
+        /*
+        while state is Started, saga will wait for OtpSentEvent from NotificationService
+        if OtpSentEvent is received, saga will transition to OtpSent state
+        */
         During(Started,
             When(OtpSentEvent)
                 .Then(context =>
                 {
                     context.Saga.OtpSentAt = DateTime.UtcNow;
-                    _logger.LogInformation("OTP sent for registration {Email}", context.Saga.Email);
+                    _logger.LogInformation("OTP sent for registration {Email} - CorrelationId: {CorrelationId}, Current State: {State}", 
+                        context.Saga.Email, context.Saga.CorrelationId, context.Saga.CurrentState);
                 })
                 .TransitionTo(OtpSent),
                 
@@ -126,6 +157,12 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(RegistrationStartedEvent)
         );
         
+
+        /*
+        while state is OtpSent,saga will wait for OtpVerifiedEvent from AuthService.
+        if OtpVerifiedEvent is received, then publish CreateAuthUser event to AuthService
+        and saga will transition to OtpVerified state
+        */
         During(OtpSent,
             When(OtpVerifiedEvent)
                 .IfElse(context => !string.IsNullOrEmpty(context.Saga.Email), 
@@ -175,7 +212,12 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(RegistrationStartedEvent),
             Ignore(OtpSentEvent)
         );
-        
+
+        /*
+        while state is OtpVerified, saga will wait for AuthUserCreatedEvent from AuthService
+        if successfully AuthUserCreatedEvent is received, then publish CreateUserProfile event to UserService
+        and saga will transition to AuthUserCreated state
+        */
         During(OtpVerified,
             When(AuthUserCreatedEvent)
                 .If(context => context.Message.Success, x => x // Success case
@@ -210,6 +252,12 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(OtpVerifiedEvent)
         );
         
+
+        /*
+        while state is AuthUserCreated, saga will wait for UserProfileCreatedEvent from UserService
+        if successfully UserProfileCreatedEvent is received, then publish SendWelcomeNotification event to NotificationService
+        and saga will transition to UserProfileCreated state
+        */
         During(AuthUserCreated,
             When(UserProfileCreatedEvent)
                 .If(context => context.Message.Success, x => x // Success case
@@ -262,6 +310,11 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(UserProfileCreatedEvent)
         );
         
+        /*
+        while state is RollingBack, saga will wait for AuthUserDeletedEvent from AuthService
+        if successfully AuthUserDeletedEvent is received, then saga will transition to RolledBack state
+        if failed AuthUserDeletedEvent is received, then saga will transition to Failed state
+        */
         // Handle rollback process
         During(RollingBack,
             When(AuthUserDeletedEvent)
@@ -278,8 +331,17 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                         context.Saga.ErrorMessage += $" | AuthUser deletion failed: {context.Message.ErrorMessage}";
                         _logger.LogError("Failed to delete AuthUser {UserId} during rollback for {Email}: {Error}", 
                             context.Message.UserId, context.Saga.Email, context.Message.ErrorMessage);
+
+                        //Future: trigger background job to delete AppUser in AuthService
                     })
-                    .TransitionTo(Failed))
+                    .TransitionTo(Failed)),
+                
+            // Ignore duplicate events during rollback - saga is focused on cleanup
+            Ignore(RegistrationStartedEvent),
+            Ignore(OtpSentEvent),
+            Ignore(OtpVerifiedEvent),
+            Ignore(AuthUserCreatedEvent),
+            Ignore(UserProfileCreatedEvent) // This was missing and causing the error
         );
         
         During(Failed,

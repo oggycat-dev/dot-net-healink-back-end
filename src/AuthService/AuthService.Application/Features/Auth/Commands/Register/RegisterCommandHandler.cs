@@ -1,5 +1,6 @@
 using AuthService.Application.Commons.Interfaces;
 using AuthService.Application.Helpers;
+using AuthService.Domain.Entities;
 using AutoMapper;
 using MassTransit;
 using MediatR;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using SharedLibrary.Commons.Cache;
 using SharedLibrary.Commons.Enums;
 using SharedLibrary.Commons.Models;
+using SharedLibrary.Commons.Repositories;
 using SharedLibrary.Contracts.User.Saga;
 
 namespace AuthService.Application.Features.Auth.Commands.Register;
@@ -18,13 +20,16 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
     private readonly IOtpCacheService _otpCacheService;
     private readonly ILogger<RegisterCommandHandler> _logger;
     private readonly string _passwordEncryptionKey;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public RegisterCommandHandler(IPublishEndpoint publishEndpoint, IOtpCacheService otpCacheService, ILogger<RegisterCommandHandler> logger, IConfiguration configuration)
+    public RegisterCommandHandler(IPublishEndpoint publishEndpoint, IOtpCacheService otpCacheService, 
+    ILogger<RegisterCommandHandler> logger, IConfiguration configuration, IUnitOfWork unitOfWork)
     {
         _publishEndpoint = publishEndpoint;
         _otpCacheService = otpCacheService;
         _passwordEncryptionKey = configuration["PasswordEncryptionKey"] ?? throw new ArgumentNullException("PasswordEncryptionKey is not configured");
         _logger = logger;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -37,18 +42,26 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
             var contact = channel == NotificationChannelEnum.Email ?
                 request.Email : request.PhoneNumber;
 
-            if (string.IsNullOrEmpty(contact))
+            // Check if email already exists
+            
+            if (await _unitOfWork.Repository<AppUser>().AnyAsync(u => u.Email == request.Email))
             {
-                return Result.Failure("Contact information is required", ErrorCodeEnum.ValidationFailed);
+                return Result.Failure("Email already exists", ErrorCodeEnum.ValidationFailed);
+            }
+
+            // Check if phone number already exists
+            if (await _unitOfWork.Repository<AppUser>().AnyAsync(u => u.PhoneNumber == request.PhoneNumber))
+            {
+                return Result.Failure("Phone number already exists", ErrorCodeEnum.ValidationFailed);
             }
 
             // Check if there's already an active registration OTP for this contact
-            var existingOtpData = await _otpCacheService.GetOtpDataAsync(contact, OtpTypeEnum.Registration);
-            if (existingOtpData != null)
-            {
-                _logger.LogWarning("Active registration OTP already exists for contact: {Contact}. Please wait or verify existing OTP.", contact);
-                return Result.Failure("Registration already in progress. Please check your email/phone for existing OTP or wait a few minutes before trying again.", ErrorCodeEnum.ResourceConflict);
-            }
+            // var existingOtpData = await _otpCacheService.GetOtpDataAsync(contact, OtpTypeEnum.Registration);
+            // if (existingOtpData != null)
+            // {
+            //     _logger.LogWarning("Active registration OTP already exists for contact: {Contact}. Please wait or verify existing OTP.", contact);
+            //     return Result.Failure("Registration already in progress. Please check your email/phone for existing OTP or wait a few minutes before trying again.", ErrorCodeEnum.ResourceConflict);
+            // }
 
             // CRITICAL: Additional safety check - ensure unique correlation ID and avoid race conditions
             // Log the attempt with timestamp for monitoring duplicate requests

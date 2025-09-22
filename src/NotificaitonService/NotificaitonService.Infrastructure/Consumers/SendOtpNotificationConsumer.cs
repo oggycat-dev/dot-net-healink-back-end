@@ -16,7 +16,8 @@ public class SendOtpNotificationConsumer : IConsumer<SendOtpNotification>
     private readonly INotificationFactory _notificationFactory;
     private readonly ILogger<SendOtpNotificationConsumer> _logger;
     private readonly IMemoryCache _cache;
-    private static readonly TimeSpan IdempotencyWindow = TimeSpan.FromMinutes(10);
+    //this means user can refresh new otp notification after 1 minute, despite the previous one is not expired
+    private static readonly TimeSpan IdempotencyWindow = TimeSpan.FromMinutes(1);
 
     public SendOtpNotificationConsumer(
         INotificationFactory notificationFactory,
@@ -92,7 +93,7 @@ public class SendOtpNotificationConsumer : IConsumer<SendOtpNotification>
                 _logger.LogInformation("OTP notification sent successfully for contact: {Contact}, CorrelationId: {CorrelationId}", 
                     message.Contact, message.CorrelationId);
 
-                // Publish success response
+                // Publish success response to RegistrationSaga
                 await context.Publish<OtpSent>(new
                 {
                     CorrelationId = message.CorrelationId,
@@ -106,7 +107,7 @@ public class SendOtpNotificationConsumer : IConsumer<SendOtpNotification>
                 _logger.LogError("Failed to send OTP notification for contact: {Contact}, CorrelationId: {CorrelationId}, Error: {Error}", 
                     message.Contact, message.CorrelationId, result.ChannelResults.FirstOrDefault(cr => !cr.Success)?.ErrorMessage);
 
-                // Publish failure response
+                // Publish failure response to RegistrationSaga
                 await context.Publish<OtpSent>(new
                 {
                     CorrelationId = message.CorrelationId,
@@ -121,7 +122,7 @@ public class SendOtpNotificationConsumer : IConsumer<SendOtpNotification>
             _logger.LogError(ex, "Error processing SendOtpNotification for contact: {Contact}, CorrelationId: {CorrelationId}", 
                 message.Contact, message.CorrelationId);
 
-            // Publish failure response
+            // Publish failure response to RegistrationSaga
             await context.Publish<OtpSent>(new
             {
                 CorrelationId = message.CorrelationId,

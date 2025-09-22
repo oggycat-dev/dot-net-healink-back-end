@@ -173,7 +173,7 @@ public class CreateAuthUserConsumer : IConsumer<CreateAuthUser>
                     _logger.LogInformation("Auth user created successfully for email: {Email}, UserId: {UserId}, CorrelationId: {CorrelationId}", 
                         message.Email, newUser.Id, message.CorrelationId);
 
-                    // Publish success response
+                    // Publish success response to RegistrationSaga
                     await context.Publish<AuthUserCreated>(new
                     {
                         CorrelationId = message.CorrelationId,

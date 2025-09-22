@@ -89,7 +89,15 @@ public static class MassTransitSagaConfiguration
                 // Configure saga endpoint with proper fault handling
                 cfg.ReceiveEndpoint("registration-saga", e =>
                 {
-                    e.ConfigureSaga<RegistrationSagaState>(context);
+                    e.ConfigureSaga<RegistrationSagaState>(context, s =>
+                    {
+                        // Ensure saga correlation works properly
+                        s.Message<RegistrationStarted>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
+                        s.Message<OtpSent>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
+                        s.Message<OtpVerified>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
+                        s.Message<AuthUserCreated>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
+                        s.Message<UserProfileCreated>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
+                    });
                     
                     // CRITICAL: Disable ALL retry mechanisms
                     e.UseMessageRetry(r => r.None());

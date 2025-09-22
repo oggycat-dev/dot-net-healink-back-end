@@ -14,7 +14,7 @@ Initial → Started → OtpSent → OtpVerified → AuthUserCreated → UserProf
 ## Updated Events Flow
 
 ### 1. Registration Request
-- Client gửi `POST /api/auth/register`
+- Client gửi `POST /api/user/auth/register`
 - AuthService tạo OTP và publish `RegistrationStarted`
 - Saga chuyển to **Started** state
 
@@ -24,7 +24,7 @@ Initial → Started → OtpSent → OtpVerified → AuthUserCreated → UserProf
 - Saga chuyển to **OtpSent** state
 
 ### 3. OTP Verification
-- Client gửi `POST /api/auth/verify-otp`
+- Client gửi `POST /api/user/auth/verify-otp`
 - AuthService verify OTP và publish `OtpVerified`
 - Saga chuyển to **OtpVerified** state
 
