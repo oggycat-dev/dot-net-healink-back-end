@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 set -e
 set -u
@@ -19,3 +19,4 @@ if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
     done
     echo "Multiple databases created"
 fi
+

@@ -1,6 +1,7 @@
 using AuthService.Application;
 using AuthService.Infrastructure;
-using ProductAuthMicroservice.Commons.DependencyInjection;
+using SharedLibrary.Commons.DependencyInjection;
+using SharedLibrary.Commons.Configurations;
 
 namespace AuthService.API.Configurations;
 
@@ -13,6 +14,18 @@ public static class ServiceConfiguration
     {
         // Configure microservice with shared services
         builder.ConfigureMicroserviceServices("AuthService");
+
+        // Add OTP cache service for registration/password reset features
+        builder.Services.AddRedisOtpCacheService(builder.Configuration);
+
+        // Add MassTransit with Saga for registration workflow
+        builder.Services.AddMassTransitWithSaga<AuthService.Infrastructure.Context.AuthDbContext>(
+            builder.Configuration, x =>
+            {
+                // Register consumers for AuthService
+                x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserConsumer>();
+            });
 
         // Application & Infrastructure layers
         builder.Services.AddApplication();

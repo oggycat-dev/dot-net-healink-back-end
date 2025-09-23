@@ -1,8 +1,8 @@
 using System.Linq.Expressions;
 using AuthService.Application.Commons.DTOs;
 using Microsoft.AspNetCore.Identity;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using ProductAuthMicroservice.Commons.Models;
+using AuthService.Domain.Entities;
+using SharedLibrary.Commons.Models;
 
 namespace AuthService.Application.Commons.Interfaces;
 
@@ -21,4 +21,5 @@ public interface IIdentityService
     Task<IdentityResult> ResetUserPasswordAsync(Expression<Func<AppUser, bool>> contactPredicate, string token, string newPassword);
     Task<string> GeneratePasswordResetToken(AppUser user);
     Task<IdentityResult> ChangePasswordAsync(AppUser user, string currentPassword, string newPassword);
+    Task<IdentityResult> DeleteUserAsync(Guid userId);
 }

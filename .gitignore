@@ -26,12 +26,12 @@ bld/
 *.sln.docstates
 
 # Sensitive configuration files
-appsettings.Production.json
-appsettings.Local.json
-appsettings.Development.json
-**/appsettings.*.json
-!**/appsettings.Example.json
-!**/appsettings.Template.json
+# appsettings.Production.json
+# appsettings.Local.json
+# appsettings.Development.json
+# **/appsettings.*.json
+# !**/appsettings.Example.json
+# !**/appsettings.Template.json
 
 # Migration configuration with sensitive data
 migrations-appsettings.json
@@ -41,6 +41,14 @@ migrations-appsettings.json
 .env.local
 .env.production
 .env.development
+
+# Configuration files with sensitive data
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+# Keep example files
+!appsettings.example.json
 
 # Database
 *.db

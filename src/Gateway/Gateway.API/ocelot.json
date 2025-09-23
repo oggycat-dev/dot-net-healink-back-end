@@ -1,7 +1,7 @@
 {
   "Routes": [
     {
-      "DownstreamPathTemplate": "/api/cms/auth/{everything}",
+      "DownstreamPathTemplate": "/api/cms/auth/login",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -9,31 +9,19 @@
           "Port": 80
         }
       ],
+      "UpstreamPathTemplate": "/api/cms/auth/login",
+      "UpstreamHttpMethod": [ "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/auth/{everything}",
+      "DownstreamScheme": "http", 
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice-api",
+          "Port": 80
+        }
+      ],
       "UpstreamPathTemplate": "/api/cms/auth/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/cms/products/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "productservice-api",
-          "Port": 80
-        }
-      ],
-      "UpstreamPathTemplate": "/api/cms/products/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/cms/categories/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "productservice-api",
-          "Port": 80
-        }
-      ],
-      "UpstreamPathTemplate": "/api/cms/categories/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -41,15 +29,69 @@
       }
     },
     {
-      "DownstreamPathTemplate": "/api/cms/categories",
+      "DownstreamPathTemplate": "/api/cms/users/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "productservice-api",
+          "Host": "userservice-api",
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/cms/categories",
+      "UpstreamPathTemplate": "/api/cms/users/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+   
+    
+    {
+      "DownstreamPathTemplate": "/api/user/auth/register",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/auth/register",
+      "UpstreamHttpMethod": [ "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/auth/verify-otp",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/auth/verify-otp",
+      "UpstreamHttpMethod": [ "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/auth/login",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/auth/login",
+      "UpstreamHttpMethod": [ "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/auth/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -57,15 +99,15 @@
       }
     },
     {
-      "DownstreamPathTemplate": "/api/cms/products",
+      "DownstreamPathTemplate": "/api/user/profile/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "productservice-api",
+          "Host": "userservice-api",
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/cms/products",
+      "UpstreamPathTemplate": "/api/user/profile/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -89,11 +131,11 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "productservice-api",
+          "Host": "userservice-api",
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/products/health",
+      "UpstreamPathTemplate": "/api/users/health",
       "UpstreamHttpMethod": [ "GET" ]
     }
   ],

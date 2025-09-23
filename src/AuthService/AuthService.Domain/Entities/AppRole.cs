@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Identity;
-using ProductAuthMicroservice.Commons.Entities;
-using ProductAuthMicroservice.Commons.Enums;
+using SharedLibrary.Commons.Entities;
+using SharedLibrary.Commons.Enums;
 
-namespace ProductAuthMicroservice.AuthService.Domain.Entities;
+namespace AuthService.Domain.Entities;
 
+/// <summary>
+/// Entity quản lý các role cơ bản trong Auth Service
+/// </summary>
 public class AppRole : IdentityRole<Guid>, IEntityLike
 {
     public DateTime? CreatedAt { get; set; }
@@ -11,4 +14,7 @@ public class AppRole : IdentityRole<Guid>, IEntityLike
     public DateTime? UpdatedAt { get; set; }
     public Guid? UpdatedBy { get; set; }
     public EntityStatusEnum Status { get; set; }
+
+    // Navigation properties
+    public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 }
