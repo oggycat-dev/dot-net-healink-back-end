@@ -15,12 +15,13 @@ public static class BaseEntityConfigExtension
     /// </summary>
     public static void ConfigureBaseEntities(ModelBuilder modelBuilder)
     {
-        // Apply soft delete filter to all entities inheriting from BaseEntity
+        // Apply soft delete filter only to root entities inheriting from BaseEntity
+        // In inheritance scenarios, filters should only be applied to the root type
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType) && entityType.BaseType == null)
             {
-                // Apply soft delete filter
+                // Apply soft delete filter only to root entity types
                 var parameter = Expression.Parameter(entityType.ClrType, "e");
                 var property = Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
                 var falseConstant = Expression.Constant(false);
@@ -44,8 +45,14 @@ public static class BaseEntityConfigExtension
     /// </summary>
     private static void ConfigureBaseEntityProperties(ModelBuilder modelBuilder, Type entityType)
     {
-        // Primary key
-        modelBuilder.Entity(entityType).HasKey("Id");
+        // Only configure primary key on root entity types, not derived types
+        // This is crucial for Entity Framework inheritance scenarios
+        var entityTypeInfo = modelBuilder.Model.FindEntityType(entityType);
+        if (entityTypeInfo?.BaseType == null)
+        {
+            // This is a root entity type, configure the primary key
+            modelBuilder.Entity(entityType).HasKey("Id");
+        }
         
         // Default values for audit fields
         modelBuilder.Entity(entityType)

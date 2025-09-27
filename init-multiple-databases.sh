@@ -20,3 +20,9 @@ if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
     echo "Multiple databases created"
 fi
 
+# Create ContentService database if not already in POSTGRES_MULTIPLE_DATABASES
+if [[ "$POSTGRES_MULTIPLE_DATABASES" != *"contentservicedb"* ]]; then
+    echo "Creating ContentService database"
+    create_user_and_database "contentservicedb"
+fi
+

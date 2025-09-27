@@ -137,9 +137,160 @@
       ],
       "UpstreamPathTemplate": "/api/users/health",
       "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/health",
+      "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/podcasts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/content/community/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/community/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/flashcards/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/flashcards/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/postcards/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/postcards/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
     }
   ],
   "GlobalConfiguration": {
     "BaseUrl": "http://localhost:5000"
   }
 }
+  {
+    "DownstreamPathTemplate": "/api/creatorapplications",
+    "DownstreamScheme": "http",
+    "DownstreamHostAndPorts": [
+      {
+        "Host": "user-service",
+        "Port": 80
+      }
+    ],
+    "UpstreamPathTemplate": "/api/creatorapplications",
+    "UpstreamHttpMethod": [ "POST" ],
+    "AuthenticationOptions": {
+      "AuthenticationProviderKey": "Bearer"
+    }
+  },
+  {
+    "DownstreamPathTemplate": "/api/creatorapplications/pending",
+    "DownstreamScheme": "http",
+    "DownstreamHostAndPorts": [
+      {
+        "Host": "user-service",
+        "Port": 80
+      }
+    ],
+    "UpstreamPathTemplate": "/api/creatorapplications/pending",
+    "UpstreamHttpMethod": [ "GET" ],
+    "AuthenticationOptions": {
+      "AuthenticationProviderKey": "Bearer"
+    }
+  },
+  {
+    "DownstreamPathTemplate": "/api/creatorapplications/{id}",
+    "DownstreamScheme": "http",
+    "DownstreamHostAndPorts": [
+      {
+        "Host": "user-service",
+        "Port": 80
+      }
+    ],
+    "UpstreamPathTemplate": "/api/creatorapplications/{id}",
+    "UpstreamHttpMethod": [ "GET" ],
+    "AuthenticationOptions": {
+      "AuthenticationProviderKey": "Bearer"
+    }
+  },
+  {
+    "DownstreamPathTemplate": "/api/creatorapplications/{id}/approve",
+    "DownstreamScheme": "http",
+    "DownstreamHostAndPorts": [
+      {
+        "Host": "user-service",
+        "Port": 80
+      }
+    ],
+    "UpstreamPathTemplate": "/api/creatorapplications/{id}/approve",
+    "UpstreamHttpMethod": [ "POST" ],
+    "AuthenticationOptions": {
+      "AuthenticationProviderKey": "Bearer"
+    }
+  },
+  {
+    "DownstreamPathTemplate": "/api/creatorapplications/{id}/reject",
+    "DownstreamScheme": "http",
+    "DownstreamHostAndPorts": [
+      {
+        "Host": "user-service",
+        "Port": 80
+      }
+    ],
+    "UpstreamPathTemplate": "/api/creatorapplications/{id}/reject",
+    "UpstreamHttpMethod": [ "POST" ],
+    "AuthenticationOptions": {
+      "AuthenticationProviderKey": "Bearer"
+    }
+  }
