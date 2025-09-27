@@ -2,6 +2,7 @@ using AuthService.Application.Commons.DTOs;
 using AuthService.Application.Features.Auth.Commands.Login;
 using AuthService.Application.Features.Auth.Commands.Logout;
 using AuthService.Application.Features.Auth.Commands.Register;
+using AuthService.Application.Features.Auth.Commands.ResetPassword;
 using AuthService.Application.Features.Auth.Commands.VerifyOtp;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -60,28 +61,83 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Verify OTP - continues the registration saga
+   /// <summary>
+    /// Reset password
     /// </summary>
-    /// <param name="request">OTP verification request</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Verification result</returns>
+    /// <remarks>
+    /// This API is used for Resetting password. It will cache an OTP code and send it to the user's email or phone number for verification.
+    /// 
+    /// Sample request:
+    /// 
+    ///     POST /api/customer/auth/reset-password
+    ///     {
+    ///        "contact": "user@example.com",
+    ///        "newPassword": "User@123",
+    ///        "otpSentChannel": 1
+    ///     }
+    /// 
+    /// `otp_sent_channel` default is 1 (Email), 2 (Phone). 
+    /// `new_password` is required
+    /// `contact` is required
+    /// </remarks>
+    /// <response code="200">Reset password successfully</response>
+    /// <response code="400">Reset password failed (validation error)</response>
+    /// <response code="500">Reset password failed (internal server error)</response>
+    [HttpPost("reset-password")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
+    [SwaggerOperation(
+        Summary = "Reset password",
+        Description = "This API is used for Resetting password",
+        OperationId = "ResetPassword",
+        Tags = new[] { "User", "User_Auth" }
+    )]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var command = new ResetPasswordCommand(request);
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.GetHttpStatusCode(), result);
+        }
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Verify OTP for registration or password reset
+    /// </summary>
+    /// <remarks>
+    /// This API is used for Verifying OTP for registration or password reset. It will verify the OTP code and register the user or reset the password.
+    /// The system automatically handles security tokens internally for enhanced security.
+    /// 
+    /// Sample request:
+    /// 
+    ///     POST /api/customer/auth/verify-otp
+    ///     {
+    ///        "contact": "user@example.com",
+    ///        "otp": "123456",
+    ///        "otp_type": 1,
+    ///        "otp_sent_channel": 1
+    ///     }
+    /// 
+    /// `otp_type` default is 1 (Registration), 2 (Password Reset)
+    /// `otp_sent_channel` default is 1 (Email), 2 (Phone)
+    /// </remarks>
     [HttpPost("verify-otp")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
-        Summary = "Verify OTP",
-        Description = "Verifies OTP for user registration or password reset",
-        OperationId = "VerifyOtp", 
+        Summary = "Verify OTP for registration",
+        Description = "This API is used for Verifying OTP for registration",
+        OperationId = "VerifyOtp",
         Tags = new[] { "User", "User_Auth" }
     )]
-    public async Task<ActionResult<Result>> VerifyOtp(
-        [FromBody] VerifyOtpRequest request,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
     {
         var command = new VerifyOtpCommand(request);
-        var result = await _mediator.Send(command, cancellationToken);
-
+        var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
             return StatusCode(result.GetHttpStatusCode(), result);

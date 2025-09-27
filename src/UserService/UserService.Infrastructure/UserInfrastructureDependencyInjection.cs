@@ -21,10 +21,10 @@ public static class UserInfrastructureDependencyInjection
         var connectionConfig = configuration.GetSection("ConnectionConfig").Get<ConnectionConfig>();
         if (connectionConfig == null || string.IsNullOrEmpty(connectionConfig.DefaultConnection))
         {
-            throw new InvalidOperationException("ProductService database connection string not found");
+            throw new InvalidOperationException("UserService database connection string not found");
         }
 
-        // Configure ProductDbContext with PostgreSQL
+        // Configure UserDbContext with PostgreSQL
         services.AddDbContext<UserDbContext>(options =>
         {
             options.UseNpgsql(connectionConfig.DefaultConnection, npgsqlOptions =>
@@ -50,7 +50,7 @@ public static class UserInfrastructureDependencyInjection
             return new UnitOfWork(context);
         });
 
-        // Register OutboxUnitOfWork for ProductService
+        // Register OutboxUnitOfWork for UserService
         services.AddScoped<IOutboxUnitOfWork>(provider =>
         {
             var context = provider.GetRequiredService<UserDbContext>();

@@ -1,12 +1,12 @@
+using System.Text.RegularExpressions;
 using FluentValidation;
 using SharedLibrary.Commons.Enums;
-using System.Text.RegularExpressions;
 
-namespace AuthService.Application.Features.Auth.Commands.VerifyOtp;
+namespace AuthService.Application.Features.Auth.Commands.ResetPassword;
 
-public class VerifyOtpCommandValidator : AbstractValidator<VerifyOtpCommand>
+public class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordCommand>
 {
-    public VerifyOtpCommandValidator()
+    public ResetPasswordCommandValidator()
     {
         RuleFor(x => x.Request.Contact)
             .NotEmpty().WithMessage("Contact is required")
@@ -16,14 +16,13 @@ public class VerifyOtpCommandValidator : AbstractValidator<VerifyOtpCommand>
                 IsValidPhoneNumber(contact))
             .WithMessage("Invalid contact format");
 
-        RuleFor(x => x.Request.OtpCode)
-            .NotEmpty().WithMessage("OTP code is required")
-            .Matches("^[0-9]{6}$").WithMessage("OTP code must be 6 digits");
+        RuleFor(x => x.Request.NewPassword)
+            .NotEmpty().WithMessage("New password is required")
+            .MinimumLength(8).WithMessage("New password must be at least 8 characters long")
+            .MaximumLength(100).WithMessage("New password must not exceed 100 characters");
 
         RuleFor(x => x.Request.OtpSentChannel)
             .IsInEnum().WithMessage("Invalid notification channel");
-        RuleFor(x => x.Request.OtpType).NotEmpty().WithMessage("OTP type is required")
-            .IsInEnum().WithMessage("Invalid OTP type");
     }
 
     private static bool IsValidEmail(string email)

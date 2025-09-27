@@ -43,14 +43,14 @@ show_usage() {
     echo "  rabbitmq           RabbitMQ message broker"
     echo "  redis              Redis cache"
     echo "  authservice-api    Authentication service"
-    echo "  productservice-api Product management service"
+    echo "  userservice-api    User management service"
     echo "  gateway-api        API Gateway"
     echo "  pgadmin            PostgreSQL admin interface"
     echo ""
     echo "Examples:"
     echo "  $0 start                    # Start all services"
     echo "  $0 restart authservice-api  # Restart auth service"
-    echo "  $0 logs productservice-api  # Show product service logs"
+    echo "  $0 logs userservice-api     # Show user service logs"
     echo "  $0 rebuild gateway-api      # Rebuild gateway"
     echo "  $0 urls                     # Show all URLs"
     echo ""
@@ -81,7 +81,7 @@ DB_USER=healink_user
 DB_PASSWORD=healink_password_2024
 DB_PORT=5432
 AUTH_DB_NAME=healink_auth_db
-PRODUCT_DB_NAME=healink_product_db
+USER_DB_NAME=healink_user_db
 
 # RabbitMQ Configuration
 RABBITMQ_USER=healink_mq
@@ -224,7 +224,7 @@ show_urls() {
     echo "================================"
     echo "🚪 Gateway API:      http://localhost:5000"
     echo "🔐 Auth Service:     http://localhost:5001"
-    echo "📦 Product Service:  http://localhost:5002"
+    echo "📦 User Service:  http://localhost:5002"
     echo "🐰 RabbitMQ Admin:   http://localhost:15672"
     echo "🗄️  PostgreSQL Admin: http://localhost:5050"
     echo "📊 Redis Commander:  http://localhost:8081"
@@ -344,7 +344,7 @@ EOF
       redis:
         condition: service_healthy
     networks:
-      - productauth-network
+      - healink-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
