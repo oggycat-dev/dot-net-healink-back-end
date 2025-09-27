@@ -19,7 +19,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly IOtpCacheService _otpCacheService;
     private readonly ILogger<RegisterCommandHandler> _logger;
-    private readonly string _passwordEncryptionKey;
+    private readonly string _PasswordEncryptionKey;
     private readonly IUnitOfWork _unitOfWork;
 
     public RegisterCommandHandler(IPublishEndpoint publishEndpoint, IOtpCacheService otpCacheService, 
@@ -27,9 +27,9 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
     {
         _publishEndpoint = publishEndpoint;
         _otpCacheService = otpCacheService;
-        _passwordEncryptionKey = configuration["PasswordEncryptionKey"] ?? throw new ArgumentNullException("PasswordEncryptionKey is not configured");
-        _logger = logger;
-        _unitOfWork = unitOfWork;
+            _PasswordEncryptionKey = configuration["PasswordEncryptionKey"] ?? throw new ArgumentNullException("PasswordEncryptionKey is not configured");
+            _logger = logger;
+            _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -75,7 +75,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
             var correlationData = new RegistrationCorrelationData(
                 correlationId, 
                 command.Request, 
-                PasswordCryptoHelper.Encrypt(command.Request.Password, _passwordEncryptionKey),
+                PasswordCryptoHelper.Encrypt(command.Request.Password, _PasswordEncryptionKey),
                 channel);
 
             // Generate and store OTP with rate limiting check

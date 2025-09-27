@@ -103,7 +103,7 @@ public static class NotificationTemplateHelper
 
     public static string GetSubject(NotificationTemplateEnums template, OtpTypeEnum? otpType = null, NotificationChannelEnum channel = NotificationChannelEnum.Email, string? appName = null)
     {
-        var appTitle = appName ?? "NekoVi";
+        var appTitle = appName ?? "Healink";
         return template switch
         {
             NotificationTemplateEnums.Otp => otpType switch
