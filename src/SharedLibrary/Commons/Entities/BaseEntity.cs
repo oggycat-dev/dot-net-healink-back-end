@@ -13,4 +13,12 @@ public class BaseEntity : IEntityLike
     public Guid? DeletedBy { get; set; }
     public DateTime? DeletedAt { get; set; }
     public EntityStatusEnum Status { get; set; } = EntityStatusEnum.Active;
+
+    public void MarkAsDeleted(Guid? deletedBy = null)
+    {
+        IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
+        DeletedBy = deletedBy;
+        Status = EntityStatusEnum.Inactive;
+    }
 }
