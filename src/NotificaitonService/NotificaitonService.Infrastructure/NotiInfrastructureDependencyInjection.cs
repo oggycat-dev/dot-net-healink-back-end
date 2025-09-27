@@ -2,9 +2,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NotificationService.Application.Commons.Interfaces;
 using NotificationService.Application.Commons.Models;
+using NotificationService.Infrastructure.EventHandlers;
 using NotificationService.Infrastructure.Factories;
 using NotificationService.Infrastructure.Services;
+using SharedLibrary.Commons.EventBus;
 using SharedLibrary.Commons.Models.Otp;
+using SharedLibrary.Contracts.Auth;
 
 namespace NotificationService.Infrastructure;
 
@@ -26,6 +29,9 @@ public static class NotiInfrastructureDependencyInjection
         services.AddScoped<INotificationFactory, NotificationFactory>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IFirebaseService, FirebaseService>();
+
+        // Register event handlers
+        services.AddScoped<IIntegrationEventHandler<ResetPasswordEvent>, ResetpasswordEventHandler>();
 
         return services;
     }

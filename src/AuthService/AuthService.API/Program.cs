@@ -39,11 +39,8 @@ try
     logger.LogInformation("Configuring RabbitMQ Event Bus...");
     app.AddRabbitMQEventBus();
 
-    // Subscribe to Product Events from ProductService
+    // Subscribe to User Events from UserService
     var eventBus = app.Services.GetRequiredService<IEventBus>();
-    // eventBus.Subscribe<ProductCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductCreatedEventHandler>();
-    // eventBus.Subscribe<ProductUpdatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductUpdatedEventHandler>();
-    // eventBus.Subscribe<ProductInventoryCreatedEvent, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers.ProductInventoryCreatedEventHandler>();
 
     // Subscribe to auth events for distributed authentication
     app.Services.SubscribeToAuthEvents();

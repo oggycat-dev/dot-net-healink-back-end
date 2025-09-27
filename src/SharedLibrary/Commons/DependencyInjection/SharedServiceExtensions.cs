@@ -116,7 +116,14 @@ public static class ApplicationServiceExtensions
         string serviceName)
     {
         // Core ASP.NET services
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            // Only configure JSON serialization to camelCase - simple!
+            options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            options.JsonSerializerOptions.WriteIndented = true;
+        });
         builder.Services.AddEndpointsApiExplorer();
 
         // Logging configuration
