@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: HealinkDB
-      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${USER_DB_NAME},${CONTENT_DB_NAME}
+      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${USER_DB_NAME},${CONTENT_DB_NAME},${NOTIFICATION_DB_NAME}
     ports:
       - "${DB_PORT}:5432"
     volumes:
@@ -151,6 +151,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
+      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${NOTIFICATION_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
       RabbitMQ__HostName: rabbitmq
       RabbitMQ__UserName: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}
@@ -187,6 +188,7 @@ services:
       context: .
       dockerfile: ./src/ContentService/ContentService.API/Dockerfile
     container_name: contentservice-api
+    user: root
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
@@ -228,6 +230,9 @@ services:
       # SỬA Ở ĐÂY: Cung cấp đường dẫn đầy đủ đến Dockerfile
       dockerfile: ./src/Gateway/Gateway.API/Dockerfile
     container_name: gateway-api
+    user: root
+    volumes:
+      - ./src/Gateway/Gateway.API/ocelot.json:/app/ocelot.json
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
