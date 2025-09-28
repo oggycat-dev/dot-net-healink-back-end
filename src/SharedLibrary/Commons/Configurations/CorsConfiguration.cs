@@ -22,7 +22,7 @@ public static class CorsConfiguration
         IConfiguration configuration, bool allowAnyOrigin = false)
     {
         // Extract CORS configuration from appsettings
-        var corsConfig = configuration.GetSection("Cors").Get<CorsConfig>() ?? new CorsConfig();
+        var corsConfig = configuration.GetSection("CorsConfig").Get<CorsConfig>() ?? new CorsConfig();
         
         // Get current environment
         var serviceProvider = services.BuildServiceProvider();

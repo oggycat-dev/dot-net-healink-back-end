@@ -15,7 +15,6 @@ public class UserDbContext : DbContext
     public DbSet<BusinessRole> BusinessRoles { get; set; }
     public DbSet<UserBusinessRole> UserBusinessRoles { get; set; }
     public DbSet<CreatorApplication> CreatorApplications { get; set; }
-    public DbSet<UserActivityLog> UserActivityLogs { get; set; }
 
     public UserDbContext(DbContextOptions<UserDbContext> options) : base(options)
     {

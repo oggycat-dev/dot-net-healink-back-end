@@ -1,5 +1,6 @@
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.Extensions;
 using UserService.Application;
 using UserService.Infrastructure;
 
@@ -12,8 +13,11 @@ public static class ServiceConfiguration
     /// </summary>
     public static WebApplicationBuilder ConfigureServices(this WebApplicationBuilder builder)
     {
-        // Configure microservice with shared services (includes RabbitMQ EventBus)
+        // Configure microservice with shared services (includes env + logging + RabbitMQ EventBus)
         builder.ConfigureMicroserviceServices("UserService");
+
+        // Add distributed authentication
+        builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
         // Add MassTransit with consumers for User creation workflow
         builder.Services.AddMassTransitWithConsumers(builder.Configuration, x =>

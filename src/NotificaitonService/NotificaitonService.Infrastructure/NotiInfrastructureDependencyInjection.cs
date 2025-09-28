@@ -31,7 +31,7 @@ public static class NotiInfrastructureDependencyInjection
         services.AddScoped<IFirebaseService, FirebaseService>();
 
         // Register event handlers
-        services.AddScoped<IIntegrationEventHandler<ResetPasswordEvent>, ResetpasswordEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<ResetPasswordEvent>, SendOtpResetPasswordEventHandler>();
 
         return services;
     }

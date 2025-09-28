@@ -1,12 +1,10 @@
-// Create startup logger
-using SharedLibrary.Commons.Configurations;
-using SharedLibrary.Commons.DependencyInjection;
-using SharedLibrary.Commons.Extensions;
 using UserService.API.Configurations;
-using UserService.Application;
-using UserService.Infrastructure;
 using UserService.Infrastructure.Extensions;
+using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.Extensions;
+using SharedLibrary.Commons.DependencyInjection;
 
+// Create startup logger
 var logger = LoggingConfiguration.CreateStartupLogger("UserService");
 
 try
@@ -14,29 +12,25 @@ try
     logger.LogInformation("Starting UserService API...");
     
     var builder = WebApplication.CreateBuilder(args);
-
+    
     // Configure all services
     builder.ConfigureServices();
     
-    // Add distributed authentication
-    builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
-
-
     var app = builder.Build();
-
-    // Configure middleware pipeline
+    
+    // Configure pipeline
     app.ConfigurePipeline();
 
-    // Apply database migrations for UserService
+    // Apply database migrations
     await app.ApplyUserMigrationsAsync(logger);
 
-    // Seed user data (business roles and admin profile)
+    // Seed user data
     await app.SeedUserDataAsync(logger);
 
     // Add RabbitMQ Event Bus
     app.AddRabbitMQEventBus();
     
-    // Subscribe to auth events for distributed authentication
+    // Subscribe to auth events
     app.Services.SubscribeToAuthEvents();
 
     logger.LogInformation("UserService API configured successfully");

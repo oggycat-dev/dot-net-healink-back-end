@@ -5,7 +5,7 @@ namespace UserService.Infrastructure.Context;
 
 /// <summary>
 /// Design-time factory for creating UserDbContext instances
-/// Used by EF Core tools for migrations and design-time operations
+/// Simple pattern like Booklify - just load .env and get connection string
 /// </summary>
 public class UserDbContextFactory : BaseDbContextFactory<UserDbContext>
 {
@@ -19,11 +19,18 @@ public class UserDbContextFactory : BaseDbContextFactory<UserDbContext>
 
     /// <summary>
     /// Gets the relative path from UserService.Infrastructure to UserService.API
-    /// This allows the factory to find appsettings.json in the API project
     /// </summary>
     protected override string GetApiProjectRelativePath()
     {
         return "../UserService.API";
+    }
+
+    /// <summary>
+    /// Gets the connection string environment variable name for UserService
+    /// </summary>
+    protected override string GetConnectionStringEnvironmentVariable()
+    {
+        return "USER_DB_CONNECTION_STRING";
     }
 }
 
