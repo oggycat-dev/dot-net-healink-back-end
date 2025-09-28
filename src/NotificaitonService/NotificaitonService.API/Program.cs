@@ -1,12 +1,7 @@
-// Create startup logger
 using NotificationService.API.Configurations;
-using NotificationService.Infrastructure.EventHandlers;
 using SharedLibrary.Commons.Configurations;
-using SharedLibrary.Commons.DependencyInjection;
-using SharedLibrary.Commons.EventBus;
-using SharedLibrary.Commons.Extensions;
-using SharedLibrary.Contracts.Auth;
 
+// Create startup logger
 var logger = LoggingConfiguration.CreateStartupLogger("NotificationService");
 
 try
@@ -14,26 +9,17 @@ try
     logger.LogInformation("Starting NotificationService API...");
     
     var builder = WebApplication.CreateBuilder(args);
-
+    
     // Configure all services
     builder.ConfigureServices();
 
-    // TODO: Add distributed authentication later when building notification management UI
-    // builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
-
     var app = builder.Build();
 
-    // Configure the application pipeline
+    // Configure pipeline
     app.ConfigurePipeline();
-
-    // Add RabbitMQ Event Bus
-    app.AddRabbitMQEventBus();
     
-    // Subscribe to auth events
-    var eventBus = app.Services.GetRequiredService<IEventBus>();
-    eventBus.Subscribe<ResetPasswordEvent, ResetpasswordEventHandler>();
-
-    app.Services.SubscribeToAuthEvents();
+    // Configure event subscriptions
+    app.ConfigureEventSubscriptions();
     
     logger.LogInformation("NotificationService API configured successfully");
 

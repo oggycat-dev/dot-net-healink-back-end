@@ -5,7 +5,7 @@ namespace AuthService.Infrastructure.Context;
 
 /// <summary>
 /// Design-time factory for creating AuthDbContext instances
-/// Used by EF Core tools for migrations and design-time operations
+/// Simple pattern like Booklify - just load .env and get connection string
 /// </summary>
 public class AuthContextFactory : BaseDbContextFactory<AuthDbContext>
 {
@@ -19,10 +19,17 @@ public class AuthContextFactory : BaseDbContextFactory<AuthDbContext>
 
     /// <summary>
     /// Gets the relative path from AuthService.Infrastructure to AuthService.API
-    /// This allows the factory to find appsettings.json in the API project
     /// </summary>
     protected override string GetApiProjectRelativePath()
     {
         return "../AuthService.API";
+    }
+
+    /// <summary>
+    /// Gets the connection string environment variable name for AuthService
+    /// </summary>
+    protected override string GetConnectionStringEnvironmentVariable()
+    {
+        return "AUTH_DB_CONNECTION_STRING";
     }
 }

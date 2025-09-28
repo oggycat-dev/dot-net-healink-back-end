@@ -7,6 +7,7 @@ using SharedLibrary.Commons.BackgroundServices;
 using SharedLibrary.Commons.EventBus;
 using SharedLibrary.SharedLibrary.Contracts.Events;
 using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.Services;
 
 namespace SharedLibrary.Commons.Extensions;
 
@@ -92,6 +93,9 @@ public static class DistributedAuthExtensions
         
         // Register Redis user state cache (includes Redis configuration)
         services.AddRedisUserStateCache(configuration);
+        
+        // Register JWT service for token validation (singleton for middleware)
+        services.AddSingleton<IJwtService, JwtService>();
         
         // Gateway doesn't need event handlers or background services
         // It only needs JWT authentication and user state cache

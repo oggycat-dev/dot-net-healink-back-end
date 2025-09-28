@@ -2,6 +2,7 @@ using AuthService.Application;
 using AuthService.Infrastructure;
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.Extensions;
 
 namespace AuthService.API.Configurations;
 
@@ -12,8 +13,11 @@ public static class ServiceConfiguration
     /// </summary>
     public static WebApplicationBuilder ConfigureServices(this WebApplicationBuilder builder)
     {
-        // Configure microservice with shared services
+        // Configure microservice with shared services (includes env + logging)
         builder.ConfigureMicroserviceServices("AuthService");
+
+        // Add distributed authentication
+        builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
         // Add OTP cache service for registration/password reset features
         builder.Services.AddRedisOtpCacheService(builder.Configuration);

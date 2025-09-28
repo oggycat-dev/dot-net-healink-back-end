@@ -60,6 +60,9 @@ public static class SharedServiceExtensions
     /// </summary>
     public static IApplicationBuilder UseSharedMiddleware(this IApplicationBuilder app)
     {
+        // Use correlation ID middleware for distributed tracing - must be early
+        app.UseCorrelationId();
+        
         // Use global exception handling
         app.UseGlobalExceptionHandling();
 
@@ -115,6 +118,12 @@ public static class ApplicationServiceExtensions
     public static WebApplicationBuilder ConfigureMicroserviceServices(this WebApplicationBuilder builder, 
         string serviceName)
     {
+        // Load environment configuration first
+        builder.AddEnvironmentConfiguration(serviceName);
+        
+        // Add logging configuration
+        builder.AddLoggingConfiguration(serviceName);
+
         // Core ASP.NET services
         builder.Services.AddControllers()
         .AddJsonOptions(options =>
@@ -125,14 +134,80 @@ public static class ApplicationServiceExtensions
             options.JsonSerializerOptions.WriteIndented = true;
         });
         builder.Services.AddEndpointsApiExplorer();
-
-        // Logging configuration
-        builder.AddLoggingConfiguration(serviceName);
         
         // Shared services
         builder.Services.AddSharedServices(builder.Configuration, serviceName);
 
         return builder;
+    }
+    
+    /// <summary>
+    /// Configure services for Gateway microservice
+    /// </summary>
+    public static WebApplicationBuilder ConfigureGatewayServices(this WebApplicationBuilder builder)
+    {
+        // Load environment configuration first
+        builder.AddEnvironmentConfiguration("Gateway");
+        
+        // Add logging configuration
+        builder.AddLoggingConfiguration("Gateway");
+
+        // Core ASP.NET services
+        builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
+        // Gateway-specific configurations
+        builder.Services.AddCorsConfiguration(builder.Configuration);
+        builder.Services.AddJwtConfiguration(builder.Configuration);
+        
+        // Add Gateway distributed auth (different from microservice auth)
+        builder.Services.AddGatewayDistributedAuth(builder.Configuration);
+        
+        // Add current user service
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddHttpClient();
+        builder.Services.AddHttpClient("AuthService", client =>
+        {
+            client.BaseAddress = new Uri("http://authservice-api");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
+        builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        return builder;
+    }
+    
+    /// <summary>
+    /// Configure Gateway-specific pipeline
+    /// </summary>
+    public static WebApplication ConfigureGatewayPipeline(this WebApplication app)
+    {
+        var environment = app.Environment;
+        var logger = app.Services.GetRequiredService<ILogger<WebApplication>>();
+        
+        logger.LogInformation("Configuring Gateway pipeline, Environment: {Environment}", environment.EnvironmentName);
+        
+        // Enable Swagger for development
+        if (environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseHttpsRedirection();
+        
+        // Use CORS - must be before authentication and Ocelot
+        app.UseCorsConfiguration();
+
+        // Use shared middleware (includes CorrelationId)
+        app.UseSharedMiddleware();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.MapControllers();
+
+        return app;
     }
 }
 
