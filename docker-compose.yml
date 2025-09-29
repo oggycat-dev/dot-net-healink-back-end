@@ -164,19 +164,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
-      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${CONTENT_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
-      JwtConfig__Key: ${JWT_SECRET_KEY}
-      JwtConfig__Issuer: ${JWT_ISSUER}
-      JwtConfig__Audience: ${JWT_AUDIENCE}
-      RabbitMQ__HostName: rabbitmq
-      RabbitMQ__UserName: ${RABBITMQ_USER}
-      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
-      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
-      AWS__S3__BucketName: "healink-content-bucket"
-      AWS__S3__Region: "us-east-1"
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: ContentService
     ports:
       - "5004:80"
+    volumes:
+      - ./.env:/app/.env
     depends_on:
       postgres:
         condition: service_healthy

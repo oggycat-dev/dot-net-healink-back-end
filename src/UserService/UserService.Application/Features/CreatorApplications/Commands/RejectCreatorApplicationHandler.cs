@@ -60,9 +60,9 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
                 UserId = application.UserId,
                 ActivityType = "ApplicationRejected",
                 Description = $"Creator application rejected: {request.RejectionReason}",
-                Data = $"{{\"applicationId\":\"{application.Id}\",\"rejectedBy\":\"{request.ReviewerId}\"}}",
+                Metadata = $"{{\"applicationId\":\"{application.Id}\",\"rejectedBy\":\"{request.ReviewerId}\"}}",
                 IpAddress = "internal",
-                Timestamp = DateTime.UtcNow
+                OccurredAt = DateTime.UtcNow
             };
 
             await _unitOfWork.Repository<UserActivityLog>().AddAsync(activityLog);

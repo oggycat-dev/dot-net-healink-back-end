@@ -81,9 +81,9 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
                 UserId = application.UserId,
                 ActivityType = "RoleAssigned",
                 Description = $"User assigned to Content Creator role via application approval",
-                Data = $"{{\"role\":\"ContentCreator\",\"assignedBy\":\"{request.ReviewerId}\"}}",
+                Metadata = $"{{\"role\":\"ContentCreator\",\"assignedBy\":\"{request.ReviewerId}\"}}",
                 IpAddress = "internal",
-                Timestamp = DateTime.UtcNow
+                OccurredAt = DateTime.UtcNow
             };
 
             await _unitOfWork.Repository<UserActivityLog>().AddAsync(activityLog);

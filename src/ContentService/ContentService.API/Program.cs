@@ -1,11 +1,9 @@
-using ContentService.Application;
-using ContentService.Infrastructure;
 using ContentService.API.Configurations;
+using ContentService.Infrastructure.Extensions;
 using SharedLibrary.Commons.Configurations;
 using SharedLibrary.Commons.DependencyInjection;
-using SharedLibrary.Commons.Extensions;
 using SharedLibrary.Commons.EventBus;
-using Serilog;
+using SharedLibrary.Commons.Extensions;
 
 // Create startup logger
 var logger = LoggingConfiguration.CreateStartupLogger("ContentService");
@@ -15,24 +13,24 @@ try
     logger.LogInformation("Starting ContentService API...");
     
     var builder = WebApplication.CreateBuilder(args);
-
-    // Configure all services using the configuration pattern
+    
+    // Configure all services
     builder.ConfigureServices();
     
-    // Add distributed authentication
-    builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
-
     var app = builder.Build();
-
-    // Configure middleware pipeline
+    
+    // Configure pipeline
     app.ConfigurePipeline();
-
-    // Add RabbitMQ Event Bus
+    
+    // Apply database migrations
+    await app.ApplyContentMigrationsAsync(logger);
+    
+    // Configure RabbitMQ Event Bus
     app.AddRabbitMQEventBus();
     
-    // Subscribe to auth events for distributed authentication
+    // Subscribe to events
     app.Services.SubscribeToAuthEvents();
-
+    
     logger.LogInformation("ContentService API configured successfully");
     
     app.Run();
