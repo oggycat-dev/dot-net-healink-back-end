@@ -279,6 +279,9 @@ public static class EnvironmentConfiguration
             case "notificationservice":
                 ConfigureNotificationServiceSettings(configuration);
                 break;
+            case "contentservice":
+                ConfigureContentServiceSettings(configuration);
+                break;
             case "gateway":
                 ConfigureGatewaySettings(configuration);
                 break;
@@ -358,6 +361,42 @@ public static class EnvironmentConfiguration
             Environment.GetEnvironmentVariable("FIREBASE_SERVER_KEY") ?? "";
         configuration["FirebaseSettings:SenderId"] = 
             Environment.GetEnvironmentVariable("FIREBASE_SENDER_ID") ?? "";
+    }
+    
+    private static void ConfigureContentServiceSettings(IConfiguration configuration)
+    {
+        // Content-specific database
+        configuration["ConnectionConfig:DefaultConnection"] = 
+            Environment.GetEnvironmentVariable("CONTENT_DB_CONNECTION_STRING") ?? 
+            Environment.GetEnvironmentVariable("ConnectionConfig__DefaultConnection");
+        
+        // Queue name
+        configuration["RabbitMQ:QueueName"] = 
+            Environment.GetEnvironmentVariable("CONTENT_QUEUE_NAME") ?? "contentservice_queue";
+        
+        // AWS S3 settings
+        configuration["AWS:S3:BucketName"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME") ?? "healink-content-bucket";
+        configuration["AWS:S3:Region"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_REGION") ?? "us-east-1";
+        configuration["AWS:S3:AccessKey"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_ACCESS_KEY") ?? "";
+        configuration["AWS:S3:SecretKey"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_SECRET_KEY") ?? "";
+        
+        // Content settings
+        configuration["ContentSettings:MaxFileSizeMB"] = 
+            Environment.GetEnvironmentVariable("CONTENT_MAX_FILE_SIZE_MB") ?? "100";
+        configuration["ContentSettings:AllowedFileTypes"] = 
+            Environment.GetEnvironmentVariable("CONTENT_ALLOWED_FILE_TYPES") ?? "jpg,jpeg,png,gif,mp4,mp3,wav,pdf,doc,docx";
+        configuration["ContentSettings:StoragePath"] = 
+            Environment.GetEnvironmentVariable("CONTENT_STORAGE_PATH") ?? "/app/content";
+        
+        // Default admin account for ContentService
+        configuration["DefaultAdminAccount:Email"] = 
+            Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";
+        configuration["DefaultAdminAccount:UserId"] = 
+            Environment.GetEnvironmentVariable("ADMIN_USER_ID") ?? "00000000-0000-0000-0000-000000000001";
     }
     
     private static void ConfigureGatewaySettings(IConfiguration configuration)
