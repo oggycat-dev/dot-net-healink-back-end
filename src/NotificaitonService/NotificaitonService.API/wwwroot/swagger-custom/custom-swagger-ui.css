@@ -1,0 +1,205 @@
+/* Custom styling for Swagger UI - Booklify Theme */
+
+/* Main header styling */
+.swagger-ui .topbar {
+    background: #2c3e50;
+    padding: 15px 0;
+}
+
+.swagger-ui .topbar-wrapper img {
+    display: none;
+}
+
+.swagger-ui .topbar-wrapper::after {
+    content: 'Booklify API';
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Main tags styling */
+.opblock-tag-section {
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.opblock-tag-section:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Main group tags: Admin, User, Common */
+.opblock-tag-section h3.opblock-tag[data-tag="Admin"] span,
+.opblock-tag-section h3.opblock-tag[data-tag="User"] span,
+.opblock-tag-section h3.opblock-tag[data-tag="Common"] span {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 6px;
+    display: inline-block;
+    margin: 5px 0;
+}
+
+/* Admin tag styling */
+.opblock-tag-section h3.opblock-tag[data-tag="Admin"] span {
+    background: #34495e;
+    color: #fff;
+    border-left: 5px solid #e74c3c;
+}
+
+/* User tag styling */
+.opblock-tag-section h3.opblock-tag[data-tag="User"] span {
+    background: #2980b9;
+    color: #fff;
+    border-left: 5px solid #3498db;
+}
+
+/* Common tag styling */
+.opblock-tag-section h3.opblock-tag[data-tag="Common"] span {
+    background: #27ae60;
+    color: #fff;
+    border-left: 5px solid #2ecc71;
+}
+
+/* Sub-tags styling */
+.opblock-tag-section h3.opblock-tag[data-tag*="_"] {
+    margin-left: 25px;
+    position: relative;
+}
+
+.opblock-tag-section h3.opblock-tag[data-tag*="_"] span {
+    font-size: 16px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Admin sub-tags */
+.opblock-tag-section h3.opblock-tag[data-tag^="CMS_"] span {
+    color: #34495e;
+    border-left: 3px solid #e74c3c;
+}
+
+/* User sub-tags */
+.opblock-tag-section h3.opblock-tag[data-tag^="User_"] span {
+    color: #2980b9;
+    border-left: 3px solid #3498db;
+}
+
+/* Common sub-tags */
+.opblock-tag-section h3.opblock-tag[data-tag^="Common_"] span {
+    color: #27ae60;
+    border-left: 3px solid #2ecc71;
+}
+
+/* Operation blocks styling */
+.swagger-ui .opblock {
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    margin: 0 0 15px 0;
+    border: none;
+}
+
+.swagger-ui .opblock.opblock-get {
+    background: rgba(97,175,254,0.1);
+    border-color: #61affe;
+}
+
+.swagger-ui .opblock.opblock-post {
+    background: rgba(73,204,144,0.1);
+    border-color: #49cc90;
+}
+
+.swagger-ui .opblock.opblock-put {
+    background: rgba(252,161,48,0.1);
+    border-color: #fca130;
+}
+
+.swagger-ui .opblock.opblock-delete {
+    background: rgba(249,62,62,0.1);
+    border-color: #f93e3e;
+}
+
+/* Operation buttons */
+.swagger-ui .opblock .opblock-summary-method {
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-weight: bold;
+}
+
+/* Models section */
+.swagger-ui .models {
+    padding: 15px;
+    border-radius: 6px;
+    background: #f8f9fa;
+    margin: 20px 0;
+}
+
+.swagger-ui .models-control {
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+/* Try it out button */
+.swagger-ui .btn.try-out__btn {
+    background: #2c3e50;
+    color: #fff;
+    border-radius: 4px;
+    padding: 8px 15px;
+    transition: all 0.3s ease;
+}
+
+.swagger-ui .btn.try-out__btn:hover {
+    background: #34495e;
+}
+
+/* Execute button */
+.swagger-ui .btn.execute {
+    background: #27ae60;
+    color: #fff;
+    border-radius: 4px;
+    padding: 8px 15px;
+    transition: all 0.3s ease;
+}
+
+.swagger-ui .btn.execute:hover {
+    background: #219a52;
+}
+
+/* Response section */
+.swagger-ui .responses-wrapper {
+    background: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* Schema tables */
+.swagger-ui .model-box {
+    background: #fff;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+/* Parameters section */
+.swagger-ui .parameters-col_description {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2c3e50;
+}
+
+/* Required field markers */
+.swagger-ui .required {
+    color: #e74c3c;
+}
+
+/* Description text */
+.swagger-ui .markdown p {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #34495e;
+    line-height: 1.6;
+} 

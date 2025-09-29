@@ -78,6 +78,7 @@ public class OutboxUnitOfWork : UnitOfWork, IOutboxUnitOfWork
                 outboxEvent.ErrorMessage = errorMessage;
                 outboxEvent.NextRetryAt = DateTime.UtcNow.AddMinutes(Math.Pow(2, outboxEvent.RetryCount));
                 Repository<OutboxEvent>().Update(outboxEvent);
+                await SaveChangesAsync();
             }
         }
         catch (Exception ex)
@@ -97,6 +98,7 @@ public class OutboxUnitOfWork : UnitOfWork, IOutboxUnitOfWork
                 outboxEvent.ProcessedAt = DateTime.UtcNow;
                 outboxEvent.UpdateEntity();
                 Repository<OutboxEvent>().Update(outboxEvent);
+                await SaveChangesAsync();
             }
         }
         catch (Exception ex)
