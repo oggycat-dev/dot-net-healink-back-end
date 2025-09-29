@@ -2,6 +2,10 @@ using NotificationService.Application;
 using NotificationService.Infrastructure;
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.EventBus;
+using SharedLibrary.Contracts.Auth;
+using NotificationService.Infrastructure.EventHandlers;
+using SharedLibrary.Commons.Extensions;
 
 namespace NotificationService.API.Configurations;
 
@@ -12,7 +16,7 @@ public static class ServiceConfiguration
     /// </summary>
     public static WebApplicationBuilder ConfigureServices(this WebApplicationBuilder builder)
     {
-        // Configure microservice with shared services
+        // Configure microservice with shared services (includes env + logging + RabbitMQ EventBus)
         builder.ConfigureMicroserviceServices("NotificationService");
 
         // Add MassTransit with consumers for notification workflow
@@ -37,6 +41,23 @@ public static class ServiceConfiguration
         // Use shared pipeline configuration
         app.ConfigureSharedPipeline("NotificationService");
 
+        return app;
+    }
+    
+    /// <summary>
+    /// Configure event subscriptions for NotificationService
+    /// </summary>
+    public static WebApplication ConfigureEventSubscriptions(this WebApplication app)
+    {
+        // Add RabbitMQ Event Bus
+        app.AddRabbitMQEventBus();
+        
+        // Subscribe to auth events
+        var eventBus = app.Services.GetRequiredService<IEventBus>();
+        eventBus.Subscribe<ResetPasswordEvent, SendOtpResetPasswordEventHandler>();
+
+        app.Services.SubscribeToAuthEvents();
+        
         return app;
     }
 }

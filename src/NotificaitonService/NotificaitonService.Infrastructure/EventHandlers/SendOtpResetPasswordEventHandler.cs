@@ -10,16 +10,16 @@ using SharedLibrary.Contracts.Auth;
 
 namespace NotificationService.Infrastructure.EventHandlers;
 
-public class ResetpasswordEventHandler : IIntegrationEventHandler<ResetPasswordEvent>
+public class SendOtpResetPasswordEventHandler : IIntegrationEventHandler<ResetPasswordEvent>
 {
     private readonly INotificationFactory _notificationFactory;
-    private readonly ILogger<ResetpasswordEventHandler> _logger;
+    private readonly ILogger<SendOtpResetPasswordEventHandler> _logger;
     private readonly IMemoryCache _cache;
     private static readonly TimeSpan IdempotencyWindow = TimeSpan.FromMinutes(1);
 
-    public ResetpasswordEventHandler(
+    public SendOtpResetPasswordEventHandler(
         INotificationFactory notificationFactory,
-        ILogger<ResetpasswordEventHandler> logger,
+        ILogger<SendOtpResetPasswordEventHandler> logger,
         IMemoryCache cache)
     {
         _notificationFactory = notificationFactory;

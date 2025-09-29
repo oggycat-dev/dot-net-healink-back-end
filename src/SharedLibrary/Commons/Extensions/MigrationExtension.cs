@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,17 @@ public static class MigrationExtension
         try
         {
             using var scope = app.ApplicationServices.CreateScope();
+            var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            
+            // Check if auto-apply migrations is enabled
+            var enableAutoMigrations = configuration.GetValue<bool>("DataConfig:EnableAutoApplyMigrations", true);
+            
+            if (!enableAutoMigrations)
+            {
+                logger.LogInformation("{ServiceName}: Auto-apply migrations is disabled (DataConfig:EnableAutoApplyMigrations=false). Skipping migrations.", serviceName);
+                return;
+            }
+            
             using var dbContext = scope.ServiceProvider.GetRequiredService<TContext>();
 
             logger.LogInformation("{ServiceName}: Starting database migrations...", serviceName);

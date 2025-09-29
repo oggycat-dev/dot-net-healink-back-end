@@ -4,9 +4,9 @@ public class CorsConfig
 {
     public string PolicyName { get; set; } = "DefaultCors";
 
-    public bool AllowAnyOrigin { get; set; }
-    public bool AllowAnyMethod { get; set; }
-    public bool AllowAnyHeader { get; set; }
+    public bool AllowAnyOrigin { get; set; } = true;
+    public bool AllowAnyMethod { get; set; } = true;
+    public bool AllowAnyHeader { get; set; } = true;
 
     public string[] AllowedOrigins { get; set; } = Array.Empty<string>();
     public string[] AllowedMethods { get; set; } = Array.Empty<string>();
