@@ -3,6 +3,7 @@ using ContentService.Infrastructure;
 using ContentService.Infrastructure.Consumers;
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
+using SharedLibrary.Commons.Extensions;
 
 namespace ContentService.API.Configurations;
 
@@ -13,11 +14,14 @@ public static class ServiceConfiguration
     /// </summary>
     public static WebApplicationBuilder ConfigureServices(this WebApplicationBuilder builder)
     {
+        // Configure microservice with shared services (includes env + logging)
+        builder.ConfigureMicroserviceServices("ContentService");
+
         // Add HttpClient for shared services
         builder.Services.AddHttpClient();
 
-        // Configure microservice with shared services
-        builder.ConfigureMicroserviceServices("ContentService");
+        // Add distributed authentication
+        builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
         // Add MassTransit with comprehensive consumers for ContentService
         builder.Services.AddMassTransitWithConsumers(builder.Configuration, x =>

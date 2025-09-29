@@ -1,35 +1,39 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER app
-EXPOSE 8080
-EXPOSE 8081
-
+# Giai đoạn 1: Build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy csproj files and restore dependencies
-COPY ["src/ContentService/ContentService.API/ContentService.API.csproj", "src/ContentService/ContentService.API/"]
-COPY ["src/ContentService/ContentService.Application/ContentService.Application.csproj", "src/ContentService/ContentService.Application/"]
-COPY ["src/ContentService/ContentService.Infrastructure/ContentService.Infrastructure.csproj", "src/ContentService/ContentService.Infrastructure/"]
-COPY ["src/ContentService/ContentService.Domain/ContentService.Domain.csproj", "src/ContentService/ContentService.Domain/"]
-COPY ["src/SharedLibrary/SharedLibrary.csproj", "src/SharedLibrary/"]
+# Copy các file .csproj trước để tận dụng Docker layer caching
+COPY ["src/ContentService/ContentService.API/ContentService.API.csproj", "ContentService/ContentService.API/"]
+COPY ["src/ContentService/ContentService.Application/ContentService.Application.csproj", "ContentService/ContentService.Application/"]
+COPY ["src/ContentService/ContentService.Domain/ContentService.Domain.csproj", "ContentService/ContentService.Domain/"]
+COPY ["src/ContentService/ContentService.Infrastructure/ContentService.Infrastructure.csproj", "ContentService/ContentService.Infrastructure/"]
+COPY ["src/SharedLibrary/SharedLibrary.csproj", "SharedLibrary/"]
 
-RUN dotnet restore "src/ContentService/ContentService.API/ContentService.API.csproj"
+# Restore các gói NuGet với SSL configuration
+RUN dotnet restore "ContentService/ContentService.API/ContentService.API.csproj" --disable-parallel --verbosity normal
 
-# Copy source code
-COPY . .
-WORKDIR "/src/src/ContentService/ContentService.API"
+COPY ["src/", "."]
+WORKDIR "/src/ContentService/ContentService.API"
+RUN dotnet build "ContentService.API.csproj" -c Release -o /app/build
 
-# Build the application
-RUN dotnet build "ContentService.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
+# Giai đoạn 2: Publish
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ContentService.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ContentService.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM base AS final
+# Giai đoạn 3: Final image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
+
+# Cài đặt curl và các dependencies cần thiết
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=publish /app/publish .
+
+ENV ASPNETCORE_ENVIRONMENT=Docker
+ENV ASPNETCORE_URLS=http://+:80
+
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost/health || exit 1
+
 ENTRYPOINT ["dotnet", "ContentService.API.dll"]

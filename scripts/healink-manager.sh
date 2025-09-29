@@ -5,7 +5,7 @@
 # ============================================
 # Single script to manage all environments
 # Author: GitHub Copilot
-# Version: 3.0
+# Version: 3.1
 
 set -e
 
@@ -48,6 +48,7 @@ show_usage() {
     echo "  destroy <env>   Destroy environment completely"
     echo "  status <env>    Show environment status"
     echo "  logs <env>      Show recent logs"
+    echo "  config          Generate config files from .env"
     echo ""
     echo "Environments:"
     echo "  dev            Development environment"
@@ -58,15 +59,31 @@ show_usage() {
     echo "  $0 deploy prod     # Deploy to production"
     echo "  $0 destroy dev     # Clean destroy (save money)"
     echo "  $0 status dev      # Check current status"
+    echo "  $0 config          # Generate config files from .env"
     echo ""
 }
 
 # Check if we're in the right directory
 check_directory() {
-    if [ ! -f "terraform_healink/healink.tf" ]; then
+    if [ ! -f "docker-compose.yml" ]; then
         print_error "Please run this script from the project root directory"
         exit 1
     fi
+}
+
+# Generate configuration files from .env
+generate_config() {
+    print_status "Generating configuration files from .env..."
+    
+    # Check if generate-appsettings.sh exists and is executable
+    if [ -f "scripts/generate-appsettings.sh" ] && [ -x "scripts/generate-appsettings.sh" ]; then
+        ./scripts/generate-appsettings.sh
+    else
+        print_error "Scripts/generate-appsettings.sh not found or not executable!"
+        exit 1
+    fi
+    
+    print_success "✅ Configuration files generated successfully!"
 }
 
 # Set Terraform workspace
@@ -201,6 +218,28 @@ show_status() {
     terraform output -no-color 2>/dev/null || echo "No infrastructure deployed"
 }
 
+# Start local development environment
+start_local() {
+    print_status "Starting local development environment..."
+    
+    # Generate config files from .env if needed
+    generate_config
+    
+    # Start Docker environment
+    print_status "Starting Docker containers..."
+    docker-compose up -d
+    
+    print_success "✅ Local development environment started"
+    print_status "Access the API Gateway at: http://localhost:5010"
+}
+
+# Stop local development environment
+stop_local() {
+    print_status "Stopping local development environment..."
+    docker-compose down
+    print_success "✅ Local development environment stopped"
+}
+
 # Main script logic
 main() {
     if [ $# -lt 1 ]; then
@@ -213,39 +252,78 @@ main() {
     local command=$1
     local env=${2:-dev}  # Default to dev environment
     
-    # Validate environment
-    if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
-        print_error "Invalid environment: $env (use 'dev' or 'prod')"
-        exit 1
-    fi
-    
     case $command in
         create)
+            # Validate environment
+            if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                print_error "Invalid environment: $env (use 'dev' or 'prod')"
+                exit 1
+            fi
             create_environment $env
             ;;
         deploy)
+            # Validate environment
+            if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                print_error "Invalid environment: $env (use 'dev' or 'prod')"
+                exit 1
+            fi
             deploy_environment $env
             ;;
         destroy)
+            # Validate environment
+            if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                print_error "Invalid environment: $env (use 'dev' or 'prod')"
+                exit 1
+            fi
             destroy_environment $env
             ;;
         status)
+            # Validate environment
+            if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                print_error "Invalid environment: $env (use 'dev' or 'prod')"
+                exit 1
+            fi
             show_status $env
             ;;
         start)
-            print_status "Starting $env environment..."
-            deploy_environment $env
+            if [ "$env" = "local" ]; then
+                start_local
+            else
+                # Validate environment
+                if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                    print_error "Invalid environment: $env (use 'dev', 'prod', or 'local')"
+                    exit 1
+                fi
+                print_status "Starting $env environment..."
+                deploy_environment $env
+            fi
             ;;
         stop)
-            print_status "Stopping $env environment..."
-            # Could implement ECS service scaling to 0 here
-            print_warning "Stop functionality not implemented yet"
-            print_status "Use 'destroy' to save costs completely"
+            if [ "$env" = "local" ]; then
+                stop_local
+            else
+                # Validate environment
+                if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                    print_error "Invalid environment: $env (use 'dev', 'prod', or 'local')"
+                    exit 1
+                fi
+                print_status "Stopping $env environment..."
+                print_warning "Stop functionality not implemented yet for cloud environments"
+                print_status "Use 'destroy' to save costs completely"
+            fi
             ;;
         logs)
+            # Validate environment
+            if [ "$env" != "dev" ] && [ "$env" != "prod" ]; then
+                print_error "Invalid environment: $env (use 'dev' or 'prod')"
+                exit 1
+            fi
             print_status "Showing logs for $env environment..."
             print_warning "Logs functionality not implemented yet"
             print_status "Check CloudWatch logs in AWS console"
+            ;;
+        config)
+            generate_config
             ;;
         *)
             print_error "Unknown command: $command"

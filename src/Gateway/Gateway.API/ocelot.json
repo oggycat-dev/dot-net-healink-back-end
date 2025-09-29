@@ -44,7 +44,6 @@
         "AllowedScopes": []
       }
     },
-   
     
     {
       "DownstreamPathTemplate": "/api/user/auth/register",
