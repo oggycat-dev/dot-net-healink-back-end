@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: HealinkDB
-      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${USER_DB_NAME},${CONTENT_DB_NAME},${NOTIFICATION_DB_NAME}
+      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${USER_DB_NAME},${CONTENT_DB_NAME}
     ports:
       - "${DB_PORT}:5432"
     volumes:
@@ -72,19 +72,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
-      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${AUTH_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
-      RabbitMQ__HostName: rabbitmq
-      RabbitMQ__UserName: ${RABBITMQ_USER}
-      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
-      JwtConfig__Key: ${JWT_SECRET_KEY}
-      JwtConfig__Issuer: ${JWT_ISSUER}
-      JwtConfig__Audience: ${JWT_AUDIENCE}
-      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
-      DefaultAdminAccount__Email: ${ADMIN_EMAIL}
-      DefaultAdminAccount__Password: ${ADMIN_PASSWORD}
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: AuthService
     ports:
       - "5001:80"
+    volumes:
+      - ./.env:/app/.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,20 +104,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
-      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${USER_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
-      RabbitMQ__HostName: rabbitmq
-      RabbitMQ__UserName: ${RABBITMQ_USER}
-      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
-      JwtConfig__Key: ${JWT_SECRET_KEY}
-      JwtConfig__Issuer: ${JWT_ISSUER}
-      JwtConfig__Audience: ${JWT_AUDIENCE}
-      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
-      OutboxProcessor__ProcessingIntervalSeconds: 30
-      OutboxProcessor__BatchSize: 100
-      OutboxProcessor__Enabled: true
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: UserService
     ports:
       - "5002:80"
+    volumes:
+      - ./.env:/app/.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -151,24 +136,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
-      ConnectionConfig__DefaultConnection: "Host=postgres;Database=${NOTIFICATION_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}"
-      RabbitMQ__HostName: rabbitmq
-      RabbitMQ__UserName: ${RABBITMQ_USER}
-      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      RabbitMQ__ExchangeName: ${RABBITMQ_EXCHANGE}
-      JwtConfig__Key: ${JWT_SECRET_KEY}
-      JwtConfig__Issuer: ${JWT_ISSUER}
-      JwtConfig__Audience: ${JWT_AUDIENCE}
-      EmailSettings__SmtpServer: ${EMAIL_SMTP_SERVER}
-      EmailSettings__Port: ${EMAIL_PORT}
-      EmailSettings__Username: ${EMAIL_USERNAME}
-      EmailSettings__Password: ${EMAIL_PASSWORD}
-      EmailSettings__FromEmail: ${EMAIL_FROM}
-      EmailSettings__FromName: ${EMAIL_FROM_NAME}
-      FirebaseSettings__ServerKey: ${FIREBASE_SERVER_KEY}
-      FirebaseSettings__SenderId: ${FIREBASE_SENDER_ID}
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: NotificationService
     ports:
       - "5003:80"
+    volumes:
+      - ./.env:/app/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -188,7 +161,6 @@ services:
       context: .
       dockerfile: ./src/ContentService/ContentService.API/Dockerfile
     container_name: contentservice-api
-    user: root
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
@@ -230,20 +202,15 @@ services:
       # SỬA Ở ĐÂY: Cung cấp đường dẫn đầy đủ đến Dockerfile
       dockerfile: ./src/Gateway/Gateway.API/Dockerfile
     container_name: gateway-api
-    user: root
-    volumes:
-      - ./src/Gateway/Gateway.API/ocelot.json:/app/ocelot.json
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:80
-      JwtConfig__Key: ${JWT_SECRET_KEY}
-      JwtConfig__Issuer: ${JWT_ISSUER}
-      JwtConfig__Audience: ${JWT_AUDIENCE}
-      Redis__ConnectionString: "redis:${REDIS_PORT},password=${REDIS_PASSWORD}"
-      AuthServiceUrl: "http://authservice-api"
-      UserServiceUrl: "http://userservice-api"
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: Gateway
     ports:
-      - "5010:80"
+      - "5000:80"
+    volumes:
+      - ./.env:/app/.env
     depends_on:
       authservice-api:
         condition: service_healthy
