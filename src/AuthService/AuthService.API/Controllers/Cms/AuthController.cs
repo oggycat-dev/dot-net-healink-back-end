@@ -1,6 +1,7 @@
 using AuthService.Application.Commons.DTOs;
 using AuthService.Application.Features.Auth.Commands.Login;
 using AuthService.Application.Features.Auth.Commands.Logout;
+using AuthService.Application.Features.Auth.Commands.RefreshToken;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Commons.Attributes;
@@ -10,7 +11,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace AuthService.API.Controllers.Cms;
 
-// <summary>
+/// <summary>
 /// Controller quản lý xác thực cho website CMS
 /// </summary>
 [ApiController]
@@ -37,10 +38,10 @@ public class AuthController : ControllerBase
     ///     {
     ///        "email": "admin@example.com",
     ///        "password": "Admin@123",
-    ///        "grant_type": 0
+    ///        "grantType": 0
     ///     }
     ///     
-    /// `grant_type` default is 0 (Password)
+    /// `grantType` default is 0 (Password)
     /// </remarks>
     /// <param name="request">Login request</param>
     /// <returns>User information and authentication token</returns>
@@ -112,5 +113,41 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Refresh token for the CMS system
+    /// </summary>
+    /// <remarks>
+    /// This API is used for Refreshing the access token for the CMS website. It will refresh the access token and refresh token expiry time in the database.
+    /// Need refresh token in the header.
+    /// 
+    /// Sample request:
+    /// 
+    ///     POST /api/cms/auth/refresh-token
+    /// 
+    /// Headers:
+    ///     Authorization: Bearer &lt;refresh_token&gt;
+    /// </remarks>
+    /// <returns>Refresh token successfully</returns>
+    /// <response code="200">Refresh token successfully</response>
+    /// <response code="401">Refresh token failed (not authorized)</response>
+    /// <response code="400">Refresh token failed (validation error)</response>
+    /// <response code="403">No access (user is not a CMS member)</response>
+    [HttpPost("refresh-token")]
+    [AuthorizeRoles("Admin", "Staff")]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status403Forbidden)]
+    [SwaggerOperation(
+        Summary = "Refresh token for the CMS system",
+        Description = "This API is used for Refreshing the access token for the CMS website",
+        OperationId = "RefreshToken",
+        Tags = new[] { "CMS", "CMS_Auth" }
+    )]
+    public async Task<IActionResult> RefreshToken()
+    {
+        var command = new RefreshTokenCommand();
+        var result = await _mediator.Send(command);
+        return StatusCode(result.GetHttpStatusCode(), result);
+    }
 }
-//test
