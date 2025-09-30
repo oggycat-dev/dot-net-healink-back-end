@@ -201,7 +201,7 @@ services:
       # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
       SERVICE_NAME: Gateway
     ports:
-      - "5000:80"
+      - "5010:80"  # Changed from 5000 to avoid conflict with AirPlay on macOS
     volumes:
       - ./.env:/app/.env
     depends_on:
