@@ -52,7 +52,8 @@ public class S3FileStorageService : IFileStorageService
                 Key = key,
                 InputStream = file.OpenReadStream(),
                 ContentType = file.ContentType,
-                CannedACL = makePublic ? S3CannedACL.PublicRead : S3CannedACL.Private,
+                // Remove CannedACL as modern S3 buckets don't allow ACLs
+                // Use bucket policy instead for public access
                 ServerSideEncryptionMethod = _config.EnableEncryption 
                     ? ServerSideEncryptionMethod.AES256 
                     : ServerSideEncryptionMethod.None,

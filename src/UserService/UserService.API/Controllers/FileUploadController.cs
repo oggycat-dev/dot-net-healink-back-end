@@ -3,6 +3,7 @@ using SharedLibrary.Commons.Attributes;
 using SharedLibrary.Commons.Controllers;
 using SharedLibrary.Commons.Interfaces;
 using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Configurations;
 using Swashbuckle.AspNetCore.Annotations;
 using UserService.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
@@ -246,6 +247,226 @@ public class FileUploadController : BaseFileUploadController
             return StatusCode(500, new { message = "Failed to upload document", error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Generate presigned URL for secure file access (for private files)
+    /// </summary>
+    /// <param name="fileUrl">Full S3 file URL</param>
+    /// <param name="expirationMinutes">URL expiration time (default: 60 minutes, max: 7 days)</param>
+    /// <returns>Temporary presigned URL</returns>
+    [HttpPost("presigned-url")]
+    [DistributedAuthorize]
+    [SwaggerOperation(
+        Summary = "Generate presigned URL for file access",
+        Description = "Generate temporary presigned URL for accessing private files. URL expires after specified time.",
+        OperationId = "GeneratePresignedUrl",
+        Tags = new[] { "File Upload" }
+    )]
+    [ProducesResponseType(typeof(PresignedUrlResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PresignedUrlResponse>> GetPresignedUrl(
+        [FromBody] PresignedUrlRequest request)
+    {
+        try
+        {
+            var userIdString = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userIdString))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            return await GeneratePresignedUrl(request.FileUrl, request.ExpirationMinutes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating presigned URL for user {UserId}", 
+                _currentUserService.UserId);
+            return StatusCode(500, new { message = "Failed to generate presigned URL", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Test S3 configuration (no authentication required for testing)
+    /// </summary>
+    [HttpPost("test-s3")]
+    [SwaggerOperation(
+        Summary = "Test S3 configuration",
+        Description = "Test S3 configuration without authentication",
+        OperationId = "TestS3Config",
+        Tags = new[] { "File Upload" }
+    )]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> TestS3Config(IFormFile file)
+    {
+        try
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "No file provided" });
+            }
+
+            _logger.LogInformation("Testing S3 upload: {FileName}, Size: {Size} bytes", 
+                file.FileName, file.Length);
+
+            // Test upload to S3
+            var fileUrl = await _fileStorageService.UploadFileAsync(
+                file, 
+                "test", 
+                makePublic: true
+            );
+
+            _logger.LogInformation("S3 upload test successful: {FileUrl}", fileUrl);
+
+            return Ok(new 
+            { 
+                success = true,
+                message = "S3 configuration is working!",
+                fileUrl = fileUrl,
+                fileName = file.FileName,
+                fileSize = file.Length
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "S3 configuration test failed");
+            return StatusCode(500, new 
+            { 
+                success = false,
+                message = "S3 configuration test failed", 
+                error = ex.Message,
+                innerError = ex.InnerException?.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// Debug S3 configuration (no authentication required for testing)
+    /// </summary>
+    [HttpGet("debug-s3")]
+    [SwaggerOperation(
+        Summary = "Debug S3 configuration",
+        Description = "Debug S3 configuration without authentication",
+        OperationId = "DebugS3Config",
+        Tags = new[] { "File Upload" }
+    )]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public ActionResult DebugS3Config()
+    {
+        try
+        {
+            var config = _fileStorageService.GetType().GetField("_config", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (config?.GetValue(_fileStorageService) is AwsS3Config awsConfig)
+            {
+                return Ok(new 
+                { 
+                    success = true,
+                    message = "S3 configuration debug info",
+                    config = new 
+                    {
+                        AccessKey = awsConfig.AccessKey?.Substring(0, Math.Min(8, awsConfig.AccessKey.Length)) + "...",
+                        SecretKey = awsConfig.SecretKey?.Substring(0, Math.Min(8, awsConfig.SecretKey.Length)) + "...",
+                        Region = awsConfig.Region,
+                        BucketName = awsConfig.BucketName,
+                        CloudFrontUrl = awsConfig.CloudFrontUrl,
+                        EnableEncryption = awsConfig.EnableEncryption,
+                        DefaultAcl = awsConfig.DefaultAcl,
+                        MaxFileSizeBytes = awsConfig.MaxFileSizeBytes,
+                        AllowedExtensions = awsConfig.AllowedExtensions
+                    }
+                });
+            }
+            
+            return Ok(new 
+            { 
+                success = false,
+                message = "Could not retrieve S3 configuration"
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new 
+            { 
+                success = false,
+                message = "Debug failed", 
+                error = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// Test presigned URL generation (no authentication required for testing)
+    /// </summary>
+    [HttpPost("test-presigned-url")]
+    [SwaggerOperation(
+        Summary = "Test presigned URL generation",
+        Description = "Test presigned URL generation without authentication",
+        OperationId = "TestPresignedUrl",
+        Tags = new[] { "File Upload" }
+    )]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> TestPresignedUrl([FromBody] PresignedUrlRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.FileUrl))
+            {
+                return BadRequest(new { message = "File URL is required" });
+            }
+
+            if (request.ExpirationMinutes <= 0 || request.ExpirationMinutes > 10080)
+            {
+                return BadRequest(new { message = "Expiration time must be between 1 minute and 7 days (10080 minutes)" });
+            }
+
+            _logger.LogInformation("Testing presigned URL generation for: {FileUrl}, Expiration: {Minutes} minutes",
+                request.FileUrl, request.ExpirationMinutes);
+
+            // Check if file exists
+            var exists = await _fileStorageService.FileExistsAsync(request.FileUrl);
+            if (!exists)
+            {
+                return NotFound(new { message = "File not found" });
+            }
+
+            // Extract key from URL
+            var uri = new Uri(request.FileUrl);
+            var fileKey = uri.AbsolutePath.TrimStart('/');
+
+            // Generate presigned URL
+            var presignedUrl = await _fileStorageService.GetPresignedUrlAsync(
+                fileKey,
+                TimeSpan.FromMinutes(request.ExpirationMinutes)
+            );
+
+            return Ok(new 
+            { 
+                success = true,
+                message = "Presigned URL generated successfully",
+                presignedUrl = presignedUrl,
+                originalUrl = request.FileUrl,
+                expirationMinutes = request.ExpirationMinutes,
+                expiresAt = DateTime.UtcNow.AddMinutes(request.ExpirationMinutes)
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error testing presigned URL generation for: {FileUrl}", request.FileUrl);
+            return StatusCode(500, new 
+            { 
+                success = false,
+                message = "Failed to generate presigned URL", 
+                error = ex.Message
+            });
+        }
+    }
 }
 
 #region Response DTOs
@@ -260,6 +481,15 @@ public class AvatarUploadResponse
     public string FileName { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request for generating presigned URL
+/// </summary>
+public class PresignedUrlRequest
+{
+    public string FileUrl { get; set; } = string.Empty;
+    public int ExpirationMinutes { get; set; } = 60;
 }
 
 #endregion

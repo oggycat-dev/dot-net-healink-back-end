@@ -159,6 +159,62 @@ public abstract class BaseFileUploadController : ControllerBase
             return StatusCode(500, new { message = "Failed to get file metadata", error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Generate presigned URL for private file access (for frontend)
+    /// </summary>
+    protected async Task<ActionResult<PresignedUrlResponse>> GeneratePresignedUrl(
+        string fileUrl, 
+        int expirationMinutes = 60)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(fileUrl))
+            {
+                return BadRequest(new { message = "File URL is required" });
+            }
+
+            if (expirationMinutes <= 0 || expirationMinutes > 10080) // Max 7 days
+            {
+                return BadRequest(new { message = "Expiration time must be between 1 minute and 7 days (10080 minutes)" });
+            }
+
+            _logger.LogInformation("Generating presigned URL for: {FileUrl}, Expiration: {Minutes} minutes", 
+                fileUrl, expirationMinutes);
+
+            // Check if file exists
+            var exists = await _fileStorageService.FileExistsAsync(fileUrl);
+            if (!exists)
+            {
+                return NotFound(new { message = "File not found" });
+            }
+
+            // Extract key from URL
+            var uri = new Uri(fileUrl);
+            var fileKey = uri.AbsolutePath.TrimStart('/');
+
+            // Generate presigned URL
+            var presignedUrl = await _fileStorageService.GetPresignedUrlAsync(
+                fileKey, 
+                TimeSpan.FromMinutes(expirationMinutes)
+            );
+
+            return Ok(new PresignedUrlResponse
+            {
+                Success = true,
+                PresignedUrl = presignedUrl,
+                OriginalUrl = fileUrl,
+                ExpiresInMinutes = expirationMinutes,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes),
+                Message = "Presigned URL generated successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating presigned URL for: {FileUrl}", fileUrl);
+            return StatusCode(500, new { message = "Failed to generate presigned URL", error = ex.Message });
+        }
+    }
 }
 
 #region Response DTOs
@@ -186,6 +242,16 @@ public class MultipleFileUploadResponse
 public class FileDeleteResponse
 {
     public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+
+public class PresignedUrlResponse
+{
+    public bool Success { get; set; }
+    public string PresignedUrl { get; set; } = string.Empty;
+    public string OriginalUrl { get; set; } = string.Empty;
+    public int ExpiresInMinutes { get; set; }
+    public DateTime ExpiresAt { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 

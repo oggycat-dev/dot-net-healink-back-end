@@ -23,15 +23,20 @@ public static class FileStorageServiceCollectionExtensions
         // Register AWS S3 configuration
         services.Configure<AwsS3Config>(configuration.GetSection(AwsS3Config.SectionName));
 
-        // Get AWS credentials from configuration
-        var awsConfig = configuration.GetSection(AwsS3Config.SectionName).Get<AwsS3Config>();
-        
-        if (awsConfig == null)
+        // Get AWS credentials from configuration with environment variable override
+        var awsConfig = new AwsS3Config
         {
-            throw new InvalidOperationException(
-                $"AWS S3 configuration section '{AwsS3Config.SectionName}' not found in configuration");
-        }
-
+            AccessKey = configuration["AwsS3Config:AccessKey"] ?? configuration["AWS_S3_ACCESS_KEY"] ?? "",
+            SecretKey = configuration["AwsS3Config:SecretKey"] ?? configuration["AWS_S3_SECRET_KEY"] ?? "",
+            Region = configuration["AwsS3Config:Region"] ?? configuration["AWS_S3_REGION"] ?? "ap-southeast-2",
+            BucketName = configuration["AwsS3Config:BucketName"] ?? configuration["AWS_S3_BUCKET_NAME"] ?? "",
+            CloudFrontUrl = configuration["AwsS3Config:CloudFrontUrl"] ?? configuration["AWS_S3_CLOUDFRONT_URL"] ?? "",
+            EnableEncryption = bool.Parse(configuration["AwsS3Config:EnableEncryption"] ?? "true"),
+            DefaultAcl = configuration["AwsS3Config:DefaultAcl"] ?? "public-read",
+            MaxFileSizeBytes = long.Parse(configuration["AwsS3Config:MaxFileSizeBytes"] ?? "104857600"),
+            AllowedExtensions = configuration["AwsS3Config:AllowedExtensions"] ?? ".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.aac,.pdf,.txt,.docx,.doc"
+        };
+        
         // Validate configuration
         awsConfig.Validate();
 

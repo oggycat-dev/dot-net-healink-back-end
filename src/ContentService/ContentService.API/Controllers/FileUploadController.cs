@@ -185,4 +185,40 @@ public class FileUploadController : BaseFileUploadController
 
         return await UploadFile(file, "community", makePublic: true);
     }
+
+    /// <summary>
+    /// Generate presigned URL for secure file access (for private content files)
+    /// </summary>
+    /// <param name="request">Request containing file URL and expiration time</param>
+    /// <returns>Temporary presigned URL</returns>
+    [HttpPost("presigned-url")]
+    [DistributedAuthorize(Roles = new[] { "Admin", "ContentCreator" })]
+    [SwaggerOperation(
+        Summary = "Generate presigned URL for file access",
+        Description = "Generate temporary presigned URL for accessing private content files. URL expires after specified time.",
+        OperationId = "GeneratePresignedUrl",
+        Tags = new[] { "File Upload" }
+    )]
+    [ProducesResponseType(typeof(PresignedUrlResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PresignedUrlResponse>> GetPresignedUrl(
+        [FromBody] PresignedUrlRequest request)
+    {
+        return await GeneratePresignedUrl(request.FileUrl, request.ExpirationMinutes);
+    }
 }
+
+#region Request DTOs
+
+/// <summary>
+/// Request for generating presigned URL
+/// </summary>
+public class PresignedUrlRequest
+{
+    public string FileUrl { get; set; } = string.Empty;
+    public int ExpirationMinutes { get; set; } = 60;
+}
+
+#endregion
