@@ -1,6 +1,7 @@
 using AuthService.Application.Commons.DTOs;
 using AuthService.Application.Features.Auth.Commands.Login;
 using AuthService.Application.Features.Auth.Commands.Logout;
+using AuthService.Application.Features.Auth.Commands.RefreshToken;
 using AuthService.Application.Features.Auth.Commands.Register;
 using AuthService.Application.Features.Auth.Commands.ResetPassword;
 using AuthService.Application.Features.Auth.Commands.VerifyOtp;
@@ -228,5 +229,43 @@ public class AuthController : ControllerBase
             return StatusCode(result.GetHttpStatusCode(), result);
         }
         return Ok(result);
+    }
+
+     /// <summary>
+    /// Refresh token for the User mobile app or website
+    /// </summary>
+    /// <remarks>
+    /// This API is used for Refreshing the access token for the User website or mobile app. It will refresh the access token and refresh token expiry time in the database.
+    /// Need refresh token in the header.
+    /// 
+    /// Sample request:
+    /// 
+    ///     POST /api/user/auth/refresh-token
+    /// 
+    /// Headers:
+    ///     Authorization: Bearer &lt;refresh_token&gt;
+    /// </remarks>
+    /// <returns>Refresh token successfully</returns>
+    /// <response code="200">Refresh token successfully</response>
+    /// <response code="401">Refresh token failed (not authorized)</response>
+    /// <response code="400">Refresh token failed (validation error)</response>
+    /// <response code="403">No access (user is not a User member)</response>
+    [HttpPost("refresh-token")]
+    [AuthorizeRoles("User")]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result<AuthResponse>), StatusCodes.Status403Forbidden)]
+    [SwaggerOperation(
+        Summary = "Refresh token for the User mobile app or website",
+        Description = "This API is used for Refreshing the access token for the User website or mobile app",
+        OperationId = "RefreshToken",
+        Tags = new[] { "User", "User_Auth" }
+    )]
+    public async Task<IActionResult> RefreshToken()
+    {
+        var command = new RefreshTokenCommand();
+        var result = await _mediator.Send(command);
+        return StatusCode(result.GetHttpStatusCode(), result);
     }
 }
