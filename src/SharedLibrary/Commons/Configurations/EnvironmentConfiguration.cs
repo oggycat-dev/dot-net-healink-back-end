@@ -334,6 +334,26 @@ public static class EnvironmentConfiguration
             Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";
         configuration["DefaultAdminAccount:UserId"] = 
             Environment.GetEnvironmentVariable("ADMIN_USER_ID") ?? "00000000-0000-0000-0000-000000000001";
+        
+        // AWS S3 settings for UserService
+        configuration["AwsS3Config:AccessKey"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_ACCESS_KEY") ?? "";
+        configuration["AwsS3Config:SecretKey"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_SECRET_KEY") ?? "";
+        configuration["AwsS3Config:Region"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_REGION") ?? "ap-southeast-2";
+        configuration["AwsS3Config:BucketName"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME") ?? "healink-upload-file";
+        configuration["AwsS3Config:CloudFrontUrl"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_CLOUDFRONT_URL") ?? "";
+        configuration["AwsS3Config:EnableEncryption"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_ENABLE_ENCRYPTION") ?? "true";
+        configuration["AwsS3Config:DefaultAcl"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_DEFAULT_ACL") ?? "public-read";
+        configuration["AwsS3Config:MaxFileSizeBytes"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_MAX_FILE_SIZE_BYTES") ?? "104857600";
+        configuration["AwsS3Config:AllowedExtensions"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_ALLOWED_EXTENSIONS") ?? ".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.aac,.pdf,.txt,.docx,.doc";
     }
     
     private static void ConfigureNotificationServiceSettings(IConfiguration configuration)
@@ -380,15 +400,25 @@ public static class EnvironmentConfiguration
         configuration["RabbitMQ:QueueName"] = 
             Environment.GetEnvironmentVariable("CONTENT_QUEUE_NAME") ?? "contentservice_queue";
         
-        // AWS S3 settings
-        configuration["AWS:S3:BucketName"] = 
-            Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME") ?? "healink-content-bucket";
-        configuration["AWS:S3:Region"] = 
-            Environment.GetEnvironmentVariable("AWS_S3_REGION") ?? "us-east-1";
-        configuration["AWS:S3:AccessKey"] = 
+        // AWS S3 settings for ContentService
+        configuration["AwsS3Config:AccessKey"] = 
             Environment.GetEnvironmentVariable("AWS_S3_ACCESS_KEY") ?? "";
-        configuration["AWS:S3:SecretKey"] = 
+        configuration["AwsS3Config:SecretKey"] = 
             Environment.GetEnvironmentVariable("AWS_S3_SECRET_KEY") ?? "";
+        configuration["AwsS3Config:Region"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_REGION") ?? "ap-southeast-2";
+        configuration["AwsS3Config:BucketName"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME") ?? "healink-upload-file";
+        configuration["AwsS3Config:CloudFrontUrl"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_CLOUDFRONT_URL") ?? "";
+        configuration["AwsS3Config:EnableEncryption"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_ENABLE_ENCRYPTION") ?? "true";
+        configuration["AwsS3Config:DefaultAcl"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_DEFAULT_ACL") ?? "public-read";
+        configuration["AwsS3Config:MaxFileSizeBytes"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_MAX_FILE_SIZE_BYTES") ?? "104857600";
+        configuration["AwsS3Config:AllowedExtensions"] = 
+            Environment.GetEnvironmentVariable("AWS_S3_ALLOWED_EXTENSIONS") ?? ".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.aac,.pdf,.txt,.docx,.doc";
         
         // Content settings
         configuration["ContentSettings:MaxFileSizeMB"] = 

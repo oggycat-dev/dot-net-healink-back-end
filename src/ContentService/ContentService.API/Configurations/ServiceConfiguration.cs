@@ -23,6 +23,9 @@ public static class ServiceConfiguration
         // Add distributed authentication
         builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
+        // Add S3 File Storage from SharedLibrary
+        builder.Services.AddS3FileStorage(builder.Configuration);
+
         // Add MassTransit with comprehensive consumers for ContentService
         builder.Services.AddMassTransitWithConsumers(builder.Configuration, x =>
         {

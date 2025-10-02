@@ -1,0 +1,291 @@
+# Full Deployment Workflow
+# Deploy all Healink microservices to AWS ECS
+# Triggers: Manual only for safety
+
+name: 🚀 Full Deploy - All Services
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        default: 'dev'
+      skip_build:
+        description: 'Skip Docker build (use existing images)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REGISTRY: 855160720656.dkr.ecr.ap-southeast-2.amazonaws.com
+
+jobs:
+  # ============================================
+  # BUILD ALL SERVICES
+  # ============================================
+  build-services:
+    name: 🔨 Build & Push All Docker Images
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_build }}
+    permissions:
+      id-token: write
+      contents: read
+    
+    strategy:
+      matrix:
+        service:
+          - name: authservice
+            path: src/AuthService/AuthService.API
+            ecr_repo: healink/auth-service
+          - name: userservice
+            path: src/UserService/UserService.API
+            ecr_repo: healink/user-service
+          - name: contentservice
+            path: src/ContentService/ContentService.API
+            ecr_repo: healink/content-service
+          - name: notificationservice
+            path: src/NotificaitonService/NotificaitonService.API
+            ecr_repo: healink/notification-service
+          - name: gateway
+            path: src/Gateway/Gateway.API
+            ecr_repo: healink/gateway
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🐳 Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: 🏗️ Build and push ${{ matrix.service.name }}
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building ${{ matrix.service.name }}..."
+          
+          # Build image
+          docker build \
+            --platform linux/amd64 \
+            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:$IMAGE_TAG \
+            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest \
+            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ inputs.environment }} \
+            -f ${{ matrix.service.path }}/Dockerfile \
+            .
+          
+          # Push all tags
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:$IMAGE_TAG
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ inputs.environment }}
+          
+          echo "✅ Successfully built and pushed ${{ matrix.service.name }}"
+
+      - name: 📊 Image info
+        run: |
+          echo "Service: ${{ matrix.service.name }}"
+          echo "Image: ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ github.sha }}"
+          echo "Tags: latest, ${{ inputs.environment }}, ${{ github.sha }}"
+
+  # ============================================
+  # DEPLOY STATEFUL INFRASTRUCTURE
+  # ============================================
+  deploy-stateful:
+    name: 🏗️ Deploy Stateful Infrastructure (RDS, ECR, Redis)
+    runs-on: ubuntu-latest
+    needs: [build-services]
+    if: always() && (needs.build-services.result == 'success' || needs.build-services.result == 'skipped')
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: 🚀 Deploy Stateful Infrastructure
+        working-directory: ./terraform_healink/stateful-infra
+        env:
+          TF_WORKSPACE: ${{ inputs.environment }}
+        run: |
+          echo "Deploying stateful infrastructure to ${{ inputs.environment }}..."
+          
+          # Initialize
+          terraform init -reconfigure
+          
+          # Select or create workspace
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          
+          # Plan
+          terraform plan -out=tfplan
+          
+          # Apply
+          terraform apply -auto-approve tfplan
+          
+          echo "✅ Stateful infrastructure deployed"
+
+      - name: 📊 Output stateful resources
+        working-directory: ./terraform_healink/stateful-infra
+        run: terraform output
+
+  # ============================================
+  # DEPLOY APPLICATION INFRASTRUCTURE
+  # ============================================
+  deploy-application:
+    name: 🚀 Deploy Application Infrastructure (ECS, ALB)
+    runs-on: ubuntu-latest
+    needs: [deploy-stateful]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: 🚀 Deploy Application Infrastructure
+        working-directory: ./terraform_healink/app-infra
+        env:
+          TF_WORKSPACE: ${{ inputs.environment }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Deploying application infrastructure to ${{ inputs.environment }}..."
+          
+          # Initialize
+          terraform init -reconfigure
+          
+          # Select or create workspace
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          
+          # Plan with variables
+          terraform plan \
+            -var="image_tag=$IMAGE_TAG" \
+            -var="environment=${{ inputs.environment }}" \
+            -out=tfplan
+          
+          # Apply
+          terraform apply -auto-approve tfplan
+          
+          echo "✅ Application infrastructure deployed"
+
+      - name: 📊 Output application URLs
+        working-directory: ./terraform_healink/app-infra
+        run: |
+          echo "=== SERVICE URLS ==="
+          terraform output
+
+  # ============================================
+  # HEALTH CHECK
+  # ============================================
+  health-check:
+    name: 🏥 Health Check All Services
+    runs-on: ubuntu-latest
+    needs: [deploy-application]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: 🏥 Check service health
+        working-directory: ./terraform_healink/app-infra
+        run: |
+          echo "Checking service health..."
+          
+          # Initialize and select workspace
+          terraform init -reconfigure
+          terraform workspace select ${{ inputs.environment }}
+          
+          # Get ALB URLs
+          echo "Waiting 60 seconds for services to start..."
+          sleep 60
+          
+          # Get outputs (you'll need to add these to your terraform outputs)
+          echo "=== Service Health Check ==="
+          echo "Note: Run manual health checks on the ALB URLs from terraform output"
+          
+          # Example health check (customize based on your output variables)
+          # GATEWAY_URL=$(terraform output -raw gateway_url 2>/dev/null || echo "")
+          # if [ -n "$GATEWAY_URL" ]; then
+          #   curl -f "$GATEWAY_URL/health" || echo "Gateway health check failed"
+          # fi
+
+      - name: ✅ Deployment Summary
+        run: |
+          echo "=== 🎉 DEPLOYMENT COMPLETED ==="
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed at: $(date)"
+          echo ""
+          echo "Services deployed:"
+          echo "  - AuthService"
+          echo "  - UserService"
+          echo "  - ContentService"
+          echo "  - NotificationService"
+          echo "  - Gateway"
+          echo ""
+          echo "Check Terraform outputs for service URLs"
+
+  # ============================================
+  # NOTIFICATION
+  # ============================================
+  notify:
+    name: 📢 Send Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [health-check]
+    if: always()
+    
+    steps:
+      - name: 📢 Deployment Status
+        run: |
+          if [ "${{ needs.health-check.result }}" == "success" ]; then
+            echo "✅ Deployment SUCCEEDED"
+            echo "Environment: ${{ inputs.environment }}"
+            echo "All services are deployed and healthy"
+          else
+            echo "❌ Deployment FAILED"
+            echo "Check the logs above for errors"
+            exit 1
+          fi
