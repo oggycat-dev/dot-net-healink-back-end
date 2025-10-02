@@ -1,54 +1,118 @@
-# 🚀 Healink Scripts - Cleaned & Simplified
+# 🚀 Healink Scripts - Local & Manual Operations
 
-## 📋 Current Scripts
+## 📋 Overview
 
-### **Primary Scripts:**
-- **`healink-manager.sh`** - 🎯 **All-in-one environment manager** (Replaces 8 old scripts)
-- **`deploy-modules.sh`** - 🏗️ **Terraform modules deployment** (Specialized for modular approach)
-- **`local-dev.sh`** - 🐳 **Local Docker Compose development** (NEW!)
+These scripts are for **local development** and **manual/emergency operations**. 
 
-### **Backup Scripts:**
-- **`old-scripts/`** - 📦 **Backup of previous scripts** (8 scripts moved here)
+For **production deployments**, use [GitHub Actions CI/CD](.github/workflows/README_FIRST.md) instead.
 
 ---
 
-## 🎯 **PRIMARY USAGE: healink-manager.sh**
+## 🎯 When to Use What?
 
-### **Quick Start:**
+| Scenario | Use This | Documentation |
+|----------|----------|---------------|
+| **Local Development** | `local-dev.sh` | This file |
+| **Deploy to AWS** | GitHub Actions | [CI/CD Guide](../.github/workflows/README_FIRST.md) |
+| **Nuke AWS** | GitHub Actions | [Nuke Workflow](../.github/workflows/README.md#nuke-aws) |
+| **Manual AWS Operations** | `healink-manager.sh` | This file |
+| **Emergency Recovery** | `healink-manager.sh` | This file |
+| **Test Terraform Changes** | `healink-manager.sh` | This file |
+
+---
+
+## 🐳 Local Development (`local-dev.sh`)
+
+For rapid local development with Docker Compose.
+
+### Quick Start:
 ```bash
-# Show help
-./scripts/healink-manager.sh
+# Start all services locally
+./scripts/local-dev.sh start
 
-# Development workflow
-./scripts/healink-manager.sh create dev      # Create dev environment
-./scripts/healink-manager.sh status dev      # Check status
-./scripts/healink-manager.sh destroy dev     # Clean up (save money)
+# Show service URLs
+./scripts/local-dev.sh urls
 
-# Production workflow  
-./scripts/healink-manager.sh deploy prod     # Deploy to production
-./scripts/healink-manager.sh status prod     # Check production status
+# Check logs
+./scripts/local-dev.sh logs authservice-api
+
+# Rebuild after changes
+./scripts/local-dev.sh rebuild contentservice-api
+
+# Clean up
+./scripts/local-dev.sh clean
 ```
 
-### **All Commands:**
-| Command | Environment | Description |
-|---------|-------------|-------------|
-| `create` | dev/prod | Create fresh environment from scratch |
-| `deploy` | dev/prod | Deploy/update existing environment |
-| `start` | dev/prod | Start existing environment (alias for deploy) |
-| `stop` | dev/prod | Stop environment (not implemented yet) |
-| `destroy` | dev/prod | Completely destroy environment |
-| `status` | dev/prod | Show current environment status |
-| `logs` | dev/prod | Show recent logs (not implemented yet) |
+### Available Commands:
+| Command | Description |
+|---------|-------------|
+| `start [service]` | Start all or specific service |
+| `stop [service]` | Stop all or specific service |
+| `restart [service]` | Restart services |
+| `rebuild [service]` | Rebuild and restart service |
+| `logs [service]` | Show logs |
+| `status` | Show status of all services |
+| `clean` | Clean up containers and volumes |
+| `reset` | Complete reset (clean + rebuild) |
+| `urls` | Show all service URLs |
+| `create-service` | Create new microservice template |
 
-### **Environment Safety:**
-- **Dev Environment**: Simple confirmation (`yes`)
-- **Production Environment**: Requires typing `DESTROY PRODUCTION`
+### Service URLs:
+```
+🚪 Gateway API:      http://localhost:5010
+🔐 Auth Service:     http://localhost:5001
+👤 User Service:     http://localhost:5002
+📝 Content Service:  http://localhost:5003
+🔔 Notification:     http://localhost:5004
+🐰 RabbitMQ Admin:   http://localhost:15672
+🗄️  PostgreSQL Admin: http://localhost:5050
+```
 
 ---
 
-## 🏗️ **SPECIALIZED: deploy-modules.sh**
+## ☁️ Manual AWS Operations (`healink-manager.sh`)
 
-For advanced Terraform modules deployment:
+For manual/emergency AWS operations when CI/CD is not available.
+
+### ⚠️ WARNING:
+For normal deployments, **use GitHub Actions** instead:
+- **Deploy**: [Full Deploy Workflow](../.github/workflows/full-deploy.yml)
+- **Nuke**: [Nuke AWS Workflow](../.github/workflows/nuke-aws.yml)
+
+### Emergency Use Cases:
+```bash
+# Emergency: Check AWS status
+./scripts/healink-manager.sh status dev
+
+# Emergency: Manual deployment
+./scripts/healink-manager.sh deploy dev
+
+# Emergency: Manual destroy (save money)
+./scripts/healink-manager.sh destroy dev
+
+# Test Terraform changes locally
+./scripts/healink-manager.sh create dev
+```
+
+### Available Commands:
+| Command | Description |
+|---------|-------------|
+| `create <env>` | Create fresh environment (dev/prod) |
+| `deploy <env>` | Deploy/update environment |
+| `start <env>` | Start existing environment |
+| `stop <env>` | Stop environment (not implemented) |
+| `destroy <env>` | Destroy environment completely |
+| `status <env>` | Show environment status |
+| `logs <env>` | Show recent logs (not implemented) |
+| `config` | Generate config files from .env |
+
+---
+
+## 📦 Other Scripts
+
+### `deploy-modules.sh`
+Specialized Terraform modules deployment.
+
 ```bash
 # Plan with modules
 ./scripts/deploy-modules.sh --plan
@@ -57,97 +121,180 @@ For advanced Terraform modules deployment:
 ./scripts/deploy-modules.sh
 ```
 
-## 🐳 **LOCAL DEVELOPMENT: local-dev.sh**
+### `git-push.sh`
+Git automation for quick commits.
 
-For rapid local development with Docker Compose:
 ```bash
-# Start all services locally
+# Quick commit and push
+./scripts/git-push.sh "commit message"
+```
+
+---
+
+## 🆚 Scripts vs CI/CD Comparison
+
+### 🏆 Use GitHub Actions CI/CD for:
+- ✅ **Production deployments** (safer, automated)
+- ✅ **Building Docker images** (parallel builds)
+- ✅ **Team collaboration** (everyone uses same process)
+- ✅ **Cost optimization** (automated nuke workflows)
+- ✅ **Audit trail** (all actions logged in GitHub)
+
+### 🔧 Use Scripts for:
+- ✅ **Local development** (Docker Compose)
+- ✅ **Manual testing** (Terraform changes)
+- ✅ **Emergency operations** (when CI/CD is down)
+- ✅ **Quick experiments** (test ideas locally)
+- ✅ **Personal workflows** (individual preferences)
+
+---
+
+## 🎓 Recommended Workflow
+
+### Daily Development:
+```bash
+# Morning: Start local environment
 ./scripts/local-dev.sh start
 
-# Create new microservice
-./scripts/local-dev.sh create-service
-
-# Show all URLs
-./scripts/local-dev.sh urls
-
-# Check logs
+# Develop and test locally
 ./scripts/local-dev.sh logs authservice-api
 
-# Rebuild after changes
-./scripts/local-dev.sh rebuild productservice-api
+# Make changes, rebuild
+./scripts/local-dev.sh rebuild authservice-api
+
+# Evening: Stop local environment
+./scripts/local-dev.sh stop
 ```
 
-**Available Services:**
-- 🚪 Gateway API: http://localhost:5000
-- 🔐 Auth Service: http://localhost:5001  
-- 📦 Product Service: http://localhost:5002
-- 🐰 RabbitMQ Admin: http://localhost:15672
-- 🗄️ pgAdmin: http://localhost:5050
-
-**See [LOCAL_DEVELOPMENT.md](../LOCAL_DEVELOPMENT.md) for complete guide**
-
----
-
-## 🧹 **What Was Cleaned Up:**
-
-### **❌ Old Scripts (Moved to backup):**
-- `create-dev-env.sh` → `healink-manager.sh create dev`
-- `start-dev-env.sh` → `healink-manager.sh start dev`  
-- `stop-dev-env.sh` → `healink-manager.sh stop dev`
-- `destroy-dev-env.sh` → `healink-manager.sh destroy dev`
-- `deploy-prod-env.sh` → `healink-manager.sh deploy prod`
-- `destroy-prod-env.sh` → `healink-manager.sh destroy prod`
-- `nuclear-start.sh` → `healink-manager.sh create dev`
-- `nuclear-stop.sh` → `healink-manager.sh destroy dev`
-
-### **✅ Benefits of Cleanup:**
-- **9 scripts → 2 scripts** (89% reduction)
-- **Consistent interface** for all operations
-- **Built-in safety** for destructive operations
-- **Better error handling** and user feedback
-- **Easier maintenance** and updates
-
----
-
-## 📖 **Examples:**
-
-### **Development Workflow:**
+### Deploy to AWS:
 ```bash
-# Start of day
-./scripts/healink-manager.sh create dev
+# Commit your changes
+git add .
+git commit -m "feature: new API endpoint"
+git push
 
-# Check everything is running
+# Go to GitHub Actions
+# Run "Full Deploy" workflow
+# Select environment: dev
+# Wait 15-20 minutes
+# ✅ Done!
+```
+
+### Emergency Recovery:
+```bash
+# If CI/CD is broken or unavailable:
 ./scripts/healink-manager.sh status dev
-
-# End of day (save money)
 ./scripts/healink-manager.sh destroy dev
-```
-
-### **Production Deployment:**
-```bash
-# Deploy to production
-./scripts/healink-manager.sh deploy prod
-
-# Verify deployment
-./scripts/healink-manager.sh status prod
-```
-
-### **Emergency Recovery:**
-```bash
-# Check current state
-./scripts/healink-manager.sh status dev
-
-# Recreate if needed
 ./scripts/healink-manager.sh create dev
 ```
 
 ---
 
-## 🎯 **Migration Complete!**
+## 📚 Documentation Links
 
-✅ **Scripts cleaned and simplified**  
-✅ **All functionality preserved**  
-✅ **Better user experience**  
-✅ **Easier to maintain**  
+### Local Development:
+- [LOCAL_DEVELOPMENT.md](../LOCAL_DEVELOPMENT.md) - Complete local dev guide
+- [docker-compose.yml](../docker-compose.yml) - Service configuration
 
-*Old scripts are safely backed up in `old-scripts/` folder.*
+### CI/CD:
+- [README_FIRST.md](../.github/workflows/README_FIRST.md) - Start here
+- [QUICK_START.md](../.github/workflows/QUICK_START.md) - Common scenarios
+- [ARCHITECTURE.md](../.github/workflows/ARCHITECTURE.md) - System design
+
+### Terraform:
+- [terraform_healink/README.md](../terraform_healink/README.md) - Terraform guide
+- [deploy.sh](../terraform_healink/deploy.sh) - Terraform script
+
+---
+
+## 🧹 Cleanup Status
+
+### ✅ Cleaned Up (Moved to `old-scripts/`):
+These scripts have been replaced by `healink-manager.sh`:
+- ❌ `create-dev-env.sh`
+- ❌ `start-dev-env.sh`
+- ❌ `stop-dev-env.sh`
+- ❌ `destroy-dev-env.sh`
+- ❌ `deploy-prod-env.sh`
+- ❌ `destroy-prod-env.sh`
+- ❌ `nuclear-start.sh`
+- ❌ `nuclear-stop.sh`
+
+### ✅ Current Scripts (Active):
+- ✅ `local-dev.sh` - Local Docker Compose development
+- ✅ `healink-manager.sh` - Manual AWS operations
+- ✅ `deploy-modules.sh` - Terraform modules
+- ✅ `git-push.sh` - Git automation
+
+---
+
+## 💡 Pro Tips
+
+### 1. Local Development First
+Always test locally before deploying to AWS:
+```bash
+./scripts/local-dev.sh start
+# Test your changes
+# If OK, commit and deploy via GitHub Actions
+```
+
+### 2. Use CI/CD for Production
+Don't use scripts for production deployments:
+```bash
+# ❌ DON'T: ./scripts/healink-manager.sh deploy prod
+# ✅ DO: GitHub Actions → Full Deploy → prod
+```
+
+### 3. Emergency Recovery
+Keep scripts for emergencies:
+```bash
+# When GitHub Actions is down:
+./scripts/healink-manager.sh status dev
+```
+
+### 4. Cost Optimization
+Use CI/CD Nuke workflow for better cost savings:
+```bash
+# ✅ Safer: GitHub Actions → Nuke AWS → Type "NUKE"
+# vs
+# ⚠️  Manual: ./scripts/healink-manager.sh destroy dev
+```
+
+---
+
+## 🎯 Quick Reference
+
+### Local Development:
+```bash
+./scripts/local-dev.sh start     # Start
+./scripts/local-dev.sh stop      # Stop
+./scripts/local-dev.sh logs      # Logs
+./scripts/local-dev.sh urls      # Show URLs
+```
+
+### Manual AWS (Emergency):
+```bash
+./scripts/healink-manager.sh status dev    # Check status
+./scripts/healink-manager.sh deploy dev    # Deploy
+./scripts/healink-manager.sh destroy dev   # Destroy
+```
+
+### CI/CD (Recommended):
+```
+GitHub → Actions → Full Deploy → Run
+GitHub → Actions → Nuke AWS → Type "NUKE" → Run
+```
+
+---
+
+## 📞 Need Help?
+
+- **Local Dev Issues**: Check [LOCAL_DEVELOPMENT.md](../LOCAL_DEVELOPMENT.md)
+- **AWS Deployment**: Use [CI/CD Guide](../.github/workflows/README_FIRST.md)
+- **Emergency**: Use scripts + contact team
+
+---
+
+**Last Updated**: September 30, 2025  
+**Status**: Active (Complementary to CI/CD)  
+**Maintained By**: Healink DevOps Team

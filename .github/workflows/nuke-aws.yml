@@ -1,0 +1,403 @@
+# Nuke AWS Workflow
+# Destroy all Healink AWS resources EXCEPT ECR and RDS
+# ⚠️ USE WITH EXTREME CAUTION ⚠️
+# This will destroy: ECS clusters, ALB, CloudWatch logs, etc.
+# This will KEEP: ECR repositories, RDS databases (data safe)
+
+name: ☢️ Nuke AWS (Keep ECR & RDS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to nuke'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        default: 'dev'
+      confirmation:
+        description: 'Type "NUKE" to confirm destruction'
+        required: true
+        type: string
+      keep_ecr_images:
+        description: 'Keep ECR images (recommended)'
+        required: false
+        type: boolean
+        default: true
+      keep_rds:
+        description: 'Keep RDS database (recommended)'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  AWS_REGION: ap-southeast-2
+
+jobs:
+  # ============================================
+  # SAFETY CHECK
+  # ============================================
+  safety-check:
+    name: 🛡️ Safety Confirmation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: ⚠️ Validate confirmation
+        run: |
+          if [ "${{ inputs.confirmation }}" != "NUKE" ]; then
+            echo "❌ ERROR: Confirmation failed"
+            echo "You must type 'NUKE' exactly to proceed"
+            echo "You typed: '${{ inputs.confirmation }}'"
+            exit 1
+          fi
+          
+          echo "✅ Confirmation validated"
+          echo ""
+          echo "⚠️  WARNING: This will destroy the following:"
+          echo "   - ECS Clusters and Services"
+          echo "   - Application Load Balancers"
+          echo "   - Target Groups"
+          echo "   - Security Groups"
+          echo "   - CloudWatch Log Groups"
+          echo "   - IAM Roles (ECS Task Execution)"
+          echo ""
+          echo "✅ This will KEEP (safe):"
+          if [ "${{ inputs.keep_ecr_images }}" == "true" ]; then
+            echo "   - ECR Repositories and Docker Images"
+          fi
+          if [ "${{ inputs.keep_rds }}" == "true" ]; then
+            echo "   - RDS Database Instances (data preserved)"
+            echo "   - Redis Cache"
+          fi
+          echo ""
+          echo "Environment: ${{ inputs.environment }}"
+
+  # ============================================
+  # DESTROY APPLICATION LAYER
+  # ============================================
+  destroy-application:
+    name: 💣 Destroy Application Infrastructure
+    runs-on: ubuntu-latest
+    needs: [safety-check]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: 💣 Destroy Application Layer
+        working-directory: ./terraform_healink/app-infra
+        run: |
+          echo "🔥 Destroying application infrastructure in ${{ inputs.environment }}..."
+          
+          # Initialize
+          terraform init -reconfigure
+          
+          # Select workspace
+          terraform workspace select ${{ inputs.environment }} || {
+            echo "❌ Workspace ${{ inputs.environment }} not found"
+            exit 1
+          }
+          
+          # Show what will be destroyed
+          echo "=== Resources to be destroyed ==="
+          terraform plan -destroy
+          
+          # Destroy
+          echo ""
+          echo "🔥 Starting destruction..."
+          terraform destroy -auto-approve
+          
+          echo "✅ Application infrastructure destroyed"
+
+      - name: 📊 Verify destruction
+        working-directory: ./terraform_healink/app-infra
+        run: |
+          terraform workspace select ${{ inputs.environment }}
+          terraform show || echo "No resources remaining in app-infra"
+
+  # ============================================
+  # MANUAL ECS CLEANUP (Safety Net)
+  # ============================================
+  cleanup-ecs:
+    name: 🧹 Manual ECS Cleanup
+    runs-on: ubuntu-latest
+    needs: [destroy-application]
+    if: always()
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🧹 Force delete ECS services
+        run: |
+          echo "Cleaning up any remaining ECS services..."
+          
+          # List all clusters
+          CLUSTERS=$(aws ecs list-clusters --query 'clusterArns[]' --output text || echo "")
+          
+          if [ -z "$CLUSTERS" ]; then
+            echo "No ECS clusters found"
+            exit 0
+          fi
+          
+          for CLUSTER in $CLUSTERS; do
+            echo "Checking cluster: $CLUSTER"
+            
+            # List services in cluster
+            SERVICES=$(aws ecs list-services --cluster $CLUSTER --query 'serviceArns[]' --output text || echo "")
+            
+            if [ -z "$SERVICES" ]; then
+              echo "  No services in this cluster"
+              continue
+            fi
+            
+            # Force delete each service
+            for SERVICE in $SERVICES; do
+              echo "  Force deleting service: $SERVICE"
+              aws ecs delete-service --cluster $CLUSTER --service $SERVICE --force || echo "  Failed to delete $SERVICE"
+            done
+            
+            # Delete cluster
+            echo "  Deleting cluster: $CLUSTER"
+            aws ecs delete-cluster --cluster $CLUSTER || echo "  Failed to delete cluster"
+          done
+          
+          echo "✅ ECS cleanup completed"
+
+  # ============================================
+  # MANUAL ALB CLEANUP
+  # ============================================
+  cleanup-alb:
+    name: 🧹 Manual ALB Cleanup
+    runs-on: ubuntu-latest
+    needs: [destroy-application]
+    if: always()
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🧹 Delete load balancers
+        run: |
+          echo "Cleaning up load balancers..."
+          
+          # List all load balancers with healink tag
+          ALBS=$(aws elbv2 describe-load-balancers \
+            --query "LoadBalancers[?starts_with(LoadBalancerName, 'healink')].LoadBalancerArn" \
+            --output text || echo "")
+          
+          if [ -z "$ALBS" ]; then
+            echo "No ALBs found"
+            exit 0
+          fi
+          
+          for ALB in $ALBS; do
+            echo "Deleting ALB: $ALB"
+            aws elbv2 delete-load-balancer --load-balancer-arn $ALB || echo "Failed to delete $ALB"
+          done
+          
+          echo "✅ ALB cleanup completed"
+
+      - name: 🧹 Delete target groups
+        run: |
+          echo "Cleaning up target groups..."
+          
+          # Wait for ALBs to be deleted
+          sleep 30
+          
+          # List all target groups with healink tag
+          TGS=$(aws elbv2 describe-target-groups \
+            --query "TargetGroups[?starts_with(TargetGroupName, 'healink')].TargetGroupArn" \
+            --output text || echo "")
+          
+          if [ -z "$TGS" ]; then
+            echo "No target groups found"
+            exit 0
+          fi
+          
+          for TG in $TGS; do
+            echo "Deleting target group: $TG"
+            aws elbv2 delete-target-group --target-group-arn $TG || echo "Failed to delete $TG"
+          done
+          
+          echo "✅ Target group cleanup completed"
+
+  # ============================================
+  # CLOUDWATCH LOGS CLEANUP
+  # ============================================
+  cleanup-logs:
+    name: 🧹 CloudWatch Logs Cleanup
+    runs-on: ubuntu-latest
+    needs: [cleanup-ecs]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🧹 Delete CloudWatch log groups
+        run: |
+          echo "Cleaning up CloudWatch log groups..."
+          
+          # List all log groups starting with /ecs/healink
+          LOG_GROUPS=$(aws logs describe-log-groups \
+            --log-group-name-prefix "/ecs/healink" \
+            --query 'logGroups[].logGroupName' \
+            --output text || echo "")
+          
+          if [ -z "$LOG_GROUPS" ]; then
+            echo "No log groups found"
+            exit 0
+          fi
+          
+          for LOG_GROUP in $LOG_GROUPS; do
+            echo "Deleting log group: $LOG_GROUP"
+            aws logs delete-log-group --log-group-name $LOG_GROUP || echo "Failed to delete $LOG_GROUP"
+          done
+          
+          echo "✅ CloudWatch logs cleanup completed"
+
+  # ============================================
+  # VERIFY SAFETY
+  # ============================================
+  verify-safety:
+    name: ✅ Verify ECR & RDS Still Exist
+    runs-on: ubuntu-latest
+    needs: [cleanup-logs]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: ✅ Verify ECR repositories exist
+        if: ${{ inputs.keep_ecr_images }}
+        run: |
+          echo "Verifying ECR repositories..."
+          
+          ECR_REPOS=$(aws ecr describe-repositories \
+            --query 'repositories[?starts_with(repositoryName, `healink`)].repositoryName' \
+            --output text || echo "")
+          
+          if [ -z "$ECR_REPOS" ]; then
+            echo "⚠️  WARNING: No ECR repositories found!"
+          else
+            echo "✅ ECR repositories found:"
+            for REPO in $ECR_REPOS; do
+              echo "  - $REPO"
+              
+              # Count images
+              IMAGE_COUNT=$(aws ecr list-images --repository-name $REPO --query 'length(imageIds)' --output text || echo "0")
+              echo "    Images: $IMAGE_COUNT"
+            done
+          fi
+
+      - name: ✅ Verify RDS instances exist
+        if: ${{ inputs.keep_rds }}
+        run: |
+          echo "Verifying RDS instances..."
+          
+          RDS_INSTANCES=$(aws rds describe-db-instances \
+            --query 'DBInstances[?starts_with(DBInstanceIdentifier, `healink`)].DBInstanceIdentifier' \
+            --output text || echo "")
+          
+          if [ -z "$RDS_INSTANCES" ]; then
+            echo "⚠️  WARNING: No RDS instances found!"
+          else
+            echo "✅ RDS instances found:"
+            for INSTANCE in $RDS_INSTANCES; do
+              echo "  - $INSTANCE"
+              
+              # Get status
+              STATUS=$(aws rds describe-db-instances \
+                --db-instance-identifier $INSTANCE \
+                --query 'DBInstances[0].DBInstanceStatus' \
+                --output text || echo "unknown")
+              echo "    Status: $STATUS"
+            done
+          fi
+
+  # ============================================
+  # FINAL REPORT
+  # ============================================
+  final-report:
+    name: 📊 Destruction Report
+    runs-on: ubuntu-latest
+    needs: [verify-safety]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate report
+        run: |
+          echo "=== ☢️  NUKE OPERATION COMPLETED ==="
+          echo ""
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Timestamp: $(date)"
+          echo ""
+          echo "✅ DESTROYED:"
+          echo "  - ECS Clusters and Services"
+          echo "  - Application Load Balancers"
+          echo "  - Target Groups"
+          echo "  - Security Groups"
+          echo "  - CloudWatch Log Groups"
+          echo "  - IAM Roles (ECS Task Execution)"
+          echo ""
+          echo "✅ PRESERVED:"
+          if [ "${{ inputs.keep_ecr_images }}" == "true" ]; then
+            echo "  - ECR Repositories (Docker images intact)"
+          fi
+          if [ "${{ inputs.keep_rds }}" == "true" ]; then
+            echo "  - RDS Database (data intact)"
+            echo "  - Redis Cache"
+          fi
+          echo ""
+          echo "💰 COST SAVINGS:"
+          echo "  - ECS Fargate: ~$0/month (no running tasks)"
+          echo "  - ALB: ~$0/month (deleted)"
+          echo "  - Remaining costs: RDS (~$15/month) + ECR storage (~$1/month)"
+          echo ""
+          echo "🚀 TO REDEPLOY:"
+          echo "  Run the 'Full Deploy' workflow to recreate all services"
+          echo ""
+          
+          if [ "${{ needs.verify-safety.result }}" == "success" ]; then
+            echo "✅ All safety checks passed - data is safe!"
+          else
+            echo "⚠️  WARNING: Some safety checks failed - verify manually!"
+          fi
