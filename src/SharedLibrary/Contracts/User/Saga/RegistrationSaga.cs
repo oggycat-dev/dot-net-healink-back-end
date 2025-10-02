@@ -148,7 +148,7 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                 .Then(context =>
                 {
                     context.Saga.OtpSentAt = DateTime.UtcNow;
-                    _logger.LogInformation("OTP sent for registration {Email} - CorrelationId: {CorrelationId}, Current State: {State}", 
+                    _logger.LogInformation("✅ SAGA RECEIVED OtpSent event! Email: {Email}, CorrelationId: {CorrelationId}, Current State: {State} → Transitioning to OtpSent", 
                         context.Saga.Email, context.Saga.CorrelationId, context.Saga.CurrentState);
                 })
                 .TransitionTo(OtpSent),
@@ -170,8 +170,8 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                     x => x.Then(context =>
                     {
                         context.Saga.OtpVerifiedAt = DateTime.UtcNow;
-                        _logger.LogInformation("OTP verified for registration {Email}. Saga state - CorrelationId: {CorrelationId}, Email: {SagaEmail}, FullName: {SagaFullName}", 
-                            context.Saga.Email, context.Saga.CorrelationId, context.Saga.Email, context.Saga.FullName);
+                        _logger.LogInformation("✅ SAGA RECEIVED OtpVerified event! Email: {Email}, CorrelationId: {CorrelationId}, Current State: {State}", 
+                            context.Saga.Email, context.Saga.CorrelationId, context.Saga.CurrentState);
                     })
                     .PublishAsync(context => 
                     {

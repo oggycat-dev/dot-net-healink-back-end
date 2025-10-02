@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\AuthService.Domain\AuthService.Domain.csproj" />
+    <ProjectReference Include="..\..\SharedLibrary\SharedLibrary.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: HealinkDB
-      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${USER_DB_NAME},${CONTENT_DB_NAME}
+      POSTGRES_MULTIPLE_DATABASES: ${AUTH_DB_NAME},${USER_DB_NAME},${CONTENT_DB_NAME},${SUBSCRIPTION_DB_NAME},${PAYMENT_DB_NAME}
     ports:
       - "${DB_PORT}:5432"
     volumes:
@@ -180,6 +180,70 @@ services:
       AWS_S3_CLOUDFRONT_URL: ${AWS_S3_CLOUDFRONT_URL}
     ports:
       - "5004:80"
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - healink-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # SubscriptionService API
+  subscriptionservice-api:
+    build:
+      context: .
+      dockerfile: ./src/SubscriptionService/SubscriptionService.API/Dockerfile
+    container_name: subscriptionservice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: SubscriptionService
+    ports:
+      - "5005:80"
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - healink-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PaymentService API
+  paymentservice-api:
+    build:
+      context: .
+      dockerfile: ./src/PaymentService/PaymentService.API/Dockerfile
+    container_name: paymentservice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
+      SERVICE_NAME: PaymentService
+    ports:
+      - "5006:80"
     volumes:
       - ./.env:/app/.env
     depends_on:

@@ -35,6 +35,9 @@ public class CorrelationIdMiddleware
         // Add correlation ID to HttpContext for easy access
         context.Items["CorrelationId"] = correlationId;
 
+        // Check if this is a health check request to reduce log noise
+        var isHealthCheck = context.Request.Path.StartsWithSegments("/health");
+
         // Log with correlation ID
         using (_logger.BeginScope(new Dictionary<string, object>
         {
@@ -43,7 +46,16 @@ public class CorrelationIdMiddleware
             ["RequestMethod"] = context.Request.Method
         }))
         {
-            _logger.LogInformation("Processing request with CorrelationId: {CorrelationId}", correlationId);
+            // Only log non-health-check requests at Information level
+            if (!isHealthCheck)
+            {
+                _logger.LogInformation("Processing request with CorrelationId: {CorrelationId}", correlationId);
+            }
+            else
+            {
+                // Log health checks at Debug level (won't show in production)
+                _logger.LogDebug("Health check request with CorrelationId: {CorrelationId}", correlationId);
+            }
 
             try
             {
@@ -56,7 +68,10 @@ public class CorrelationIdMiddleware
             }
             finally
             {
-                _logger.LogDebug("Completed request with CorrelationId: {CorrelationId}", correlationId);
+                if (!isHealthCheck)
+                {
+                    _logger.LogDebug("Completed request with CorrelationId: {CorrelationId}", correlationId);
+                }
             }
         }
     }
