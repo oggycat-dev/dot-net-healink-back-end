@@ -162,6 +162,42 @@
       "UpstreamHttpMethod": [ "GET" ]
     },
     {
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "subscriptionservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/subscription/health",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "paymentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/payment/health",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "notificationservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notification/health",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
       "DownstreamPathTemplate": "/api/podcasts/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

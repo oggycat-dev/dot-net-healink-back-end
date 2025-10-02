@@ -57,7 +57,16 @@ public class OutboxEventProcessorService : BackgroundService
     private async Task ProcessPendingEventsAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IOutboxUnitOfWork>();
+        
+        // Check if IOutboxUnitOfWork is available (services with database)
+        var unitOfWork = scope.ServiceProvider.GetService<IOutboxUnitOfWork>();
+        if (unitOfWork == null)
+        {
+            // Service doesn't have database/outbox support (e.g., NotificationService)
+            _logger.LogDebug("IOutboxUnitOfWork not available - skipping outbox processing");
+            return;
+        }
+        
         var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
 
         try
