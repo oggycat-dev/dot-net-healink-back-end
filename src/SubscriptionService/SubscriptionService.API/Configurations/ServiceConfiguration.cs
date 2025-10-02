@@ -19,12 +19,13 @@ public static class ServiceConfiguration
         // Add distributed authentication
         builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
-        // Add MassTransit with Saga for subscription workflow
-        builder.Services.AddMassTransitWithSaga<SubscriptionService.Infrastructure.Context.SubscriptionDbContext>(
+        // Add MassTransit with Consumers (NO Saga - RegistrationSaga is handled by AuthService)
+        // SubscriptionService will have its own Saga later for subscription/payment workflow
+        builder.Services.AddMassTransitWithConsumers(
             builder.Configuration, x =>
             {
                 // Register consumers for SubscriptionService
-                
+                // TODO: Add subscription-related consumers here
             });
 
         // Application & Infrastructure layers
