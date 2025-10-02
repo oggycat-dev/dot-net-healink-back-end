@@ -496,11 +496,6 @@ namespace SubscriptionService.InfraStructure.Migrations
                         .HasColumnType("jsonb")
                         .HasDefaultValue("{}");
 
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

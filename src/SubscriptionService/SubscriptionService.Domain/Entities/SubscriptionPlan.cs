@@ -8,7 +8,6 @@ public class SubscriptionPlan : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public bool IsActive { get; set; } = true;
     public string FeatureConfig { get; set; } = "{}"; // jsonb
     public string Currency { get; set; } = "VND";
     public int BillingPeriodCount { get; set; } = 1;

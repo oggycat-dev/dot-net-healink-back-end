@@ -25,7 +25,6 @@ public class SubscriptionDbContext : DbContext
             e.ToTable("SubscriptionPlans");
             e.HasIndex(x => x.Name).IsUnique();
             e.Property(x => x.FeatureConfig).HasColumnType("jsonb").HasDefaultValue("{}");
-            e.Property(x => x.IsActive).HasDefaultValue(true);
             e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
             e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
             e.Property(x => x.BillingPeriodCount).HasDefaultValue(1);
