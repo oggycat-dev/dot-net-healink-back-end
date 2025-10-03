@@ -22,6 +22,10 @@ public static class SubscriptionEventSubscriptionExtension
         eventBus.Subscribe<SubscriptionPlanUpdatedEvent, SubscriptionPlanUpdatedEventHandler>();
         eventBus.Subscribe<SubscriptionPlanDeletedEvent, SubscriptionPlanDeletedEventHandler>();
         
+        // Subscribe to Subscription (User Subscription) events for User Activity Logging
+        eventBus.Subscribe<SubscriptionUpdatedEvent, SubscriptionUpdatedEventHandler>();
+        eventBus.Subscribe<SubscriptionCanceledEvent, SubscriptionCanceledEventHandler>();
+        
         // Event bus StartConsuming() is already called in SubscribeToAuthEvents
         // No need to call it again
     }

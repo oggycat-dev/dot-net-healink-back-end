@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Commons.Attributes;
 using SharedLibrary.Commons.Extensions;
+using SharedLibrary.Commons.Models;
 using SubscriptionService.Application.Commons.DTOs;
 using SubscriptionService.Application.Features.Subscriptions.Commands.CancelSubscription;
 using SubscriptionService.Application.Features.Subscriptions.Commands.UpdateSubscription;
@@ -18,6 +19,7 @@ namespace SubscriptionService.API.Controllers.Cms;
 [Route("api/cms/subscriptions")]
 [ApiExplorerSettings(GroupName = "v1")]
 [SwaggerTag("This API is used for managing user subscriptions in CMS")]
+[SharedLibrary.Commons.Configurations.Tags("CMS", "CMS_Subscription")]
 public class SubscriptionController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -37,14 +39,15 @@ public class SubscriptionController : ControllerBase
     /// <response code="403">Forbidden</response>
     [HttpGet]
     [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Get all subscriptions",
         Description = "Retrieve paginated subscriptions with optional filters",
         OperationId = "GetSubscriptions",
-        Tags = new[] { "CMS", "Subscription" }
+        Tags = new[] { "CMS", "CMS_Subscription" }
     )]
     public async Task<IActionResult> GetSubscriptions([FromQuery] SubscriptionFilter filter)
     {
@@ -64,15 +67,16 @@ public class SubscriptionController : ControllerBase
     /// <response code="403">Forbidden</response>
     [HttpGet("{id}")]
     [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Get subscription by ID",
         Description = "Retrieve a single subscription by its unique identifier",
         OperationId = "GetSubscriptionById",
-        Tags = new[] { "CMS", "Subscription" }
+        Tags = new[] { "CMS", "CMS_Subscription" }
     )]
     public async Task<IActionResult> GetSubscriptionById(Guid id)
     {
@@ -94,16 +98,17 @@ public class SubscriptionController : ControllerBase
     /// <response code="403">Forbidden</response>
     [HttpPut("{id}")]
     [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Update subscription",
         Description = "Update subscription settings (status, renewal behavior, etc.)",
         OperationId = "UpdateSubscription",
-        Tags = new[] { "CMS", "Subscription" }
+        Tags = new[] { "CMS", "CMS_Subscription" }
     )]
     public async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] UpdateSubscriptionRequest request)
     {
@@ -126,16 +131,17 @@ public class SubscriptionController : ControllerBase
     /// <response code="403">Forbidden</response>
     [HttpPost("{id}/cancel")]
     [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Cancel subscription",
         Description = "Cancel a subscription immediately or at period end",
         OperationId = "CancelSubscription",
-        Tags = new[] { "CMS", "Subscription" }
+        Tags = new[] { "CMS", "CMS_Subscription" }
     )]
     public async Task<IActionResult> CancelSubscription(
         Guid id,

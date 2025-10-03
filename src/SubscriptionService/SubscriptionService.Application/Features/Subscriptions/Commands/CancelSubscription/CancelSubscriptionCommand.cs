@@ -10,4 +10,4 @@ namespace SubscriptionService.Application.Features.Subscriptions.Commands.Cancel
 public record CancelSubscriptionCommand(
     Guid Id,
     bool CancelAtPeriodEnd = true,
-    string? Reason = null) : IRequest<Result<SubscriptionResponse>>;
+    string? Reason = null) : IRequest<Result>;

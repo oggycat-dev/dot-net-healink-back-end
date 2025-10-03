@@ -1,7 +1,9 @@
+using Amazon.Runtime;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Commons.Attributes;
 using SharedLibrary.Commons.Extensions;
+using SharedLibrary.Commons.Models;
 using SubscriptionService.Application.Commons.DTOs;
 using SubscriptionService.Application.Features.SubscriptionPlans.Commands.CreateSubscriptionPlan;
 using SubscriptionService.Application.Features.SubscriptionPlans.Commands.DeleteSubscriptionPlan;
@@ -19,6 +21,7 @@ namespace SubscriptionService.API.Controllers.Cms;
 [Route("api/cms/subscription-plans")]
 [ApiExplorerSettings(GroupName = "v1")]
 [SwaggerTag("This API is used for managing subscription plans in CMS")]
+[SharedLibrary.Commons.Configurations.Tags("CMS", "CMS_SubscriptionPlan")]
 public class SubscriptionPlanController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -38,14 +41,15 @@ public class SubscriptionPlanController : ControllerBase
     /// <response code="403">Forbidden</response>
     [HttpGet]
     [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(PaginationResult<SubscriptionPlanResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginationResult<SubscriptionPlanResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(PaginationResult<SubscriptionPlanResponse>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(PaginationResult<SubscriptionPlanResponse>), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Get all subscription plans",
         Description = "Retrieve paginated subscription plans with optional filters",
         OperationId = "GetSubscriptionPlans",
-        Tags = new[] { "CMS", "SubscriptionPlan" }
+        Tags = new[] { "CMS", "CMS_SubscriptionPlan" }
     )]
     public async Task<IActionResult> GetSubscriptionPlans([FromQuery] SubscriptionPlanFilter filter)
     {
@@ -66,14 +70,15 @@ public class SubscriptionPlanController : ControllerBase
     [HttpGet("{id}")]
     [AuthorizeRoles("Admin", "Staff")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result<SubscriptionPlanResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result<SubscriptionPlanResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result<SubscriptionPlanResponse>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result<SubscriptionPlanResponse>), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Get subscription plan by ID",
         Description = "Retrieve a single subscription plan by its unique identifier",
         OperationId = "GetSubscriptionPlanById",
-        Tags = new[] { "CMS", "SubscriptionPlan" }
+        Tags = new[] { "CMS", "CMS_SubscriptionPlan" }
     )]
     public async Task<IActionResult> GetSubscriptionPlanById(Guid id)
     {
@@ -93,17 +98,18 @@ public class SubscriptionPlanController : ControllerBase
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden</response>
     [HttpPost]
-    [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [AuthorizeRoles("Admin")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result),StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result),StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(Result),StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Create subscription plan",
         Description = "Create a new subscription plan with specified details",
         OperationId = "CreateSubscriptionPlan",
-        Tags = new[] { "CMS", "SubscriptionPlan" }
+        Tags = new[] { "CMS", "CMS_SubscriptionPlan" }
     )]
     public async Task<IActionResult> CreateSubscriptionPlan([FromBody] SubscriptionPlanRequest request)
     {
@@ -124,17 +130,18 @@ public class SubscriptionPlanController : ControllerBase
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden</response>
     [HttpPut("{id}")]
-    [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [AuthorizeRoles("Admin")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Update subscription plan",
         Description = "Update an existing subscription plan (partial update supported)",
         OperationId = "UpdateSubscriptionPlan",
-        Tags = new[] { "CMS", "SubscriptionPlan" }
+        Tags = new[] { "CMS", "CMS_SubscriptionPlan" }
     )]
     public async Task<IActionResult> UpdateSubscriptionPlan(Guid id, [FromBody] SubscriptionPlanRequest request)
     {
@@ -154,17 +161,18 @@ public class SubscriptionPlanController : ControllerBase
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden</response>
     [HttpDelete("{id}")]
-    [AuthorizeRoles("Admin", "Staff")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [AuthorizeRoles("Admin")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status500InternalServerError)]
     [SwaggerOperation(
         Summary = "Delete subscription plan",
         Description = "Soft delete a subscription plan (fails if there are active subscriptions)",
         OperationId = "DeleteSubscriptionPlan",
-        Tags = new[] { "CMS", "SubscriptionPlan" }
+        Tags = new[] { "CMS", "CMS_SubscriptionPlan" }
     )]
     public async Task<IActionResult> DeleteSubscriptionPlan(Guid id)
     {

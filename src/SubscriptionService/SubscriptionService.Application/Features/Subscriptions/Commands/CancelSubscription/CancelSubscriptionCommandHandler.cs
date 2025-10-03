@@ -13,12 +13,12 @@ using SubscriptionService.Domain.Enums;
 
 namespace SubscriptionService.Application.Features.Subscriptions.Commands.CancelSubscription;
 
-public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscriptionCommand, Result<SubscriptionResponse>>
+public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscriptionCommand, Result>
 {
     private readonly IOutboxUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<CancelSubscriptionCommandHandler> _logger;
+    private readonly IMapper _mapper;
 
     public CancelSubscriptionCommandHandler(
         IOutboxUnitOfWork unitOfWork,
@@ -32,7 +32,7 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
         _logger = logger;
     }
 
-    public async Task<Result<SubscriptionResponse>> Handle(
+    public async Task<Result> Handle(
         CancelSubscriptionCommand request,
         CancellationToken cancellationToken)
     {
@@ -41,15 +41,13 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
             var repository = _unitOfWork.Repository<Subscription>();
 
             // Find subscription
-            var subscriptions = await repository.FindAsync(
+            var subscription = await repository.GetFirstOrDefaultAsync(
                 x => x.Id == request.Id,
                 includes: x => x.Plan);
-
-            var subscription = subscriptions.FirstOrDefault();
             if (subscription == null)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} not found for cancellation", request.Id);
-                return Result<SubscriptionResponse>.Failure(
+                return Result.Failure(
                     "Subscription not found",
                     ErrorCodeEnum.NotFound);
             }
@@ -58,7 +56,7 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
             if (subscription.SubscriptionStatus == SubscriptionStatus.Canceled)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} is already canceled", request.Id);
-                return Result<SubscriptionResponse>.Failure(
+                return Result.Failure(
                     "Subscription is already canceled",
                     ErrorCodeEnum.ValidationFailed);
             }
@@ -87,24 +85,19 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
                     request.Id);
             }
 
-            // Update metadata
-            var userId = _currentUserService.UserId != null
-                ? Guid.Parse(_currentUserService.UserId)
-                : (Guid?)null;
+            // Update metadata - CurrentUserService already validated by middleware
+            var userId = Guid.Parse(_currentUserService.UserId!);
             subscription.UpdateEntity(userId);
 
-            // Publish integration event
-            var cancelEvent = new SubscriptionCanceledEvent
-            {
-                SubscriptionId = subscription.Id,
-                UserProfileId = subscription.UserProfileId,
-                SubscriptionPlanId = subscription.SubscriptionPlanId,
-                PlanName = subscription.Plan.DisplayName,
-                CancelAtPeriodEnd = request.CancelAtPeriodEnd,
-                CancelAt = subscription.CancelAt,
-                CanceledAt = subscription.CanceledAt,
+            // Publish integration event using AutoMapper
+            var cancelEvent = _mapper.Map<SubscriptionCanceledEvent>(subscription);
+            cancelEvent = cancelEvent with 
+            { 
+                CanceledBy = userId,
                 Reason = request.Reason,
-                CanceledBy = userId
+                // Capture HTTP context for audit trail
+                IpAddress = _currentUserService.IpAddress,
+                UserAgent = _currentUserService.UserAgent
             };
             await _unitOfWork.AddOutboxEventAsync(cancelEvent);
 
@@ -118,9 +111,7 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
                 request.Reason ?? "Not specified");
 
             // Return response
-            var response = _mapper.Map<SubscriptionResponse>(subscription);
-            return Result<SubscriptionResponse>.Success(
-                response,
+            return Result.Success(
                 request.CancelAtPeriodEnd
                     ? "Subscription will be canceled at the end of the current period"
                     : "Subscription canceled immediately");
@@ -128,7 +119,7 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error canceling subscription {SubscriptionId}", request.Id);
-            return Result<SubscriptionResponse>.Failure(
+            return Result.Failure(
                 "An error occurred while canceling the subscription",
                 ErrorCodeEnum.InternalError);
         }

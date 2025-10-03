@@ -46,5 +46,19 @@ public class SubscriptionMappingProfile : Profile
             .ForMember(dest => dest.SubscriptionPlanId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.DeletedBy, opt => opt.Ignore()) // Set manually in handler
             .ForMember(dest => dest.DeletedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        // Subscription to Event mappings
+        CreateMap<Subscription, SubscriptionUpdatedEvent>()
+            .ForMember(dest => dest.SubscriptionId, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.PlanName, opt => opt.MapFrom(src => src.Plan.DisplayName))
+            .ForMember(dest => dest.SubscriptionStatus, opt => opt.MapFrom(src => src.SubscriptionStatus.ToString()))
+            .ForMember(dest => dest.RenewalBehavior, opt => opt.MapFrom(src => src.RenewalBehavior.ToString()))
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore()); // Set manually in handler
+
+        CreateMap<Subscription, SubscriptionCanceledEvent>()
+            .ForMember(dest => dest.SubscriptionId, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.PlanName, opt => opt.MapFrom(src => src.Plan.DisplayName))
+            .ForMember(dest => dest.CanceledBy, opt => opt.Ignore()) // Set manually in handler
+            .ForMember(dest => dest.Reason, opt => opt.Ignore()); // Set manually in handler
     }
 }

@@ -8,4 +8,4 @@ namespace SubscriptionService.Application.Features.Subscriptions.Commands.Update
 /// Command to update subscription settings
 /// </summary>
 public record UpdateSubscriptionCommand(Guid Id, UpdateSubscriptionRequest Request)
-    : IRequest<Result<SubscriptionResponse>>;
+    : IRequest<Result>;

@@ -1,5 +1,4 @@
 using AutoMapper;
-using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedLibrary.Commons.Enums;
@@ -8,61 +7,45 @@ using SharedLibrary.Commons.Entities;
 using SharedLibrary.Commons.Services;
 using SharedLibrary.Commons.Outbox;
 using SharedLibrary.Contracts.Subscription;
-using SubscriptionService.Application.Commons.DTOs;
 using SubscriptionService.Domain.Entities;
 
 namespace SubscriptionService.Application.Features.Subscriptions.Commands.UpdateSubscription;
 
-public class UpdateSubscriptionCommandHandler : IRequestHandler<UpdateSubscriptionCommand, Result<SubscriptionResponse>>
+public class UpdateSubscriptionCommandHandler : IRequestHandler<UpdateSubscriptionCommand, Result>
 {
     private readonly IOutboxUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
-    private readonly IValidator<UpdateSubscriptionCommand> _validator;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<UpdateSubscriptionCommandHandler> _logger;
 
     public UpdateSubscriptionCommandHandler(
         IOutboxUnitOfWork unitOfWork,
         IMapper mapper,
-        IValidator<UpdateSubscriptionCommand> validator,
         ICurrentUserService currentUserService,
         ILogger<UpdateSubscriptionCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
-        _validator = validator;
+
         _currentUserService = currentUserService;
         _logger = logger;
     }
 
-    public async Task<Result<SubscriptionResponse>> Handle(
+    public async Task<Result> Handle(
         UpdateSubscriptionCommand request,
         CancellationToken cancellationToken)
     {
         try
         {
-            // 1. Validate
-            var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-            if (!validationResult.IsValid)
-            {
-                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-                return Result<SubscriptionResponse>.Failure(
-                    "Validation failed",
-                    ErrorCodeEnum.ValidationFailed,
-                    errors);
-            }
-
             // 2. Find subscription
             var repository = _unitOfWork.Repository<Subscription>();
-            var subscriptions = await repository.FindAsync(
+            var subscription = await repository.GetFirstOrDefaultAsync(
                 x => x.Id == request.Id,
-                includes: x => x.Plan);
-
-            var subscription = subscriptions.FirstOrDefault();
+                x => x.Plan);
             if (subscription == null)
             {
                 _logger.LogWarning("Subscription {SubscriptionId} not found for update", request.Id);
-                return Result<SubscriptionResponse>.Failure(
+                return Result.Failure(
                     "Subscription not found",
                     ErrorCodeEnum.NotFound);
             }
@@ -98,24 +81,18 @@ public class UpdateSubscriptionCommandHandler : IRequestHandler<UpdateSubscripti
                 subscription.CancelAt = request.Request.CancelAt.Value;
             }
 
-            // 4. Update metadata
-            var userId = _currentUserService.UserId != null
-                ? Guid.Parse(_currentUserService.UserId)
-                : (Guid?)null;
+            // 4. Update metadata - CurrentUserService already validated by middleware
+            var userId = Guid.Parse(_currentUserService.UserId!);
             subscription.UpdateEntity(userId);
 
-            // 5. Publish integration event
-            var updateEvent = new SubscriptionUpdatedEvent
-            {
-                SubscriptionId = subscription.Id,
-                UserProfileId = subscription.UserProfileId,
-                SubscriptionPlanId = subscription.SubscriptionPlanId,
-                PlanName = subscription.Plan.DisplayName,
-                SubscriptionStatus = subscription.SubscriptionStatus.ToString(),
-                RenewalBehavior = subscription.RenewalBehavior.ToString(),
-                CancelAtPeriodEnd = subscription.CancelAtPeriodEnd,
-                CurrentPeriodEnd = subscription.CurrentPeriodEnd,
-                UpdatedBy = userId
+            // 5. Publish integration event using AutoMapper
+            var updateEvent = _mapper.Map<SubscriptionUpdatedEvent>(subscription);
+            updateEvent = updateEvent with 
+            { 
+                UpdatedBy = userId,
+                // Capture HTTP context for audit trail
+                IpAddress = _currentUserService.IpAddress,
+                UserAgent = _currentUserService.UserAgent
             };
             await _unitOfWork.AddOutboxEventAsync(updateEvent);
 
@@ -126,17 +103,12 @@ public class UpdateSubscriptionCommandHandler : IRequestHandler<UpdateSubscripti
                 "Subscription {SubscriptionId} updated successfully by user {UserId}",
                 request.Id,
                 userId);
-
-            // 7. Return response
-            var response = _mapper.Map<SubscriptionResponse>(subscription);
-            return Result<SubscriptionResponse>.Success(
-                response,
-                "Subscription updated successfully");
+            return Result.Success("Subscription updated successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating subscription {SubscriptionId}", request.Id);
-            return Result<SubscriptionResponse>.Failure(
+            return Result.Failure(
                 "An error occurred while updating the subscription",
                 ErrorCodeEnum.InternalError);
         }

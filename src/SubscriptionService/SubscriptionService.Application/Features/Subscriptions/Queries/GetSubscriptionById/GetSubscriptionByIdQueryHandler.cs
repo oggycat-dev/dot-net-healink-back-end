@@ -34,12 +34,9 @@ public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionBy
             var repository = _unitOfWork.Repository<Subscription>();
 
             // Find subscription with Plan included
-            var subscription = await repository.FindAsync(
+            var existingSubscription = await repository.GetFirstOrDefaultAsync(
                 x => x.Id == request.Id,
                 includes: x => x.Plan);
-
-            var existingSubscription = subscription.FirstOrDefault();
-
             if (existingSubscription == null)
             {
                 _logger.LogWarning("Subscription with ID {SubscriptionId} not found", request.Id);
