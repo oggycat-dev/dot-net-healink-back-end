@@ -210,6 +210,38 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/CreatorApplications/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "userservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/CreatorApplications/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/FileUpload/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/fileupload/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/content/community/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

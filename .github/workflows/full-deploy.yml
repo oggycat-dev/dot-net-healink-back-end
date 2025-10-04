@@ -281,7 +281,7 @@ jobs:
       - name: 📢 Deployment Status
         run: |
           if [ "${{ needs.health-check.result }}" == "success" ]; then
-            echo "✅ Deployment SUCCEEDED"
+            echo "Deployment SUCCEEDED"
             echo "Environment: ${{ inputs.environment }}"
             echo "All services are deployed and healthy"
           else

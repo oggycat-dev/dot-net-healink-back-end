@@ -5,6 +5,9 @@ using SharedLibrary.Commons.Attributes;
 using UserService.Application.Features.CreatorApplications.Commands;
 using UserService.Application.Features.CreatorApplications.Queries;
 using Swashbuckle.AspNetCore.Annotations;
+using SharedLibrary.Commons.Outbox;
+using UserService.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace UserService.API.Controllers;
 
@@ -15,13 +18,16 @@ public class CreatorApplicationsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<CreatorApplicationsController> _logger;
+    private readonly IOutboxUnitOfWork _unitOfWork;
 
     public CreatorApplicationsController(
         IMediator mediator,
-        ILogger<CreatorApplicationsController> logger)
+        ILogger<CreatorApplicationsController> logger,
+        IOutboxUnitOfWork unitOfWork)
     {
         _mediator = mediator;
         _logger = logger;
+        _unitOfWork = unitOfWork;
     }
 
     /// <summary>
@@ -106,6 +112,183 @@ public class CreatorApplicationsController : ControllerBase
     }
     
     /// <summary>
+    /// Lấy trạng thái đơn đăng ký Content Creator của user hiện tại
+    /// </summary>
+    [HttpGet("my-status")]
+    [DistributedAuthorize]
+    [SwaggerOperation(
+        Summary = "Lấy trạng thái đơn đăng ký của user hiện tại",
+        Description = "User xem trạng thái đơn đăng ký Content Creator của mình",
+        OperationId = "GetMyApplicationStatus",
+        Tags = new[] { "Creator Applications" }
+    )]
+    [ProducesResponseType(typeof(MyApplicationStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MyApplicationStatusDto>> GetMyApplicationStatus()
+    {
+        // Extract UserId from JWT token
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { message = "Người dùng không được xác thực" });
+        }
+
+        try
+        {
+            var query = new GetMyApplicationStatusQuery { UserId = userId };
+            var result = await _mediator.Send(query);
+            
+            if (result == null)
+            {
+                return NotFound(new { message = "Bạn chưa nộp đơn đăng ký Content Creator nào" });
+            }
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in GetMyApplicationStatus for User: {UserId}", userId);
+            return StatusCode(500, new { message = "Đã xảy ra lỗi khi lấy trạng thái đơn đăng ký" });
+        }
+    }
+    
+    /// <summary>
+    /// Debug endpoint để kiểm tra User ID và đơn đăng ký
+    /// </summary>
+    [HttpGet("debug")]
+    [DistributedAuthorize]
+    [SwaggerOperation(
+        Summary = "Debug endpoint để kiểm tra User ID và đơn đăng ký",
+        Description = "Debug endpoint để kiểm tra User ID và đơn đăng ký",
+        OperationId = "DebugApplicationStatus",
+        Tags = new[] { "Creator Applications" }
+    )]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<ActionResult> DebugApplicationStatus()
+    {
+        // Extract UserId from JWT token
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { message = "Người dùng không được xác thực" });
+        }
+
+        try
+        {
+            // Get all applications for this user
+            var applications = await _unitOfWork.Repository<CreatorApplication>()
+                .GetQueryable()
+                .Where(a => a.UserId == userId)
+                .OrderByDescending(a => a.SubmittedAt)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                userId = userId,
+                userIdString = userIdClaim,
+                totalApplications = applications.Count,
+                applications = applications.Select(a => new
+                {
+                    id = a.Id,
+                    userId = a.UserId,
+                    status = a.ApplicationStatus.ToString(),
+                    submittedAt = a.SubmittedAt,
+                    reviewedAt = a.ReviewedAt,
+                    applicationData = a.ApplicationData
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in DebugApplicationStatus for User: {UserId}", userId);
+            return StatusCode(500, new { message = "Đã xảy ra lỗi khi debug", error = ex.Message });
+        }
+    }
+    
+    /// <summary>
+    /// Debug endpoint để kiểm tra User ID từ JWT token
+    /// </summary>
+    [HttpGet("debug-token")]
+    [DistributedAuthorize]
+    [SwaggerOperation(
+        Summary = "Debug endpoint để kiểm tra User ID từ JWT token",
+        Description = "Debug endpoint để kiểm tra User ID từ JWT token",
+        OperationId = "DebugToken",
+        Tags = new[] { "Creator Applications" }
+    )]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public ActionResult DebugToken()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+            var userNameClaim = User.FindFirst(ClaimTypes.Name)?.Value;
+            
+            var allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            
+            return Ok(new
+            {
+                userIdFromToken = userIdClaim,
+                userEmailFromToken = userEmailClaim,
+                userNameFromToken = userNameClaim,
+                allClaims = allClaims,
+                message = "Token debug info"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in DebugToken");
+            return StatusCode(500, new { message = "Đã xảy ra lỗi khi debug token", error = ex.Message });
+        }
+    }
+    
+    /// <summary>
+    /// Debug endpoint để kiểm tra tất cả đơn đăng ký trong database
+    /// </summary>
+    [HttpGet("debug-all")]
+    [DistributedAuthorizeRoles("Admin")]
+    [SwaggerOperation(
+        Summary = "Debug endpoint để kiểm tra tất cả đơn đăng ký",
+        Description = "Debug endpoint để kiểm tra tất cả đơn đăng ký trong database",
+        OperationId = "DebugAllApplications",
+        Tags = new[] { "Creator Applications" }
+    )]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<ActionResult> DebugAllApplications()
+    {
+        try
+        {
+            // Get all applications
+            var applications = await _unitOfWork.Repository<CreatorApplication>()
+                .GetQueryable()
+                .OrderByDescending(a => a.SubmittedAt)
+                .Take(10)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                totalApplications = applications.Count,
+                applications = applications.Select(a => new
+                {
+                    id = a.Id,
+                    userId = a.UserId,
+                    status = a.ApplicationStatus.ToString(),
+                    submittedAt = a.SubmittedAt,
+                    reviewedAt = a.ReviewedAt,
+                    applicationData = a.ApplicationData
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in DebugAllApplications");
+            return StatusCode(500, new { message = "Đã xảy ra lỗi khi debug", error = ex.Message });
+        }
+    }
+    
+    /// <summary>
     /// Lấy chi tiết đơn đăng ký theo ID
     /// </summary>
     [HttpGet("{id}")]
@@ -160,9 +343,19 @@ public class CreatorApplicationsController : ControllerBase
     public async Task<ActionResult<ApproveCreatorApplicationResponse>> ApproveApplication(
         Guid id, [FromBody] ApproveCreatorApplicationCommand request)
     {
+        // Debug logging to see the actual values
+        _logger.LogInformation("ApproveApplication - URL ID: {UrlId}, Body ApplicationId: {BodyApplicationId}", 
+            id, request.ApplicationId);
+        
         if (id != request.ApplicationId)
         {
-            return BadRequest(new { message = "ID trong URL phải khớp với ID trong request body" });
+            _logger.LogWarning("ID mismatch - URL ID: {UrlId}, Body ApplicationId: {BodyApplicationId}", 
+                id, request.ApplicationId);
+            return BadRequest(new { 
+                message = "ID trong URL phải khớp với ID trong request body",
+                urlId = id.ToString(),
+                bodyApplicationId = request.ApplicationId.ToString()
+            });
         }
         
         // Extract Admin UserId from JWT token

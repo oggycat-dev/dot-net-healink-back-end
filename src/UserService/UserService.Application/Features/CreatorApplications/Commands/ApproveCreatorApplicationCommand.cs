@@ -8,7 +8,7 @@ namespace UserService.Application.Features.CreatorApplications.Commands;
 /// </summary>
 public record ApproveCreatorApplicationCommand : IRequest<ApproveCreatorApplicationResponse>
 {
-    [JsonPropertyName("application_id")]
+    [JsonPropertyName("applicationId")]
     public Guid ApplicationId { get; init; }
     
     [JsonPropertyName("notes")]

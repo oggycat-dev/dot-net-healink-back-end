@@ -43,6 +43,14 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
                 throw new InvalidOperationException($"Không tìm thấy đơn đăng ký với ID: {request.ApplicationId}");
             }
 
+            if (application.User == null)
+            {
+                throw new InvalidOperationException($"Không tìm thấy thông tin user cho đơn đăng ký ID: {request.ApplicationId}");
+            }
+
+            _logger.LogInformation("Found application: {ApplicationId}, UserId: {UserId}, UserEmail: {UserEmail}", 
+                application.Id, application.User.UserId, application.User.Email);
+
             if (application.ApplicationStatus != ApplicationStatusEnum.Pending)
             {
                 throw new InvalidOperationException($"Đơn đăng ký này không còn ở trạng thái chờ duyệt. Trạng thái hiện tại: {application.ApplicationStatus}");
@@ -61,19 +69,56 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
             // Update application
             application.ApplicationStatus = ApplicationStatusEnum.Approved;
             application.ReviewedAt = DateTime.UtcNow;
-            application.ReviewedBy = request.ReviewerId;
-            application.ReviewNotes = request.Notes;
-
-            // Add user to ContentCreator role
-            var userBusinessRole = new UserBusinessRole
+            
+            // Validate ReviewerId exists in UserProfiles before setting
+            if (request.ReviewerId != Guid.Empty)
             {
-                UserId = application.UserId,
-                BusinessRoleId = contentCreatorRole.Id,
-                AssignedAt = DateTime.UtcNow,
-                AssignedBy = request.ReviewerId
-            };
+                var reviewerExists = await _unitOfWork.Repository<UserProfile>()
+                    .GetQueryable()
+                    .AnyAsync(x => x.Id == request.ReviewerId, cancellationToken);
+                    
+                application.ReviewedBy = reviewerExists ? request.ReviewerId : null;
+                
+                if (!reviewerExists)
+                {
+                    _logger.LogWarning("ReviewerId {ReviewerId} not found in UserProfiles, setting ReviewedBy to null", request.ReviewerId);
+                }
+            }
+            else
+            {
+                application.ReviewedBy = null;
+            }
+            
+            application.ReviewNotes = request.Notes;
+            
+            // Explicitly mark as modified to ensure EF tracks the changes
+            _unitOfWork.Repository<CreatorApplication>().Update(application);
+            _logger.LogInformation("Marked application as modified in EF context");
 
-            await _unitOfWork.Repository<UserBusinessRole>().AddAsync(userBusinessRole);
+            // Check if user already has ContentCreator role
+            var existingRole = await _unitOfWork.Repository<UserBusinessRole>()
+                .GetQueryable()
+                .FirstOrDefaultAsync(x => x.UserId == application.UserId && 
+                                         x.BusinessRoleId == contentCreatorRole.Id, cancellationToken);
+
+            if (existingRole == null)
+            {
+                // Add user to ContentCreator role
+                var userBusinessRole = new UserBusinessRole
+                {
+                    UserId = application.UserId,
+                    BusinessRoleId = contentCreatorRole.Id,
+                    AssignedAt = DateTime.UtcNow,
+                    AssignedBy = request.ReviewerId
+                };
+
+                await _unitOfWork.Repository<UserBusinessRole>().AddAsync(userBusinessRole);
+                _logger.LogInformation("Added ContentCreator role to user: {UserId}", application.UserId);
+            }
+            else
+            {
+                _logger.LogInformation("User {UserId} already has ContentCreator role", application.UserId);
+            }
 
             // Log activity
             var activityLog = new UserActivityLog
@@ -87,13 +132,12 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
             };
 
             await _unitOfWork.Repository<UserActivityLog>().AddAsync(activityLog);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Publish approval event
+            
+            // Add events to outbox for reliable publishing
             var approvedEvent = new CreatorApplicationApprovedEvent
             {
                 ApplicationId = application.Id,
-                UserId = application.User.UserId,  // AuthUser ID
+                UserId = application.User.UserId,  // AuthUser ID from UserProfile
                 UserEmail = application.User.Email,
                 ReviewerId = request.ReviewerId,
                 ApprovedAt = application.ReviewedAt.Value,
@@ -101,19 +145,51 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
                 BusinessRoleName = "ContentCreator"
             };
 
-            await _eventBus.PublishAsync(approvedEvent);
+            await _unitOfWork.AddOutboxEventAsync(approvedEvent);
+            _logger.LogInformation("CreatorApplicationApprovedEvent added to outbox. ApplicationId: {ApplicationId}", application.Id);
 
             // Add system role to AuthUser via event
             var roleAddEvent = new RoleAddedToUserEvent
             {
-                UserId = application.User.UserId,  // AuthUser ID
+                UserId = application.User.UserId,  // AuthUser ID from UserProfile
                 Email = application.User.Email,
                 RoleName = "ContentCreator",
                 AddedBy = request.ReviewerId,
                 AddedAt = DateTime.UtcNow
             };
 
-            await _eventBus.PublishAsync(roleAddEvent);
+            await _unitOfWork.AddOutboxEventAsync(roleAddEvent);
+            _logger.LogInformation("RoleAddedToUserEvent added to outbox. UserId: {UserId}", application.User.UserId);
+
+            // Publish UserRolesChangedEvent to update Redis cache in all services
+            // Get all current roles of user
+            var currentRoles = await _unitOfWork.Repository<UserBusinessRole>()
+                .GetQueryable()
+                .Where(x => x.UserId == application.UserId)
+                .Select(x => x.BusinessRole.Name)
+                .ToListAsync(cancellationToken);
+
+            var rolesChangedEvent = new UserRolesChangedEvent
+            {
+                UserId = application.User.UserId,
+                Email = application.User.Email,
+                OldRoles = currentRoles.Where(r => r != "ContentCreator").ToList(),
+                NewRoles = currentRoles,
+                AddedRoles = new List<string> { "ContentCreator" },
+                RemovedRoles = new List<string>(),
+                ChangedBy = request.ReviewerId,
+                ChangedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.AddOutboxEventAsync(rolesChangedEvent);
+            _logger.LogInformation("UserRolesChangedEvent added to outbox to update Redis cache. UserId: {UserId}, NewRoles: {Roles}", 
+                application.User.UserId, string.Join(", ", currentRoles));
+
+            // Save all changes with outbox events atomically
+            await _unitOfWork.SaveChangesWithOutboxAsync(cancellationToken);
+            
+            _logger.LogInformation("Application approved and saved to database with outbox events. ApplicationId: {ApplicationId}, Status: {Status}", 
+                application.Id, application.ApplicationStatus);
 
             _logger.LogInformation("Creator application approved successfully. ApplicationId: {ApplicationId}, UserId: {UserId}", 
                 application.Id, application.User.UserId);

@@ -37,13 +37,24 @@ public static class DistributedAuthExtensions
         // Using Singleton for middleware compatibility
         services.AddRedisUserStateCache(configuration);
         
-        // Register event handlers
+        // Register event handlers with both concrete type and interface
         services.AddTransient<UserLoggedInEventHandler>();
+        services.AddTransient<IIntegrationEventHandler<UserLoggedInEvent>>(sp => sp.GetRequiredService<UserLoggedInEventHandler>());
+        
         services.AddTransient<UserLoggedOutEventHandler>();
+        services.AddTransient<IIntegrationEventHandler<UserLoggedOutEvent>>(sp => sp.GetRequiredService<UserLoggedOutEventHandler>());
+        
         services.AddTransient<UserStatusChangedEventHandler>();
+        services.AddTransient<IIntegrationEventHandler<UserStatusChangedEvent>>(sp => sp.GetRequiredService<UserStatusChangedEventHandler>());
+        
         services.AddTransient<UserRolesChangedEventHandler>();
+        services.AddTransient<IIntegrationEventHandler<UserRolesChangedEvent>>(sp => sp.GetRequiredService<UserRolesChangedEventHandler>());
+        
         services.AddTransient<RefreshTokenRevokedEventHandler>();
+        services.AddTransient<IIntegrationEventHandler<RefreshTokenRevokedEvent>>(sp => sp.GetRequiredService<RefreshTokenRevokedEventHandler>());
+        
         services.AddTransient<UserSessionsInvalidatedEventHandler>();
+        services.AddTransient<IIntegrationEventHandler<UserSessionsInvalidatedEvent>>(sp => sp.GetRequiredService<UserSessionsInvalidatedEventHandler>());
         
         // Register background service for user state sync only if Redis is enabled
         var redisConfig = configuration.GetSection("Redis").Get<RedisConfig>();
