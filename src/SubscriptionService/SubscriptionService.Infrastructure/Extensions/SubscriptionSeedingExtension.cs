@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SubscriptionService.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using SharedLibrary.Commons.Enums;
 
 namespace SubscriptionService.Infrastructure.Extensions;
 
@@ -53,6 +54,7 @@ public static class SubscriptionSeedingExtension
             {
                 Id = Guid.NewGuid(),
                 Name = freePlanName,
+                DisplayName = freePlanName,
                 Description = "Free plan with basic features",
                 Amount = freePlanAmount,
                 Currency = currency,
@@ -60,7 +62,7 @@ public static class SubscriptionSeedingExtension
                 BillingPeriodCount = 1,
                 TrialDays = 0,
                 FeatureConfig = "{}",
-                IsActive = true,
+                Status = EntityStatusEnum.Active, // ✅ Using Status instead of IsActive
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = adminUserId
             };
@@ -69,6 +71,7 @@ public static class SubscriptionSeedingExtension
             {
                 Id = Guid.NewGuid(),
                 Name = "Premium",
+                DisplayName = "Premium",
                 Description = "Premium plan with advanced features",
                 Amount = 9.99m,
                 Currency = currency,
@@ -76,7 +79,7 @@ public static class SubscriptionSeedingExtension
                 BillingPeriodCount = 1,
                 TrialDays = trialDays,
                 FeatureConfig = "{\"maxContent\": 1000, \"premium\": true}",
-                IsActive = true,
+                Status = EntityStatusEnum.Active, // ✅ Using Status instead of IsActive
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = adminUserId
             };

@@ -13,6 +13,6 @@ public class Subscription : BaseEntity
     public DateTime? CancelAt { get; set; }
     public DateTime? CanceledAt { get; set; }
     public bool CancelAtPeriodEnd { get; set; }
-    public RenewalBehavior RenewalBehavior { get; set; } = RenewalBehavior.AutoRenew;
+    public RenewalBehavior RenewalBehavior { get; set; } = RenewalBehavior.Manual;
     public virtual SubscriptionPlan Plan { get; set; } = null!;
 }

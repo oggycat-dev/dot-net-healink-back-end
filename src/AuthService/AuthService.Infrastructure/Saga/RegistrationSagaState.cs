@@ -1,10 +1,11 @@
 using MassTransit;
 using SharedLibrary.Commons.Enums;
 
-namespace SharedLibrary.Contracts.User.Saga;
+namespace AuthService.Infrastructure.Saga;
 
 /// <summary>
-/// Registration Saga State Machine states
+/// Registration Saga State - Owned by AuthService
+/// Each saga instance represents ONE registration attempt with unique CorrelationId
 /// </summary>
 public class RegistrationSagaState : SagaStateMachineInstance
 {

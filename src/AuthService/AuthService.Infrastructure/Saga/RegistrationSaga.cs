@@ -2,12 +2,13 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using SharedLibrary.Contracts.User.Events;
 using SharedLibrary.Commons.Enums;
+using SharedLibrary.Contracts.User.Saga;
 
-namespace SharedLibrary.Contracts.User.Saga;
+namespace AuthService.Infrastructure.Saga;
 
 /// <summary>
-/// Saga quản lý workflow đăng ký user với OTP verification
-/// Quản lý distributed transaction từ AuthService qua UserService
+/// Registration Saga - Orchestrates user registration workflow across AuthService and UserService
+/// Owned by AuthService - manages distributed transaction with compensating actions
 /// </summary>
 public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
 {
@@ -139,6 +140,7 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
                     })
                 )
         );
+        
         /*
         while state is Started, saga will wait for OtpSentEvent from NotificationService
         if OtpSentEvent is received, saga will transition to OtpSent state
@@ -156,7 +158,6 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             // Ignore duplicate events
             Ignore(RegistrationStartedEvent)
         );
-        
 
         /*
         while state is OtpSent,saga will wait for OtpVerifiedEvent from AuthService.
@@ -251,7 +252,6 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(OtpSentEvent),
             Ignore(OtpVerifiedEvent)
         );
-        
 
         /*
         while state is AuthUserCreated, saga will wait for UserProfileCreatedEvent from UserService
@@ -341,7 +341,7 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(OtpSentEvent),
             Ignore(OtpVerifiedEvent),
             Ignore(AuthUserCreatedEvent),
-            Ignore(UserProfileCreatedEvent) // This was missing and causing the error
+            Ignore(UserProfileCreatedEvent)
         );
         
         During(Failed,
@@ -365,7 +365,6 @@ public class RegistrationSaga : MassTransitStateMachine<RegistrationSagaState>
             Ignore(AuthUserDeletedEvent),
             Ignore(UserProfileDeletedEvent)
         );
-        
         
         // Cấu hình xóa completed sagas
         SetCompletedWhenFinalized();

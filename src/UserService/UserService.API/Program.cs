@@ -32,6 +32,9 @@ try
     
     // Subscribe to auth events
     app.Services.SubscribeToAuthEvents();
+    
+    // Subscribe to subscription events
+    app.Services.SubscribeToSubscriptionEvents();
 
     logger.LogInformation("UserService API configured successfully");
     

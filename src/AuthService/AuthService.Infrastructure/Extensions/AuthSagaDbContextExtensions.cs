@@ -1,20 +1,20 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using SharedLibrary.Contracts.User.Saga;
+using AuthService.Infrastructure.Saga;
 
-namespace SharedLibrary.Commons.Extensions;
+namespace AuthService.Infrastructure.Extensions;
 
 /// <summary>
-/// Extension methods for adding MassTransit Saga entities to DbContext
+/// Extension methods for adding AuthService Saga entities to DbContext
 /// </summary>
-public static class SagaDbContextExtensions
+public static class AuthSagaDbContextExtensions
 {
     /// <summary>
-    /// Add MassTransit Saga entities to DbContext
+    /// Add AuthService Saga entities to DbContext
     /// </summary>
-    public static void AddSagaEntities(this ModelBuilder modelBuilder)
+    public static void AddAuthSagaEntities(this ModelBuilder modelBuilder)
     {
-        // Add RegistrationSagaState mapping
+        // Add MassTransit infrastructure entities (inbox, outbox)
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
