@@ -1,4 +1,5 @@
 using AuthService.Domain.Entities;
+using AuthService.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -93,7 +94,7 @@ public class AuthDbContext : IdentityDbContext<AppUser, AppRole, Guid>
 
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
         
-        // Add Saga entities for MassTransit
-        builder.AddSagaEntities();
+        // Add Saga entities for AuthService (RegistrationSaga)
+        builder.AddAuthSagaEntities();
     }
 }

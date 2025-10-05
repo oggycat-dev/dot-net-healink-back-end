@@ -1,8 +1,10 @@
 using AuthService.Application;
 using AuthService.Infrastructure;
+using AuthService.Infrastructure.Configurations;
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
 using SharedLibrary.Commons.Extensions;
+using AuthService.Infrastructure.Context;
 
 namespace AuthService.API.Configurations;
 
@@ -24,11 +26,22 @@ public static class ServiceConfiguration
 
         // Add MassTransit with Saga for registration workflow
         builder.Services.AddMassTransitWithSaga<AuthService.Infrastructure.Context.AuthDbContext>(
-            builder.Configuration, x =>
+            builder.Configuration, 
+            configureSagas: x =>
+            {
+                // Configure Registration Saga owned by AuthService
+                AuthSagaConfiguration.ConfigureRegistrationSaga<AuthDbContext>(x);
+            },
+            configureConsumers: x =>
             {
                 // Register consumers for AuthService
                 x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserConsumer>();
                 x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserConsumer>();
+            },
+            configureEndpoints: (cfg, context) =>
+            {
+                // Configure saga-specific endpoints
+                AuthSagaConfiguration.ConfigureSagaEndpoints(cfg, context);
             });
 
         // Application & Infrastructure layers

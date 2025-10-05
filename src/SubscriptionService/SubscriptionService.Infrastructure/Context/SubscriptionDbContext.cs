@@ -45,11 +45,6 @@ public class SubscriptionDbContext : DbContext
                 .IsUnique();
         });
 
-        // Removed SubscriptionCycles to simplify model; keep period in Subscription
-
-        // Add MassTransit Saga entities
-        builder.AddSagaEntities();
-
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
     }
 }
