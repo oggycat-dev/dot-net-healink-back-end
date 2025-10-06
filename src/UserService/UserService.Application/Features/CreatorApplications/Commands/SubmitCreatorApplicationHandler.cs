@@ -83,7 +83,7 @@ public class SubmitCreatorApplicationHandler : IRequestHandler<SubmitCreatorAppl
             // Create creator application
             var creatorApplication = new CreatorApplication
             {
-                UserId = userProfile.Id, // Reference to UserProfile entity ID
+                UserId = userProfile.Id, // Use UserProfile.Id for foreign key constraint
                 ApplicationData = JsonSerializer.Serialize(applicationData),
                 ApplicationStatus = ApplicationStatusEnum.Pending,
                 SubmittedAt = DateTime.UtcNow,
@@ -91,9 +91,14 @@ public class SubmitCreatorApplicationHandler : IRequestHandler<SubmitCreatorAppl
             };
 
             await _unitOfWork.Repository<CreatorApplication>().AddAsync(creatorApplication);
+            
+            // Commit transaction first
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            
+            _logger.LogInformation("Creator application saved to database. ApplicationId: {ApplicationId}, UserId: {UserId}", 
+                creatorApplication.Id, creatorApplication.UserId);
 
-            // Publish event
+            // Publish event after successful commit
             var applicationEvent = new CreatorApplicationSubmittedEvent
             {
                 ApplicationId = creatorApplication.Id,
@@ -105,6 +110,9 @@ public class SubmitCreatorApplicationHandler : IRequestHandler<SubmitCreatorAppl
             };
 
             await _eventBus.PublishAsync(applicationEvent);
+            
+            _logger.LogInformation("Creator application event published successfully. ApplicationId: {ApplicationId}", 
+                creatorApplication.Id);
 
             _logger.LogInformation("Creator application submitted successfully. ApplicationId: {ApplicationId}", 
                 creatorApplication.Id);

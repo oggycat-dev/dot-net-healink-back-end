@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Text.Json;
+using SharedLibrary.Commons.Cache;
 
 namespace SharedLibrary.Commons.Services;
 
@@ -12,15 +13,18 @@ public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IUserStateCache _userStateCache;
     private readonly ILogger<CurrentUserService> _logger;
 
     public CurrentUserService(
         IHttpContextAccessor httpContextAccessor,
         IHttpClientFactory httpClientFactory,
+        IUserStateCache userStateCache,
         ILogger<CurrentUserService> logger)
     {
         _httpContextAccessor = httpContextAccessor;
         _httpClientFactory = httpClientFactory;
+        _userStateCache = userStateCache;
         _logger = logger;
     }
 
@@ -32,9 +36,42 @@ public class CurrentUserService : ICurrentUserService
     public bool IsAuthenticated =>
         _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
-    public IEnumerable<string> Roles =>
-        _httpContextAccessor.HttpContext?.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? 
-        Enumerable.Empty<string>();
+    /// <summary>
+    /// Get roles from Redis cache (real-time) if available, fallback to JWT claims
+    /// </summary>
+    public IEnumerable<string> Roles
+    {
+        get
+        {
+            // Try to get roles from Redis cache first (real-time roles)
+            if (!string.IsNullOrEmpty(UserId) && Guid.TryParse(UserId, out var userGuid))
+            {
+                try
+                {
+                    var userState = _userStateCache.GetUserStateAsync(userGuid).GetAwaiter().GetResult();
+                    if (userState != null && userState.Roles.Any())
+                    {
+                        _logger.LogDebug("Roles loaded from Redis cache for user {UserId}: {Roles}", 
+                            userGuid, string.Join(", ", userState.Roles));
+                        return userState.Roles;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get roles from Redis cache for user {UserId}, falling back to JWT claims", userGuid);
+                }
+            }
+
+            // Fallback to JWT claims
+            var claimRoles = _httpContextAccessor.HttpContext?.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? 
+                           Enumerable.Empty<string>();
+            
+            _logger.LogDebug("Roles loaded from JWT claims for user {UserId}: {Roles}", 
+                UserId ?? "unknown", string.Join(", ", claimRoles));
+                
+            return claimRoles;
+        }
+    }
 
     public string? IpAddress =>
         _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();

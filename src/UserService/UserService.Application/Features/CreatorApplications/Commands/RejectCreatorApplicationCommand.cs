@@ -8,10 +8,10 @@ namespace UserService.Application.Features.CreatorApplications.Commands;
 /// </summary>
 public record RejectCreatorApplicationCommand : IRequest<RejectCreatorApplicationResponse>
 {
-    [JsonPropertyName("application_id")]
+    [JsonPropertyName("applicationId")]
     public Guid ApplicationId { get; init; }
     
-    [JsonPropertyName("rejection_reason")]
+    [JsonPropertyName("rejectionReason")]
     public string RejectionReason { get; init; } = string.Empty;
     
     [JsonPropertyName("notes")]

@@ -22,6 +22,29 @@ public class PodcastsController : ControllerBase
     }
 
     /// <summary>
+    /// Debug endpoint to check user claims and roles
+    /// </summary>
+    [HttpGet("debug/me")]
+    [Authorize]
+    public IActionResult GetMyInfo()
+    {
+        var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+        var userId = _currentUserService.UserId;
+        var roles = _currentUserService.Roles;
+        var isAuthenticated = _currentUserService.IsAuthenticated;
+        
+        return Ok(new 
+        { 
+            UserId = userId,
+            Roles = roles,
+            IsAuthenticated = isAuthenticated,
+            Claims = claims,
+            HasContentCreatorRole = roles?.Contains("ContentCreator") ?? false,
+            HasContentCreatorClaim = User.Claims.Any(c => c.Type == "role" && c.Value == "ContentCreator")
+        });
+    }
+
+    /// <summary>
     /// Get podcasts with filtering and pagination
     /// </summary>
     [HttpGet]
