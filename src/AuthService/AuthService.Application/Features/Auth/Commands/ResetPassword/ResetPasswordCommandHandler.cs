@@ -48,6 +48,17 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
             {
                 return Result.Failure("User not found", ErrorCodeEnum.NotFound);
             }
+
+            // ✅ CRITICAL: Rate limiting with Redis - Check before doing anything
+            var rateLimitCheck = await _otpCacheService.CheckRateLimitingAsync(command.Request.Contact, OtpTypeEnum.PasswordReset);
+            if (!rateLimitCheck.IsAllowed)
+            {
+                _logger.LogWarning("Rate limit check failed for {Contact}: {Reason}", command.Request.Contact, rateLimitCheck.Reason);
+                return Result.Failure(rateLimitCheck.Reason, ErrorCodeEnum.TooManyRequests);
+            }
+
+            // Check if there's already an active password reset OTP
+        
             //encrypt password
             var passwordEncrypt = PasswordCryptoHelper.Encrypt(command.Request.NewPassword, _PasswordEncryptionKey);
 
@@ -61,7 +72,7 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
                 ResetToken = token
             };
 
-            // Store password reset data in cache with a short expiration time (e.g., 15 minutes)
+            // Store password reset data in cache
             var cacheResult = await _otpCacheService.GenerateAndStoreOtpAsync(
                 command.Request.Contact,
                 OtpTypeEnum.PasswordReset,
@@ -72,6 +83,9 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
                 _logger.LogError("Failed to store password reset data in cache for contact: {Contact}", command.Request.Contact);
                 return Result.Failure("Failed to initiate password reset. Please try again.", ErrorCodeEnum.InternalError);
             }
+            
+            // ✅ Track this request for rate limiting (after successful OTP generation)
+            await _otpCacheService.TrackOtpRequestAsync(command.Request.Contact, OtpTypeEnum.PasswordReset);
 
             //todo: publish event to send otp to notification service
             var resetPasswordEvent = new ResetPasswordEvent
