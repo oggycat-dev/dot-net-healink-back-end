@@ -282,6 +282,12 @@ public static class EnvironmentConfiguration
             case "contentservice":
                 ConfigureContentServiceSettings(configuration);
                 break;
+            case "subscriptionservice":
+                ConfigureSubscriptionServiceSettings(configuration);
+                break;
+            case "paymentservice":
+                ConfigurePaymentServiceSettings(configuration);
+                break;
             case "gateway":
                 ConfigureGatewaySettings(configuration);
                 break;
@@ -423,6 +429,70 @@ public static class EnvironmentConfiguration
             Environment.GetEnvironmentVariable("CONTENT_STORAGE_PATH") ?? "/app/content";
         
         // Default admin account for ContentService
+        configuration["DefaultAdminAccount:Email"] = 
+            Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";
+        configuration["DefaultAdminAccount:UserId"] = 
+            Environment.GetEnvironmentVariable("ADMIN_USER_ID") ?? "00000000-0000-0000-0000-000000000001";
+    }
+    
+    private static void ConfigureSubscriptionServiceSettings(IConfiguration configuration)
+    {
+        // Subscription-specific database
+        configuration["ConnectionConfig:DefaultConnection"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_DB_CONNECTION_STRING") ?? 
+            Environment.GetEnvironmentVariable("ConnectionConfig__DefaultConnection");
+        
+        // Queue name
+        configuration["RabbitMQ:QueueName"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_QUEUE_NAME") ?? "subscriptionservice_queue";
+        
+        // Subscription-specific settings
+        configuration["SubscriptionSettings:DefaultFreePlanName"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_DEFAULT_FREE_PLAN_NAME") ?? "Free";
+        configuration["SubscriptionSettings:DefaultFreePlanAmount"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_DEFAULT_FREE_PLAN_AMOUNT") ?? "0";
+        configuration["SubscriptionSettings:DefaultFreePlanCurrency"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_DEFAULT_FREE_PLAN_CURRENCY") ?? "USD";
+        configuration["SubscriptionSettings:DefaultTrialDays"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_DEFAULT_TRIAL_DAYS") ?? "7";
+        configuration["SubscriptionSettings:EnableAutoRenewal"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_ENABLE_AUTO_RENEWAL") ?? "true";
+        configuration["SubscriptionSettings:GracePeriodDays"] = 
+            Environment.GetEnvironmentVariable("SUBSCRIPTION_GRACE_PERIOD_DAYS") ?? "3";
+        
+        // Default admin account for SubscriptionService
+        configuration["DefaultAdminAccount:Email"] = 
+            Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";
+        configuration["DefaultAdminAccount:UserId"] = 
+            Environment.GetEnvironmentVariable("ADMIN_USER_ID") ?? "00000000-0000-0000-0000-000000000001";
+    }
+    
+    private static void ConfigurePaymentServiceSettings(IConfiguration configuration)
+    {
+        // Payment-specific database
+        configuration["ConnectionConfig:DefaultConnection"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_DB_CONNECTION_STRING") ?? 
+            Environment.GetEnvironmentVariable("ConnectionConfig__DefaultConnection");
+        
+        // Queue name
+        configuration["RabbitMQ:QueueName"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_QUEUE_NAME") ?? "paymentservice_queue";
+        
+        // Payment-specific settings
+        configuration["PaymentSettings:SupportedCurrencies"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_SUPPORTED_CURRENCIES") ?? "USD,EUR,VND";
+        configuration["PaymentSettings:DefaultCurrency"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_DEFAULT_CURRENCY") ?? "USD";
+        configuration["PaymentSettings:InvoiceValidityDays"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_INVOICE_VALIDITY_DAYS") ?? "30";
+        configuration["PaymentSettings:AutoCancelFailedPaymentHours"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_AUTO_CANCEL_FAILED_PAYMENT_HOURS") ?? "24";
+        configuration["PaymentSettings:EnableRefunds"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_ENABLE_REFUNDS") ?? "true";
+        configuration["PaymentSettings:MaxRefundDays"] = 
+            Environment.GetEnvironmentVariable("PAYMENT_MAX_REFUND_DAYS") ?? "30";
+        
+        // Default admin account for PaymentService
         configuration["DefaultAdminAccount:Email"] = 
             Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";
         configuration["DefaultAdminAccount:UserId"] = 

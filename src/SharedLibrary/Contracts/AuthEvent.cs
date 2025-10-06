@@ -29,11 +29,7 @@ public record UserLoggedInEvent : IntegrationEvent
     [JsonPropertyName("login_at")]
     public DateTime LoginAt { get; init; }
 
-    [JsonPropertyName("user_agent")]
-    public string? UserAgent { get; init; }
-
-    [JsonPropertyName("ip_address")]
-    public string? IpAddress { get; init; }
+    // IpAddress and UserAgent inherited from IntegrationEvent base class
 
     public UserLoggedInEvent() : base("AuthService") { }
 }

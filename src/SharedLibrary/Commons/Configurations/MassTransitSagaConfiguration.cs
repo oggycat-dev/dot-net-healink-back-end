@@ -4,22 +4,29 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharedLibrary.Commons.Configs;
-using SharedLibrary.Contracts.User.Saga;
 
 namespace SharedLibrary.Commons.Configurations;
 
 /// <summary>
-/// Extension methods for MassTransit Saga configuration
+/// Generic extension methods for MassTransit Saga configuration
+/// Each microservice should configure its own saga state machines
 /// </summary>
 public static class MassTransitSagaConfiguration
 {
     /// <summary>
-    /// Add MassTransit with Saga configuration for AuthService
+    /// Add MassTransit with generic Saga configuration
+    /// Use this when you need to configure saga state machines in your service
     /// </summary>
+    /// <typeparam name="TDbContext">DbContext that will store saga state</typeparam>
+    /// <param name="configureSagas">Action to configure saga state machines</param>
+    /// <param name="configureConsumers">Action to configure consumers</param>
+    /// <param name="configureEndpoints">Action to configure custom endpoints (optional)</param>
     public static IServiceCollection AddMassTransitWithSaga<TDbContext>(
         this IServiceCollection services, 
         IConfiguration configuration,
+        Action<IRegistrationConfigurator> configureSagas,
         Action<IRegistrationConfigurator>? configureConsumers = null,
+        Action<IRabbitMqBusFactoryConfigurator, IBusRegistrationContext>? configureEndpoints = null,
         string connectionStringKey = "DefaultConnection")
         where TDbContext : DbContext
     {
@@ -41,23 +48,10 @@ public static class MassTransitSagaConfiguration
 
         services.AddMassTransit(x =>
         {
-            // Add Registration Saga with optimized configuration
-            x.AddSagaStateMachine<RegistrationSaga, RegistrationSagaState>()
-                .EntityFrameworkRepository(r =>
-                {
-                    r.ExistingDbContext<TDbContext>();
-                    r.UsePostgres();
-                    
-                    // CRITICAL: Use pessimistic concurrency for data integrity
-                    // Prevents duplicate key violations during concurrent saga creation
-                    r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
-                    
-                    // ReadCommitted isolation - Serializable was causing deadlocks/retries
-                    // This allows proper saga creation without blocking on concurrent access
-                    r.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;
-                });
+            // Configure sagas - each service defines its own
+            configureSagas(x);
 
-            // Configure consumers (e.g., for AuthService consumers)
+            // Configure consumers (optional)
             configureConsumers?.Invoke(x);
 
             // Configure RabbitMQ transport
@@ -77,41 +71,14 @@ public static class MassTransitSagaConfiguration
                     }
                 });
 
-                // Disable global retry for AuthService - prioritize data integrity
-                cfg.UseMessageRetry(r => r.None());
+                // Default retry configuration (can be overridden per endpoint)
+                cfg.UseMessageRetry(r => r.Interval(rabbitMQConfig.RetryCount, TimeSpan.FromSeconds(rabbitMQConfig.RetryDelaySeconds)));
                 
-                // TODO: Configure proper message scheduler when RabbitMQ delayed message plugin is available
-                // For now, remove scheduling to avoid plugin dependency
-                
-                // Configure endpoints
+                // Configure endpoints - auto-configure first, then custom
                 cfg.ConfigureEndpoints(context);
                 
-                // Configure saga endpoint with proper fault handling
-                cfg.ReceiveEndpoint("registration-saga", e =>
-                {
-                    e.ConfigureSaga<RegistrationSagaState>(context, s =>
-                    {
-                        // Ensure saga correlation works properly
-                        s.Message<RegistrationStarted>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
-                        s.Message<OtpSent>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
-                        s.Message<OtpVerified>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
-                        s.Message<AuthUserCreated>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
-                        s.Message<UserProfileCreated>(m => m.UsePartitioner(8, p => p.Message.CorrelationId));
-                    });
-                    
-                    // CRITICAL: Disable ALL retry mechanisms
-                    e.UseMessageRetry(r => r.None());
-                    
-                    // CRITICAL: Handle faults without retrying
-                    e.DiscardFaultedMessages();
-                    e.DiscardSkippedMessages();
-                    
-                    // Single threaded processing to prevent race conditions
-                    e.ConcurrentMessageLimit = 1;
-                    
-                    // Minimal prefetch to reduce duplicate processing  
-                    e.PrefetchCount = 1;
-                });
+                // Apply custom endpoint configuration if provided
+                configureEndpoints?.Invoke(cfg, context);
             });
         });
 

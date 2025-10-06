@@ -101,12 +101,27 @@ public static class SwaggerConfiguration
                 }
             });
             
-            // Include XML comments
-            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            // Include XML comments from current assembly
+            var xmlFile = $"{Assembly.GetEntryAssembly()?.GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
             {
-                options.IncludeXmlComments(xmlPath);
+                options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+            }
+            
+            // Also include XML comments from referenced assemblies (Application layer)
+            var referencedAssemblies = Assembly.GetEntryAssembly()?.GetReferencedAssemblies();
+            if (referencedAssemblies != null)
+            {
+                foreach (var referencedAssembly in referencedAssemblies)
+                {
+                    var referencedXmlFile = $"{referencedAssembly.Name}.xml";
+                    var referencedXmlPath = Path.Combine(AppContext.BaseDirectory, referencedXmlFile);
+                    if (File.Exists(referencedXmlPath))
+                    {
+                        options.IncludeXmlComments(referencedXmlPath, includeControllerXmlComments: true);
+                    }
+                }
             }
             
             // Customize operation IDs to include controller name
@@ -120,8 +135,7 @@ public static class SwaggerConfiguration
                 return null;
             });
             
-            // Add service name to operation descriptions
-            options.DocumentFilter<ServiceNameDocumentFilter>(serviceName);
+            // Note: ServiceNameDocumentFilter removed - not needed when using custom tags
         });
         
         return services;
@@ -155,6 +169,13 @@ public static class SwaggerConfiguration
                 
                 // Custom title
                 options.DocumentTitle = $"{serviceName} API Documentation";
+                
+                // Inject custom CSS if exists
+                var customCssPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "swagger-custom", "custom-swagger-ui.css");
+                if (File.Exists(customCssPath))
+                {
+                    options.InjectStylesheet("/swagger-custom/custom-swagger-ui.css");
+                }
             });
         }
         
@@ -185,7 +206,10 @@ public class TagsAttribute : Attribute
 
 /// <summary>
 /// Document filter to add service name to Swagger documentation
+/// NOTE: This filter is deprecated. Use custom tags on controllers instead.
+/// Keeping for backward compatibility but not registered in AddSwaggerConfiguration anymore.
 /// </summary>
+[Obsolete("Use custom tags on controllers instead of this filter")]
 public class ServiceNameDocumentFilter : IDocumentFilter
 {
     private readonly string _serviceName;

@@ -22,6 +22,18 @@ public interface ICurrentUserService
     IEnumerable<string> Roles { get; }
     
     /// <summary>
+    /// IP Address of the current HTTP request (null if not in HTTP context)
+    /// For activity logging and audit trail
+    /// </summary>
+    string? IpAddress { get; }
+    
+    /// <summary>
+    /// User Agent of the current HTTP request (null if not in HTTP context)
+    /// For activity logging and audit trail
+    /// </summary>
+    string? UserAgent { get; }
+    
+    /// <summary>
     /// Validate user existence and status (for register/logout scenarios)
     /// </summary>
     /// <returns>Tuple with isValid and userId (null if invalid)</returns>

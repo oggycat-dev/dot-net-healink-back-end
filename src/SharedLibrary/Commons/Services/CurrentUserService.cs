@@ -73,6 +73,12 @@ public class CurrentUserService : ICurrentUserService
         }
     }
 
+    public string? IpAddress =>
+        _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+
+    public string? UserAgent =>
+        _httpContextAccessor.HttpContext?.Request?.Headers["User-Agent"].ToString();
+
     public async Task<(bool isValid, Guid? userId)> IsUserValidAsync()
     {
         try

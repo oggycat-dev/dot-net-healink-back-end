@@ -19,6 +19,18 @@ public abstract record IntegrationEvent
     [JsonPropertyName("source_service")]
     public string SourceService { get; init; } = string.Empty;
 
+    /// <summary>
+    /// IP Address of the user who triggered the event (null for system/background events)
+    /// </summary>
+    [JsonPropertyName("ip_address")]
+    public string? IpAddress { get; init; }
+
+    /// <summary>
+    /// User Agent of the request that triggered the event (null for system/background events)
+    /// </summary>
+    [JsonPropertyName("user_agent")]
+    public string? UserAgent { get; init; }
+
     protected IntegrationEvent()
     {
         EventType = GetType().Name;
