@@ -19,6 +19,9 @@ public static class ServiceConfiguration
         // Configure microservice with shared services (includes env + logging + RabbitMQ EventBus)
         builder.ConfigureMicroserviceServices("NotificationService");
 
+        // Add distributed authentication
+        builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
+
         // Add MassTransit with consumers for notification workflow
         builder.Services.AddMassTransitWithConsumers(builder.Configuration, x =>
         {
