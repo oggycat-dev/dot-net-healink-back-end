@@ -257,10 +257,26 @@ public static class EnvironmentConfiguration
             Environment.GetEnvironmentVariable("OTP_EXPIRATION_MINUTES") ?? "5";
         configuration["OtpSettings:MaxAttempts"] = 
             Environment.GetEnvironmentVariable("OTP_MAX_ATTEMPTS") ?? "3";
-        configuration["OtpSettings:RetryLimitPerHour"] = 
-            Environment.GetEnvironmentVariable("OTP_RETRY_LIMIT_PER_HOUR") ?? "5";
-        configuration["OtpSettings:CooldownMinutes"] = 
-            Environment.GetEnvironmentVariable("OTP_COOLDOWN_MINUTES") ?? "1";
+        
+        // OTP Rate Limiting - Registration
+        configuration["OtpSettings:RateLimiting:Registration:WindowMinutes"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_REGISTRATION_WINDOW_MINUTES") ?? "10";
+        configuration["OtpSettings:RateLimiting:Registration:MaxRequestsPerWindow"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_REGISTRATION_MAX_REQUESTS") ?? "3";
+        configuration["OtpSettings:RateLimiting:Registration:CooldownSeconds"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_REGISTRATION_COOLDOWN_SECONDS") ?? "60";
+        configuration["OtpSettings:RateLimiting:Registration:BlockDurationMinutes"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_REGISTRATION_BLOCK_DURATION_MINUTES") ?? "15";
+        
+        // OTP Rate Limiting - Password Reset
+        configuration["OtpSettings:RateLimiting:PasswordReset:WindowMinutes"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_PASSWORD_RESET_WINDOW_MINUTES") ?? "10";
+        configuration["OtpSettings:RateLimiting:PasswordReset:MaxRequestsPerWindow"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_PASSWORD_RESET_MAX_REQUESTS") ?? "5";
+        configuration["OtpSettings:RateLimiting:PasswordReset:CooldownSeconds"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_PASSWORD_RESET_COOLDOWN_SECONDS") ?? "60";
+        configuration["OtpSettings:RateLimiting:PasswordReset:BlockDurationMinutes"] = 
+            Environment.GetEnvironmentVariable("OTP_RATE_LIMIT_PASSWORD_RESET_BLOCK_DURATION_MINUTES") ?? "30";
     }
     
     /// <summary>

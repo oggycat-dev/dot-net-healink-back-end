@@ -13,4 +13,10 @@ public interface IOtpCacheService
     //Utility methods
     Task<int> GetRemainingAttemptsAsync(string contact, OtpTypeEnum type);
     Task<TimeSpan> GetRemainingTimeAsync(string contact, OtpTypeEnum type);
+    
+    // Rate Limiting methods
+    Task<(bool IsAllowed, string Reason)> CheckRateLimitingAsync(string contact, OtpTypeEnum type);
+    Task TrackOtpRequestAsync(string contact, OtpTypeEnum type);
+    Task<(bool IsBlocked, TimeSpan? RemainingTime)> GetRateLimitStatusAsync(string contact);
+    Task ClearRateLimitTrackerAsync(string contact);
 }

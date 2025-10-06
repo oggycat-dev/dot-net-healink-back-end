@@ -55,16 +55,17 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
                 return Result.Failure("Phone number already exists", ErrorCodeEnum.ValidationFailed);
             }
 
-            // Check if there's already an active registration OTP for this contact
-            // var existingOtpData = await _otpCacheService.GetOtpDataAsync(contact, OtpTypeEnum.Registration);
-            // if (existingOtpData != null)
-            // {
-            //     _logger.LogWarning("Active registration OTP already exists for contact: {Contact}. Please wait or verify existing OTP.", contact);
-            //     return Result.Failure("Registration already in progress. Please check your email/phone for existing OTP or wait a few minutes before trying again.", ErrorCodeEnum.ResourceConflict);
-            // }
+            // ✅ CRITICAL: Rate limiting with Redis - Check before doing anything
+            var rateLimitCheck = await _otpCacheService.CheckRateLimitingAsync(contact, OtpTypeEnum.Registration);
+            if (!rateLimitCheck.IsAllowed)
+            {
+                _logger.LogWarning("Rate limit check failed for {Contact}: {Reason}", contact, rateLimitCheck.Reason);
+                return Result.Failure(rateLimitCheck.Reason, ErrorCodeEnum.TooManyRequests);
+            }
 
-            // CRITICAL: Additional safety check - ensure unique correlation ID and avoid race conditions
-            // Log the attempt with timestamp for monitoring duplicate requests
+            // Check if there's already an active registration OTP for this contact
+
+            // Log the attempt with timestamp for monitoring
             _logger.LogInformation("Registration attempt for {Email} at {Timestamp}", request.Email, DateTime.UtcNow);
 
             // Create correlation ID for saga
@@ -78,7 +79,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
                 PasswordCryptoHelper.Encrypt(command.Request.Password, _PasswordEncryptionKey),
                 channel);
 
-            // Generate and store OTP with rate limiting check
+            // Generate and store OTP
             var otpResult = await _otpCacheService.GenerateAndStoreOtpAsync(
                     contact,
                     OtpTypeEnum.Registration,
@@ -87,6 +88,9 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
             
             var otpCode = otpResult.OtpCode;
             var expiresInMinutes = otpResult.ExpiresInMinutes;
+            
+            // ✅ Track this request for rate limiting (after successful OTP generation)
+            await _otpCacheService.TrackOtpRequestAsync(contact, OtpTypeEnum.Registration);
                     
             //3. Start Registration Saga
             await _publishEndpoint.Publish<RegistrationStarted>(new
