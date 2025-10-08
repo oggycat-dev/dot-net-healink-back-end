@@ -3,6 +3,7 @@ using MassTransit.EntityFrameworkCoreIntegration;
 using AuthService.Infrastructure.Saga;
 using SharedLibrary.Contracts.User.Events;
 using SharedLibrary.Contracts.User.Saga;
+using System.Data;
 
 namespace AuthService.Infrastructure.Configurations;
 
@@ -31,12 +32,12 @@ public static class AuthSagaConfiguration
                 
                 // ReadCommitted isolation - Serializable was causing deadlocks/retries
                 // This allows proper saga creation without blocking on concurrent access
-                r.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;
+                r.IsolationLevel = IsolationLevel.ReadCommitted;
             });
     }
 
     /// <summary>
-    /// Configure saga endpoints with proper fault handling
+    /// Configure saga endpoints with proper fault handling and outbox pattern
     /// </summary>
     public static void ConfigureSagaEndpoints(IRabbitMqBusFactoryConfigurator cfg, IBusRegistrationContext context)
     {
@@ -55,6 +56,10 @@ public static class AuthSagaConfiguration
             
             // CRITICAL: Disable ALL retry mechanisms for data integrity
             e.UseMessageRetry(r => r.None());
+            
+            // CRITICAL: Configure Entity Framework Outbox for transactional messaging
+            // This ensures saga state changes and published messages are atomic
+            e.UseEntityFrameworkOutbox<Context.AuthDbContext>(context);
             
             // CRITICAL: Handle faults without retrying
             e.DiscardFaultedMessages();
