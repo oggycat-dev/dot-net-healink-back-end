@@ -8,6 +8,7 @@ using ContentService.Domain.Interfaces;
 using SharedLibrary.Commons.Outbox;
 using SharedLibrary.Commons.Enums;
 using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace ContentService.Application.Features.Podcasts.Handlers;
@@ -137,15 +138,18 @@ public class UpdatePodcastCommandHandler : IRequestHandler<UpdatePodcastCommand,
 {
     private readonly IOutboxUnitOfWork _outboxUnitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<UpdatePodcastCommandHandler> _logger;
 
     public UpdatePodcastCommandHandler(
         IOutboxUnitOfWork outboxUnitOfWork,
         ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService,
         ILogger<UpdatePodcastCommandHandler> logger)
     {
         _outboxUnitOfWork = outboxUnitOfWork;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
         _logger = logger;
     }
 
@@ -161,20 +165,37 @@ public class UpdatePodcastCommandHandler : IRequestHandler<UpdatePodcastCommand,
                 throw new InvalidOperationException($"Podcast with ID {request.Id} not found");
             }
 
-            // Update podcast properties
-            podcast.Title = request.Title;
-            podcast.Description = request.Description;
-            podcast.ThumbnailUrl = request.ThumbnailUrl;
-            podcast.AudioUrl = request.AudioUrl;
-            podcast.Duration = request.Duration;
-            podcast.TranscriptUrl = request.TranscriptUrl;
-            podcast.HostName = request.HostName;
-            podcast.GuestName = request.GuestName;
-            podcast.EpisodeNumber = request.EpisodeNumber;
-            podcast.SeriesName = request.SeriesName;
-            podcast.Tags = request.Tags;
-            podcast.EmotionCategories = request.EmotionCategories;
-            podcast.TopicCategories = request.TopicCategories;
+            _logger.LogInformation("Updating podcast {PodcastId}", request.Id);
+
+            // Upload new audio file if provided
+            if (request.AudioFile != null)
+            {
+                var audioUrl = await _fileStorageService.UploadFileAsync(request.AudioFile, "podcasts/audio");
+                podcast.AudioUrl = audioUrl;
+                _logger.LogInformation("New audio file uploaded: {AudioUrl}", audioUrl);
+            }
+
+            // Upload new thumbnail if provided
+            if (request.ThumbnailFile != null)
+            {
+                var thumbnailUrl = await _fileStorageService.UploadFileAsync(request.ThumbnailFile, "podcasts/thumbnails");
+                podcast.ThumbnailUrl = thumbnailUrl;
+                _logger.LogInformation("New thumbnail uploaded: {ThumbnailUrl}", thumbnailUrl);
+            }
+
+            // Update podcast properties (only if provided)
+            if (request.Title != null) podcast.Title = request.Title;
+            if (request.Description != null) podcast.Description = request.Description;
+            if (request.Duration.HasValue) podcast.Duration = request.Duration.Value;
+            if (request.TranscriptUrl != null) podcast.TranscriptUrl = request.TranscriptUrl;
+            if (request.HostName != null) podcast.HostName = request.HostName;
+            if (request.GuestName != null) podcast.GuestName = request.GuestName;
+            if (request.EpisodeNumber.HasValue) podcast.EpisodeNumber = request.EpisodeNumber.Value;
+            if (request.SeriesName != null) podcast.SeriesName = request.SeriesName;
+            if (request.Tags != null) podcast.Tags = request.Tags;
+            if (request.EmotionCategories != null) podcast.EmotionCategories = request.EmotionCategories;
+            if (request.TopicCategories != null) podcast.TopicCategories = request.TopicCategories;
+            
             podcast.UpdatedAt = DateTime.UtcNow;
 
             _outboxUnitOfWork.Repository<Podcast>().Update(podcast);

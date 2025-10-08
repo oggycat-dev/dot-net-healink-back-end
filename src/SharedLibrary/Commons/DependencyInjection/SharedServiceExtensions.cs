@@ -46,7 +46,8 @@ public static class SharedServiceExtensions
 
         // Add shared configurations
         services.AddCorsConfiguration(configuration);
-        services.AddJwtConfiguration(configuration);
+        // JWT Configuration is registered separately in ConfigureMicroserviceServices via AddJwtConfiguration
+        // Don't register here to avoid duplicate registration
         services.AddSwaggerConfiguration(serviceName);
         
         // Add RabbitMQ Event Bus
@@ -134,6 +135,9 @@ public static class ApplicationServiceExtensions
             options.JsonSerializerOptions.WriteIndented = true;
         });
         builder.Services.AddEndpointsApiExplorer();
+        
+        // Add JWT authentication with role sync from Redis
+        builder.Services.AddJwtConfiguration(builder.Configuration);
         
         // Shared services
         builder.Services.AddSharedServices(builder.Configuration, serviceName);

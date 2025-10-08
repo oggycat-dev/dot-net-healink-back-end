@@ -14,6 +14,7 @@ using SharedLibrary.Commons.Services;
 using SharedLibrary.Commons.Configs;
 using SharedLibrary.Commons.Cache;
 using SharedLibrary.Commons.Models.Otp;
+using SharedLibrary.SharedLibrary.Contracts.Events;
 
 namespace AuthService.Infrastructure;
 
@@ -134,6 +135,10 @@ public static class AuthInfrastructureDependencyInjection
         // Add auth-specific infrastructure services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthJwtService, AuthJwtService>();
+        services.AddScoped<IRoleService, RoleService>();
+        
+        // Register Auth-specific event handlers
+        services.AddScoped<IIntegrationEventHandler<UserRolesChangedEvent>, EventHandlers.AuthUserRolesChangedEventHandler>();
         
         // Configure OtpSettings from appsettings.json
         services.Configure<OtpSettings>(configuration.GetSection("OtpSettings"));

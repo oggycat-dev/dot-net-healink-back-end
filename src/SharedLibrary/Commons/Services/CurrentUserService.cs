@@ -29,6 +29,7 @@ public class CurrentUserService : ICurrentUserService
     }
 
     public string? UserId =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst("user_id")?.Value ??
         _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
         _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value ??
         _httpContextAccessor.HttpContext?.User?.FindFirst("nameid")?.Value;

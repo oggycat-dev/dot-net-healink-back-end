@@ -8,6 +8,7 @@ using NotificationService.Infrastructure.Services;
 using SharedLibrary.Commons.EventBus;
 using SharedLibrary.Commons.Models.Otp;
 using SharedLibrary.Contracts.Auth;
+using SharedLibrary.Contracts.User.Events;
 
 namespace NotificationService.Infrastructure;
 
@@ -32,6 +33,7 @@ public static class NotiInfrastructureDependencyInjection
 
         // Register event handlers
         services.AddScoped<IIntegrationEventHandler<ResetPasswordEvent>, SendOtpResetPasswordEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<CreatorApplicationApprovedEvent>, CreatorApplicationApprovedEventHandler>();
 
         return services;
     }
