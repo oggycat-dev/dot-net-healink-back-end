@@ -14,11 +14,13 @@ public class PodcastsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ILogger<PodcastsController> _logger;
 
-    public PodcastsController(IMediator mediator, ICurrentUserService currentUserService)
+    public PodcastsController(IMediator mediator, ICurrentUserService currentUserService, ILogger<PodcastsController> logger)
     {
         _mediator = mediator;
         _currentUserService = currentUserService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -83,6 +85,21 @@ public class PodcastsController : ControllerBase
             return Unauthorized();
         }
 
+        // Log received request data for debugging
+        _logger.LogWarning("=== [DEBUG] CreatePodcast Request Received ===");
+        _logger.LogWarning("  Title: {Title}", request.Title);
+        _logger.LogWarning("  Description: {Description}", request.Description);
+        _logger.LogWarning("  HostName: '{HostName}'", request.HostName ?? "NULL");
+        _logger.LogWarning("  GuestName: '{GuestName}'", request.GuestName ?? "NULL");
+        _logger.LogWarning("  EpisodeNumber: {EpisodeNumber}", request.EpisodeNumber);
+        _logger.LogWarning("  SeriesName: '{SeriesName}'", request.SeriesName ?? "NULL");
+        _logger.LogWarning("  TranscriptUrl: '{TranscriptUrl}'", request.TranscriptUrl ?? "NULL");
+        _logger.LogWarning("  Tags count: {TagsCount}", request.Tags?.Count ?? 0);
+        _logger.LogWarning("  EmotionCategories count: {EmotionCount}", request.EmotionCategories?.Count ?? 0);
+        _logger.LogWarning("  TopicCategories count: {TopicCount}", request.TopicCategories?.Count ?? 0);
+        _logger.LogWarning("  ThumbnailFile: {HasThumbnail}", request.ThumbnailFile != null ? "Provided" : "NULL");
+        _logger.LogWarning("=== [DEBUG] End ===");
+
         // Validate audio file
         if (request.AudioFile == null || request.AudioFile.Length == 0)
         {
@@ -100,15 +117,15 @@ public class PodcastsController : ControllerBase
             request.Description,
             request.AudioFile,
             TimeSpan.FromSeconds(request.Duration),
-            null, // TranscriptUrl
-            null, // HostName
-            null, // GuestName
-            1,    // EpisodeNumber
-            null, // SeriesName
+            request.TranscriptUrl,
+            request.HostName,
+            request.GuestName,
+            request.EpisodeNumber,
+            request.SeriesName,
             request.Tags?.ToArray(),
-            null, // EmotionCategories
-            null, // TopicCategories
-            null  // ThumbnailFile
+            request.EmotionCategories?.ToArray(),
+            request.TopicCategories?.ToArray(),
+            request.ThumbnailFile
         );
 
         var result = await _mediator.Send(command);
@@ -139,19 +156,19 @@ public class PodcastsController : ControllerBase
 
         var command = new UpdatePodcastCommand(
             id,
-            request.Title ?? string.Empty,
-            request.Description ?? string.Empty,
-            null, // ThumbnailUrl
-            string.Empty, // AudioUrl (will be updated in handler)
-            TimeSpan.FromSeconds(request.Duration ?? 0),
+            request.Title,
+            request.Description,
+            request.Duration.HasValue ? TimeSpan.FromSeconds(request.Duration.Value) : null,
             null, // TranscriptUrl
             null, // HostName
             null, // GuestName
-            1,    // EpisodeNumber
+            null, // EpisodeNumber
             null, // SeriesName
-            request.Tags?.ToArray() ?? new string[0],
+            request.Tags?.ToArray(),
             new Domain.Enums.EmotionCategory[0], // EmotionCategories
             new Domain.Enums.TopicCategory[0],   // TopicCategories
+            null, // AudioFile
+            null, // ThumbnailFile
             userId
         );
 

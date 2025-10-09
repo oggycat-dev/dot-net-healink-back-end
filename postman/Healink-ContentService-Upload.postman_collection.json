@@ -1,0 +1,377 @@
+{
+  "info": {
+    "name": "Healink ContentService Upload APIs",
+    "description": "Collection for testing ContentService upload endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5010",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+                  "    console.log(\"Token saved:\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"creator@example.com\",\n  \"password\": \"YourPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Creator Upload",
+      "item": [
+        {
+          "name": "Upload Podcast Audio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/audio.mp3",
+                  "description": "Select your audio file (Max 500MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/upload/podcast/audio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "upload", "podcast", "audio"]
+            },
+            "description": "Upload podcast audio file (Max 500MB)\nAllowed types: .mp3, .wav, .m4a"
+          }
+        },
+        {
+          "name": "Upload Podcast Thumbnail",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/image.jpg",
+                  "description": "Select thumbnail image (Max 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/upload/podcast/thumbnail",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "upload", "podcast", "thumbnail"]
+            },
+            "description": "Upload podcast thumbnail (Max 5MB)\nAllowed types: .jpg, .jpeg, .png"
+          }
+        },
+        {
+          "name": "Upload Podcast Transcript",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/transcript.txt",
+                  "description": "Select transcript file (Max 2MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/upload/podcast/transcript",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "upload", "podcast", "transcript"]
+            },
+            "description": "Upload podcast transcript (Max 2MB)\nAllowed types: .txt, .srt, .vtt"
+          }
+        },
+        {
+          "name": "Upload Community Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/story-image.jpg",
+                  "description": "Select story image (Max 10MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/upload/community/image",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "upload", "community", "image"]
+            },
+            "description": "Upload community story image (Max 10MB)\nAllowed types: .jpg, .jpeg, .png, .gif, .webp"
+          }
+        },
+        {
+          "name": "Upload Community Audio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/story-audio.mp3",
+                  "description": "Select story audio (Max 100MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/upload/community/audio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "upload", "community", "audio"]
+            },
+            "description": "Upload community story audio (Max 100MB)\nAllowed types: .mp3, .wav, .m4a"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User APIs (Public)",
+      "item": [
+        {
+          "name": "Get Published Podcasts",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content/user/podcasts?page=1&pageSize=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "user", "podcasts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trending Podcasts",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content/user/podcasts/trending?page=1&pageSize=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "user", "podcasts", "trending"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Podcasts",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content/user/podcasts/search?keyword=meditation&page=1&pageSize=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "user", "podcasts", "search"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "meditation"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Creator APIs (Auth Required)",
+      "item": [
+        {
+          "name": "Get My Podcasts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/podcasts/my-podcasts?page=1&pageSize=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "podcasts", "my-podcasts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Podcast",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My First Podcast\",\n  \"description\": \"A relaxing meditation podcast\",\n  \"audioUrl\": \"https://your-bucket.s3.amazonaws.com/podcasts/audio/uuid.mp3\",\n  \"thumbnailUrl\": \"https://your-bucket.s3.amazonaws.com/podcasts/thumbnails/uuid.jpg\",\n  \"transcriptUrl\": \"https://your-bucket.s3.amazonaws.com/podcasts/transcripts/uuid.txt\",\n  \"duration\": 300,\n  \"emotionTag\": \"Relaxation\",\n  \"topicTags\": [\"Meditation\", \"Sleep\"],\n  \"seriesName\": \"Daily Meditation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/podcasts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "podcasts"]
+            }
+          }
+        },
+        {
+          "name": "Update My Podcast",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Podcast Title\",\n  \"description\": \"Updated description\",\n  \"emotionTag\": \"Relaxation\",\n  \"topicTags\": [\"Meditation\", \"Mindfulness\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/podcasts/{podcastId}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "podcasts", "{podcastId}"]
+            }
+          }
+        },
+        {
+          "name": "Delete My Podcast",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/podcasts/{podcastId}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "podcasts", "{podcastId}"]
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content/creator/podcasts/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "content", "creator", "podcasts", "dashboard"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

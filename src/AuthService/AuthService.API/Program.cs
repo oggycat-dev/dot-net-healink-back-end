@@ -31,9 +31,11 @@ try
     // Configure RabbitMQ Event Bus
     app.AddRabbitMQEventBus();
     
-    // Subscribe to events
+    // Subscribe to auth events with AuthService-specific handlers
+    // (uses custom UserRolesChangedEventHandler that updates both database and cache)
     var eventBus = app.Services.GetRequiredService<IEventBus>();
-    app.Services.SubscribeToAuthEvents();
+    app.Services.SubscribeToAuthServiceEvents();
+    
     eventBus.StartConsuming();
     
     logger.LogInformation("AuthService API configured successfully");

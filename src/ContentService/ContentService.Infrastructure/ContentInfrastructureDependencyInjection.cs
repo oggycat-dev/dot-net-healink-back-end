@@ -3,14 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using ContentService.Infrastructure.Context;
 using ContentService.Infrastructure.Services;
-using ContentService.Infrastructure.FileStorage;
 using ContentService.Infrastructure.Repositories;
 using ContentService.Infrastructure.Consumers;
 using ContentService.Domain.Interfaces;
 using SharedLibrary.Commons.Outbox;
 using SharedLibrary.Commons.Repositories;
 using SharedLibrary.Commons.EventBus;
-using Amazon.S3;
 
 namespace ContentService.Infrastructure;
 
@@ -44,11 +42,8 @@ public static class ContentInfrastructureDependencyInjection
         // Background services
         services.AddHostedService<OutboxEventProcessorService>();
 
-        // AWS S3 Configuration
-        services.AddAWSService<IAmazonS3>();
-
-        // File Storage
-        services.AddScoped<IFileStorageService, S3FileStorageService>();
+        // Note: IFileStorageService is registered in SharedLibrary via AddS3FileStorage()
+        // Do not register here to avoid overriding the SharedLibrary implementation
 
         // Repositories
         services.AddScoped<IContentRepository, ContentRepository>();

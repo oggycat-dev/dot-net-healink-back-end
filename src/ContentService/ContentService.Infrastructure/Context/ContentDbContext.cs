@@ -25,6 +25,13 @@ public class ContentDbContext : DbContext
     public DbSet<ContentRating> ContentRatings { get; set; }
     public DbSet<CreatorSettings> CreatorSettings { get; set; }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Disable foreign key convention that auto-creates relationships
+        // This prevents EF from creating CreatorSettingsId FK on Content table
+        configurationBuilder.Conventions.Remove(typeof(Microsoft.EntityFrameworkCore.Metadata.Conventions.ForeignKeyIndexConvention));
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -234,7 +241,7 @@ public class ContentDbContext : DbContext
             entity.Property(x => x.EventData).HasColumnType("text");
         });
         
-        // Configure CreatorSettings entity
+        // Configure CreatorSettings entity  
         modelBuilder.Entity<CreatorSettings>(entity =>
         {
             entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(100);
