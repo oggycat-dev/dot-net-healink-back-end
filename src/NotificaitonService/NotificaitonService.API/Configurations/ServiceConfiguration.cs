@@ -27,6 +27,7 @@ public static class ServiceConfiguration
         {
             x.AddConsumer<NotificationService.Infrastructure.Consumers.SendOtpNotificationConsumer>();
             x.AddConsumer<NotificationService.Infrastructure.Consumers.SendWelcomeNotificationConsumer>();
+            x.AddConsumer<NotificationService.Infrastructure.Consumers.SubscriptionActivatedNotificationConsumer>();
         });
 
         // Application & Infrastructure layers

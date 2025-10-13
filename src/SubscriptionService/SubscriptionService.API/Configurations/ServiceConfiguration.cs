@@ -1,8 +1,12 @@
 using SubscriptionService.Application;
 using SubscriptionService.Infrastructure;
+using SubscriptionService.Infrastructure.Context;
+using SubscriptionService.Infrastructure.Configurations;
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
 using SharedLibrary.Commons.Extensions;
+using SharedLibrary.Contracts.Payment.Requests;
+using MassTransit;
 
 namespace SubscriptionService.API.Configurations;
 
@@ -19,18 +23,38 @@ public static class ServiceConfiguration
         // Add distributed authentication
         builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
-        // Add MassTransit with Consumers (NO Saga - RegistrationSaga is handled by AuthService)
-        // SubscriptionService will have its own Saga later for subscription/payment workflow
-        builder.Services.AddMassTransitWithConsumers(
-            builder.Configuration, x =>
+        // CRITICAL: Add MassTransit with Saga and Entity Framework Outbox
+        // Reference: https://masstransit.io/documentation/configuration/middleware/outbox
+        builder.Services.AddMassTransitWithSaga<SubscriptionDbContext>(
+            builder.Configuration,
+            configureSagas: x =>
+            {
+                // Configure RegisterSubscription Saga
+                SubscriptionSagaConfiguration.ConfigureRegisterSubscriptionSaga<SubscriptionDbContext>(x);
+            },
+            configureConsumers: x =>
             {
                 // Register consumers for SubscriptionService
-                // TODO: Add subscription-related consumers here
+                x.AddConsumer<Infrastructure.Consumers.ActivateSubscriptionConsumer>();
+                x.AddConsumer<Infrastructure.Consumers.CancelSubscriptionConsumer>();
+            },
+            configureEndpoints: (cfg, context) =>
+            {
+                // Configure saga-specific endpoints with Entity Framework Outbox
+                SubscriptionSagaConfiguration.ConfigureSagaEndpoints(cfg, context);
             });
 
         // Application & Infrastructure layers
         builder.Services.AddSubscriptionApplication();
         builder.Services.AddSubscriptionInfrastructure(builder.Configuration);
+
+        // ✅ Register Request Client for payment intent creation (RPC)
+        // This allows RegisterSubscriptionCommandHandler to call PaymentService synchronously
+        builder.Services.AddScoped(provider =>
+        {
+            var bus = provider.GetRequiredService<MassTransit.IBus>();
+            return bus.CreateRequestClient<CreatePaymentIntentRequest>(RequestTimeout.After(s: 30));
+        });
 
         return builder;
     }

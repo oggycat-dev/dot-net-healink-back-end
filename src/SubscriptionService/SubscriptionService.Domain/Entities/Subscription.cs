@@ -7,12 +7,12 @@ public class Subscription : BaseEntity
 {
     public Guid UserProfileId { get; set; }
     public Guid SubscriptionPlanId { get; set; }
-    public SubscriptionStatus SubscriptionStatus { get; set; } = SubscriptionStatus.InTrial;
+    public SubscriptionStatus SubscriptionStatus { get; set; } = SubscriptionStatus.Pending;
     public DateTime? CurrentPeriodStart { get; set; }
     public DateTime? CurrentPeriodEnd { get; set; }
-    public DateTime? CancelAt { get; set; }
     public DateTime? CanceledAt { get; set; }
     public bool CancelAtPeriodEnd { get; set; }
     public RenewalBehavior RenewalBehavior { get; set; } = RenewalBehavior.Manual;
+    public string? CancelReason { get; set; }
     public virtual SubscriptionPlan Plan { get; set; } = null!;
 }

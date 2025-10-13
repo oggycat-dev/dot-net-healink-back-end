@@ -66,12 +66,12 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
             {
                 // Schedule cancellation at period end
                 subscription.CancelAtPeriodEnd = true;
-                subscription.CancelAt = subscription.CurrentPeriodEnd;
+                subscription.CanceledAt = subscription.CurrentPeriodEnd;
                 
                 _logger.LogInformation(
                     "Subscription {SubscriptionId} scheduled for cancellation at period end ({CancelAt})",
                     request.Id,
-                    subscription.CancelAt);
+                    subscription.CanceledAt);
             }
             else
             {

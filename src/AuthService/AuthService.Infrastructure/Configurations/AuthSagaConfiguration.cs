@@ -57,10 +57,6 @@ public static class AuthSagaConfiguration
             // CRITICAL: Disable ALL retry mechanisms for data integrity
             e.UseMessageRetry(r => r.None());
             
-            // CRITICAL: Configure Entity Framework Outbox for transactional messaging
-            // This ensures saga state changes and published messages are atomic
-            e.UseEntityFrameworkOutbox<Context.AuthDbContext>(context);
-            
             // CRITICAL: Handle faults without retrying
             e.DiscardFaultedMessages();
             e.DiscardSkippedMessages();

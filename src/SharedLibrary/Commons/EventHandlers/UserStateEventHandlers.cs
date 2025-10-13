@@ -30,6 +30,7 @@ public class UserLoggedInEventHandler : IIntegrationEventHandler<UserLoggedInEve
             var userState = new UserStateInfo
             {
                 UserId = @event.UserId,
+                UserProfileId = @event.UserProfileId, // ✅ Set UserProfileId from event
                 Email = @event.Email,
                 Roles = @event.Roles,
                 Status = EntityStatusEnum.Active,
@@ -40,7 +41,9 @@ public class UserLoggedInEventHandler : IIntegrationEventHandler<UserLoggedInEve
 
             await _userStateCache.SetUserStateAsync(userState);
             
-            _logger.LogInformation("User state cached for user {UserId} after login", @event.UserId);
+            _logger.LogInformation(
+                "User state cached for user {UserId} with UserProfileId={UserProfileId} after login", 
+                @event.UserId, @event.UserProfileId);
         }
         catch (Exception ex)
         {

@@ -11,7 +11,7 @@ public record CommunityStoryCreatedEvent(
     Guid StoryId,
     string Title,
     string StoryContent,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     DateTime CreatedAt,
     EmotionCategory[]? EmotionCategories = null,
     string[]? Tags = null
@@ -20,7 +20,7 @@ public record CommunityStoryCreatedEvent(
 public record CommunityStoryApprovedEvent(
     Guid StoryId,
     string Title,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     Guid ApprovedBy,
     DateTime ApprovedAt,
     string? ModerationNotes = null
@@ -29,7 +29,7 @@ public record CommunityStoryApprovedEvent(
 public record CommunityStoryRejectedEvent(
     Guid StoryId,
     string Title,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     Guid RejectedBy,
     DateTime RejectedAt,
     string RejectionReason

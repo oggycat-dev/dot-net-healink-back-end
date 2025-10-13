@@ -508,6 +508,38 @@ public static class EnvironmentConfiguration
         configuration["PaymentSettings:MaxRefundDays"] = 
             Environment.GetEnvironmentVariable("PAYMENT_MAX_REFUND_DAYS") ?? "30";
         
+        // === MoMo Gateway Settings ===
+        configuration["Momo:PartnerCode"] = 
+            Environment.GetEnvironmentVariable("MOMO_PARTNER_CODE") ?? "MOMO";
+        configuration["Momo:PartnerName"] = 
+            Environment.GetEnvironmentVariable("MOMO_PARTNER_NAME") ?? "Healink";
+        configuration["Momo:StoreId"] = 
+            Environment.GetEnvironmentVariable("MOMO_STORE_ID") ?? "HealinkStore";
+        configuration["Momo:AccessKey"] = 
+            Environment.GetEnvironmentVariable("MOMO_ACCESS_KEY") ?? "";
+        configuration["Momo:SecretKey"] = 
+            Environment.GetEnvironmentVariable("MOMO_SECRET_KEY") ?? "";
+        configuration["Momo:ApiEndpoint"] = 
+            Environment.GetEnvironmentVariable("MOMO_API_ENDPOINT") ?? "https://test-payment.momo.vn/v2/gateway/api";
+        configuration["Momo:IpnUrl"] = 
+            Environment.GetEnvironmentVariable("MOMO_IPN_URL") ?? "http://localhost:5002/api/payment-callback/momo/ipn";
+        configuration["Momo:RedirectUrl"] = 
+            Environment.GetEnvironmentVariable("MOMO_REDIRECT_URL") ?? "http://localhost:3000/payment/result";
+        
+        // MoMo IPN IP Whitelist (comma-separated)
+        var momoIpWhitelist = Environment.GetEnvironmentVariable("MOMO_IPN_WHITELIST") ?? 
+                             "118.69.212.158,210.245.113.71,127.0.0.1,::1";
+        configuration["Momo:IpnWhitelist"] = momoIpWhitelist;
+        
+        // Convert comma-separated string to array format for easy access
+        var ipArray = momoIpWhitelist.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                     .Select(ip => ip.Trim())
+                                     .ToArray();
+        for (int i = 0; i < ipArray.Length; i++)
+        {
+            configuration[$"Momo:IpnWhitelist:{i}"] = ipArray[i];
+        }
+        
         // Default admin account for PaymentService
         configuration["DefaultAdminAccount:Email"] = 
             Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";

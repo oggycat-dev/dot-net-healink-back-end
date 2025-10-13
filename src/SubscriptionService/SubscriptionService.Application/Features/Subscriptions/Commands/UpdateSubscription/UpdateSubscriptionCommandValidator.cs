@@ -22,10 +22,5 @@ public class UpdateSubscriptionCommandValidator : AbstractValidator<UpdateSubscr
             .GreaterThan(DateTime.UtcNow)
             .WithMessage("Current period end must be in the future")
             .When(x => x.Request.CurrentPeriodEnd.HasValue);
-
-        RuleFor(x => x.Request.CancelAt)
-            .GreaterThan(DateTime.UtcNow)
-            .WithMessage("Cancel date must be in the future")
-            .When(x => x.Request.CancelAt.HasValue);
     }
 }

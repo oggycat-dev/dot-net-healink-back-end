@@ -214,7 +214,7 @@ services:
       # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
       SERVICE_NAME: SubscriptionService
     ports:
-      - "5005:80"
+      - "5007:80"
     volumes:
       - ./.env:/app/.env
     depends_on:

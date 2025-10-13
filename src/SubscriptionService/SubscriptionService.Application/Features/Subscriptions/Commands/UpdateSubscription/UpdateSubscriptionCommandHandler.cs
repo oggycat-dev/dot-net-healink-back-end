@@ -76,11 +76,6 @@ public class UpdateSubscriptionCommandHandler : IRequestHandler<UpdateSubscripti
                 subscription.CurrentPeriodEnd = request.Request.CurrentPeriodEnd.Value;
             }
 
-            if (request.Request.CancelAt.HasValue)
-            {
-                subscription.CancelAt = request.Request.CancelAt.Value;
-            }
-
             // 4. Update metadata - CurrentUserService already validated by middleware
             var userId = Guid.Parse(_currentUserService.UserId!);
             subscription.UpdateEntity(userId);

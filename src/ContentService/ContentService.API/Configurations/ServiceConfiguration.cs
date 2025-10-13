@@ -51,6 +51,9 @@ public static class ServiceConfiguration
             // Authentication & Authorization Event Consumers  
             x.AddConsumer<AuthEventConsumer>();
             
+            // Subscription Status Cache Consumers
+            x.AddConsumer<UserSubscriptionStatusChangedConsumer>();
+            
             // Creator Application Consumers
             x.AddConsumer<CreatorApplicationConsumer>();
         });

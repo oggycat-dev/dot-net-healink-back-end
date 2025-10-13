@@ -35,57 +35,94 @@ public static class SubscriptionSeedingExtension
             
             var context = scope.ServiceProvider.GetRequiredService<SubscriptionDbContext>();
             
-            // Check if any plans exist
-            if (await context.SubscriptionPlans.AnyAsync())
-            {
-                logger.LogInformation("SubscriptionService: Subscription plans already exist, skipping seeding");
-                return;
-            }
-            
             // Get settings from configuration
             var freePlanName = configuration.GetValue<string>("SubscriptionSettings:DefaultFreePlanName") ?? "Free";
             var freePlanAmount = configuration.GetValue<decimal>("SubscriptionSettings:DefaultFreePlanAmount");
-            var currency = configuration.GetValue<string>("SubscriptionSettings:DefaultFreePlanCurrency") ?? "USD";
+            var currency = configuration.GetValue<string>("SubscriptionSettings:DefaultFreePlanCurrency") ?? "VND";
             var trialDays = configuration.GetValue<int>("SubscriptionSettings:DefaultTrialDays");
             var adminUserId = configuration.GetValue<Guid?>("AdminUserId");
             
-            // Create default subscription plans
-            var freePlan = new SubscriptionService.Domain.Entities.SubscriptionPlan
+            // Define subscription plans to seed
+            var plansToSeed = new[]
             {
-                Id = Guid.NewGuid(),
-                Name = freePlanName,
-                DisplayName = freePlanName,
-                Description = "Free plan with basic features",
-                Amount = freePlanAmount,
-                Currency = currency,
-                BillingPeriodUnit = SubscriptionService.Domain.Enums.BillingPeriodUnit.Month,
-                BillingPeriodCount = 1,
-                TrialDays = 0,
-                FeatureConfig = "{}",
-                Status = EntityStatusEnum.Active, // ✅ Using Status instead of IsActive
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = adminUserId
+                new SubscriptionService.Domain.Entities.SubscriptionPlan
+                {
+                    Id = Guid.NewGuid(),
+                    Name = freePlanName,
+                    DisplayName = freePlanName,
+                    Description = "Free plan with basic features",
+                    Amount = freePlanAmount,
+                    Currency = currency,
+                    BillingPeriodUnit = SubscriptionService.Domain.Enums.BillingPeriodUnit.Month,
+                    BillingPeriodCount = 1,
+                    TrialDays = 0,
+                    FeatureConfig = "{}",
+                    Status = EntityStatusEnum.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = adminUserId
+                },
+                new SubscriptionService.Domain.Entities.SubscriptionPlan
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Premium",
+                    DisplayName = "Premium",
+                    Description = "Premium plan with advanced features",
+                    Amount = 50000,
+                    Currency = currency,
+                    BillingPeriodUnit = SubscriptionService.Domain.Enums.BillingPeriodUnit.Month,
+                    BillingPeriodCount = 1,
+                    TrialDays = trialDays,
+                    FeatureConfig = "{\"maxContent\": 1000, \"premium\": true}",
+                    Status = EntityStatusEnum.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = adminUserId
+                },
+                new SubscriptionService.Domain.Entities.SubscriptionPlan
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "yearly-premium",
+                    DisplayName = "Yearly Premium",
+                    Description = "Yearly Premium for user",
+                    Amount = 200000,
+                    Currency = currency,
+                    BillingPeriodUnit = SubscriptionService.Domain.Enums.BillingPeriodUnit.Year,
+                    BillingPeriodCount = 12,
+                    TrialDays = 0,
+                    FeatureConfig = "{\"maxContent\": 1000, \"premium\": true, \"yearlyDiscount\": true}",
+                    Status = EntityStatusEnum.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = adminUserId
+                }
             };
             
-            var premiumPlan = new SubscriptionService.Domain.Entities.SubscriptionPlan
+            // Check and add only plans that don't exist
+            var plansAdded = 0;
+            foreach (var plan in plansToSeed)
             {
-                Id = Guid.NewGuid(),
-                Name = "Premium",
-                DisplayName = "Premium",
-                Description = "Premium plan with advanced features",
-                Amount = 9.99m,
-                Currency = currency,
-                BillingPeriodUnit = SubscriptionService.Domain.Enums.BillingPeriodUnit.Month,
-                BillingPeriodCount = 1,
-                TrialDays = trialDays,
-                FeatureConfig = "{\"maxContent\": 1000, \"premium\": true}",
-                Status = EntityStatusEnum.Active, // ✅ Using Status instead of IsActive
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = adminUserId
-            };
+                var existingPlan = await context.SubscriptionPlans
+                    .FirstOrDefaultAsync(p => p.Name == plan.Name);
+                
+                if (existingPlan == null)
+                {
+                    context.SubscriptionPlans.Add(plan);
+                    plansAdded++;
+                    logger.LogInformation($"SubscriptionService: Adding plan '{plan.Name}'");
+                }
+                else
+                {
+                    logger.LogInformation($"SubscriptionService: Plan '{plan.Name}' already exists, skipping");
+                }
+            }
             
-            context.SubscriptionPlans.AddRange(freePlan, premiumPlan);
-            await context.SaveChangesAsync();
+            if (plansAdded > 0)
+            {
+                await context.SaveChangesAsync();
+                logger.LogInformation($"SubscriptionService: Successfully added {plansAdded} new subscription plan(s)");
+            }
+            else
+            {
+                logger.LogInformation("SubscriptionService: No new plans to add, all plans already exist");
+            }
             
             logger.LogInformation("SubscriptionService: Subscription data seeding completed successfully");
         }
