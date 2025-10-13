@@ -202,6 +202,67 @@ services:
       retries: 3
       start_period: 40s
 
+  # PodcastRecommendationService API
+  podcastrecommendation-api:
+    build:
+      context: .
+      dockerfile: ./src/PodcastRecommendationService/PodcastRecommendationService.API/Dockerfile
+    container_name: podcastrecommendation-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - SERVICE_NAME=PodcastRecommendationService
+      # Service URLs (from .env)
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - CONTENT_SERVICE_URL=${CONTENT_SERVICE_URL}
+      - PODCAST_AI_SERVICE_URL=${PODCAST_AI_SERVICE_URL}
+      # Recommendation specific settings (from .env)
+      - RECOMMENDATION_AI_SERVICE_BASE_URL=${RECOMMENDATION_AI_SERVICE_BASE_URL}
+      - RECOMMENDATION_AI_SERVICE_TIMEOUT_SECONDS=${RECOMMENDATION_AI_SERVICE_TIMEOUT_SECONDS}
+      - RECOMMENDATION_CONTENT_SERVICE_URL=${RECOMMENDATION_CONTENT_SERVICE_URL}
+      - RECOMMENDATION_USER_SERVICE_URL=${RECOMMENDATION_USER_SERVICE_URL}
+      - RECOMMENDATION_DEFAULT_LIMIT=${RECOMMENDATION_DEFAULT_LIMIT}
+      - RECOMMENDATION_MAX_LIMIT=${RECOMMENDATION_MAX_LIMIT}
+      - RECOMMENDATION_CACHE_EXPIRATION_MINUTES=${RECOMMENDATION_CACHE_EXPIRATION_MINUTES}
+      - RECOMMENDATION_ENABLE_CACHING=${RECOMMENDATION_ENABLE_CACHING}
+      # JWT Settings (from .env)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - JWT_EXPIRES_IN_MINUTES=${JWT_EXPIRES_IN_MINUTES}
+      # Redis (from .env)
+      - REDIS_CONNECTION_STRING=${REDIS_CONNECTION_STRING}
+      - REDIS_DATABASE=${REDIS_DATABASE}
+      # RabbitMQ (from .env)
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+    ports:
+      - "5005:80"
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      podcast-ai-service:
+        condition: service_healthy
+      userservice-api:
+        condition: service_healthy
+      contentservice-api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - healink-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+
+
   # SubscriptionService API
   subscriptionservice-api:
     build:
@@ -293,6 +354,42 @@ services:
         condition: service_healthy
     networks:
       - healink-network
+    restart: unless-stopped
+
+  # Podcast AI Recommendation Service (FastAPI)
+  podcast-ai-service:
+    build:
+      context: ./src/PodcastRecommendationService/ai_service
+      dockerfile: Dockerfile_fastapi
+      args:
+        CACHEBUST: ${CACHEBUST:-1}
+    container_name: podcast-ai-service
+    environment:
+      # Python settings (from .env)
+      - PYTHONUNBUFFERED=${PYTHON_UNBUFFERED}
+      # Service URLs (from .env)
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+      - CONTENT_SERVICE_URL=${CONTENT_SERVICE_URL}
+      # Model settings (from .env)
+      - MODEL_PATH=${MODEL_PATH}
+      - MODEL_RELOAD_ON_STARTUP=${MODEL_RELOAD_ON_STARTUP}
+    ports:
+      - "8000:8000"
+    depends_on:
+      userservice-api:
+        condition: service_healthy
+      contentservice-api:
+        condition: service_healthy
+    networks:
+      - healink-network
+    volumes:
+      - ./src/PodcastRecommendationService/ai_service/models:/app/models  # Mount model files
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   # pgAdmin (Optional - for database management)

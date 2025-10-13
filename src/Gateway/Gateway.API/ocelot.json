@@ -552,6 +552,102 @@
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
       }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/me",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/recommendations/me",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/me/listened",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/recommendations/me/listened",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/interaction",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/recommendations/interaction",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/user/{userId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/recommendations/user/{userId}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/batch",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/recommendations/batch",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/model/info",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/recommendations/model/info",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
     }
   ],
   "GlobalConfiguration": {

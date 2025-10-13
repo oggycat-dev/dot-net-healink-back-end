@@ -1,0 +1,73 @@
+{
+  "model_info": {
+    "name": "collaborative_filtering_model",
+    "version": "2.0.0",
+    "type": "neural_collaborative_filtering",
+    "framework": "tensorflow",
+    "framework_version": "2.18.0",
+    "created_at": "2025-10-10T06:16:39.864195",
+    "random_seed": 42,
+    "config": {
+      "num_podcasts": 2000,
+      "num_users": 1000,
+      "num_ratings": 50000,
+      "embedding_size": 128,
+      "batch_size": 1024,
+      "max_epochs": 100,
+      "patience": 15,
+      "learning_rate": 0.001
+    }
+  },
+  "architecture": {
+    "embedding_size": 128,
+    "total_parameters": 489729,
+    "model_size_mb": 1.87,
+    "input_shape": [
+      "user_index",
+      "podcast_index"
+    ],
+    "output_range": [
+      1.0,
+      5.0
+    ]
+  },
+  "data_statistics": {
+    "num_users": 1000,
+    "num_podcasts": 1990,
+    "num_ratings": 31267,
+    "num_personas": 7,
+    "sparsity_percent": 98.429,
+    "rating_distribution": {
+      "1": 381,
+      "2": 1130,
+      "3": 4641,
+      "4": 12242,
+      "5": 12873
+    },
+    "train_test_split": {
+      "train_samples": 21886,
+      "val_samples": 4690,
+      "test_samples": 4691
+    }
+  },
+  "performance_metrics": {
+    "epochs_trained": 17,
+    "best_epoch": 2,
+    "final_train_loss": 0.22525084018707275,
+    "final_val_loss": 0.9028028845787048,
+    "final_train_mae": 0.388345867395401,
+    "final_val_mae": 0.7464240193367004,
+    "test_metrics": {
+      "test_loss": 0.8000520467758179,
+      "test_mae": 0.6963533759117126,
+      "test_rmse": 0.8941752295841024
+    }
+  },
+  "usage_instructions": {
+    "load_model": "tf.keras.models.load_model('collaborative_filtering_model.h5')",
+    "load_mappings": "pickle.load(open('mappings.pkl', 'rb'))",
+    "input_preprocessing": "Convert user_id and podcast_id to indices using mappings",
+    "prediction_format": "model.predict([user_indices, podcast_indices])",
+    "output_interpretation": "Predicted ratings in range [1.0, 5.0]"
+  }
+}

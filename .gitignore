@@ -152,8 +152,40 @@ terraform_healink/app-infra/*.tfstate
 terraform_healink/app-infra/*.tfstate.*
 terraform_healink/app-infra/.terraform.lock.hcl
 
-# Ignore PodcastRecommendation files
-collaborative_filtering_model.h5
-mappings.pkl
-podcasts.pkl
-ratings.pkl
+# ====================================
+# PodcastRecommendation AI Model Files
+# ====================================
+
+# Large model files (should NOT be committed to git)
+# Use Git LFS or external storage for these files
+**/collaborative_filtering_model.h5
+**/mappings.pkl
+**/podcasts.pkl
+**/ratings.pkl
+**/users.pkl
+
+# Allow small metadata and documentation files
+!**/model_metadata.json
+!**/training_summary.txt
+!**/training_history.pkl
+!**/training_visualization.png
+!**/models/README.md
+
+# Python AI Service
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+**/.pytest_cache/
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
+
+# Jupyter Notebooks checkpoints
+**/.ipynb_checkpoints/
+
+# Model training outputs (large files)
+**/model_checkpoints/
+**/tensorboard_logs/
