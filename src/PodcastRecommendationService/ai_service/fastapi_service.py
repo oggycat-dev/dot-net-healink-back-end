@@ -1,6 +1,5 @@
 """
-🚀 PODCAST RECOMMENDATION FASTAPI SERVICE
-Đọc model từ Kaggle và tích hợp với database thật
+PODCAST RECOMMENDATION FASTAPI SERVICE
 """
 
 from fastapi import FastAPI, HTTPException, Depends, Query
