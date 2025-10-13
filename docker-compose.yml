@@ -196,7 +196,7 @@ services:
       - healink-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3

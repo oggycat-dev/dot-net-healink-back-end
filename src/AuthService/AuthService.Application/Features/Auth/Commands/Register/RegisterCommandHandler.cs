@@ -63,7 +63,16 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result>
                 return Result.Failure(rateLimitCheck.Reason, ErrorCodeEnum.TooManyRequests);
             }
 
-            // Check if there's already an active registration OTP for this contact
+            // ✅ IDEMPOTENCY CHECK: Check if there's already an active registration OTP for this contact
+            var existingOtp = await _otpCacheService.GetOtpDataAsync(contact, OtpTypeEnum.Registration);
+            if (existingOtp != null && existingOtp.userData is RegistrationCorrelationData existingCorrelation)
+            {
+                _logger.LogWarning("Active OTP already exists for {Contact}. Reusing existing CorrelationId {CorrelationId}", 
+                    contact, existingCorrelation.CorrelationId);
+                
+                // Return the same response - idempotent behavior
+                return Result.Success("User registration started. Please check your email/phone for OTP verification.");
+            }
 
             // Log the attempt with timestamp for monitoring
             _logger.LogInformation("Registration attempt for {Email} at {Timestamp}", request.Email, DateTime.UtcNow);

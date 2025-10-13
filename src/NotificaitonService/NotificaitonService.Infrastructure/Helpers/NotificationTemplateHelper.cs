@@ -76,13 +76,6 @@ public static class NotificationTemplateHelper
             ["currency"] = currency,
             ["transactionId"] = transactionId,
             ["activatedDate"] = DateTime.UtcNow.ToString("MMMM dd, yyyy"),
-    public static NotificationRequest BuildCreatorApprovedNotification(string email, string applicationId, string approvedAt, string roleName, string? supportEmail = null, string? appName = null)
-    {
-        var templateData = new Dictionary<string, object>
-        {
-            ["ApplicationId"] = applicationId,
-            ["ApprovedAt"] = approvedAt,
-            ["RoleName"] = roleName,
             ["appName"] = appName ?? "Healink",
             ["supportEmail"] = supportEmail ?? "support@healink.com"
         };
@@ -98,6 +91,20 @@ public static class NotificationTemplateHelper
             Template = NotificationTemplateEnums.SubscriptionActivated,
             TemplateData = templateData,
             Priority = NotificationPriorityEnum.Normal
+        };
+    }
+
+    public static NotificationRequest BuildCreatorApprovedNotification(string email, string applicationId, string approvedAt, string roleName, string? supportEmail = null, string? appName = null)
+    {
+        var templateData = new Dictionary<string, object>
+        {
+            ["ApplicationId"] = applicationId,
+            ["ApprovedAt"] = approvedAt,
+            ["RoleName"] = roleName,
+            ["appName"] = appName ?? "Healink",
+            ["supportEmail"] = supportEmail ?? "support@healink.com"
+        };
+
         var htmlContent = ProcessCreatorApprovedTemplate(templateData);
 
         return new NotificationRequest
@@ -170,7 +177,6 @@ public static class NotificationTemplateHelper
             NotificationTemplateEnums.Welcome => $"Welcome to {appTitle}!",
             NotificationTemplateEnums.SubscriptionActivated => $"{appTitle} - Subscription Activated Successfully!",
             NotificationTemplateEnums.CreatorApproved => $"{appTitle} - Content Creator Application Approved! 🎉",
-            NotificationTemplateEnums.CreatorRejected => $"{appTitle} - Content Creator Application Status",
             _ => $"{appTitle} Notification"
         };
     }
@@ -190,6 +196,9 @@ public static class NotificationTemplateHelper
     public static string ProcessSubscriptionActivatedTemplate(Dictionary<string, object> data)
     {
         var template = GetSubscriptionActivatedTemplate();
+        return ProcessTemplate(template, data);
+    }
+
     public static string ProcessCreatorApprovedTemplate(Dictionary<string, object> data)
     {
         var template = GetCreatorApprovedTemplate();
@@ -313,7 +322,6 @@ public static class NotificationTemplateHelper
     }
 
     private static string GetSubscriptionActivatedTemplate()
-    private static string GetCreatorApprovedTemplate()
     {
         return @"
 <!DOCTYPE html>
@@ -333,17 +341,6 @@ public static class NotificationTemplateHelper
         .details-row:last-child { border-bottom: none; }
         .label { font-weight: bold; color: #555; }
         .value { color: #333; }
-    <title>Content Creator Application Approved!</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #27ae60; color: white; padding: 30px; text-align: center; }
-        .content { padding: 30px; background-color: #f9f9f9; }
-        .footer { text-align: center; padding: 20px; color: #7f8c8d; font-size: 12px; }
-        .approval-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin: 20px 0; text-align: center; }
-        .info-box { background-color: white; border-left: 4px solid #27ae60; padding: 15px; margin: 15px 0; }
-        .action-button { display: inline-block; padding: 15px 30px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-        .emoji { font-size: 48px; }
     </style>
 </head>
 <body>
@@ -384,6 +381,35 @@ public static class NotificationTemplateHelper
         </div>
         <div class='footer'>
             <p>&copy; {{appName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private static string GetCreatorApprovedTemplate()
+    {
+        return @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Content Creator Application Approved!</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #27ae60; color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background-color: #f9f9f9; }
+        .footer { text-align: center; padding: 20px; color: #7f8c8d; font-size: 12px; }
+        .approval-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin: 20px 0; text-align: center; }
+        .info-box { background-color: white; border-left: 4px solid #27ae60; padding: 15px; margin: 15px 0; }
+        .action-button { display: inline-block; padding: 15px 30px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .emoji { font-size: 48px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
             <div class='emoji'>🎉</div>
             <h1>Congratulations!</h1>
         </div>
