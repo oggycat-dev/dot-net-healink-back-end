@@ -4,5 +4,6 @@ public enum RoleEnum
 {
     Admin,
     Staff,
-    User
+    User,
+    ContentCreator  // Role for approved content creators who can create podcasts
 }

@@ -37,6 +37,7 @@ public static class ServiceConfiguration
                 // Register consumers for AuthService
                 x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserConsumer>();
                 x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.CreatorApplicationConsumer>();
             },
             configureEndpoints: (cfg, context) =>
             {

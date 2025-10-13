@@ -230,7 +230,7 @@
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
-      "DownstreamPathTemplate": "/api/podcasts/{everything}",
+      "DownstreamPathTemplate": "/api/user/podcasts/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -238,8 +238,80 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/podcasts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "UpstreamPathTemplate": "/api/content/user/podcasts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/user/podcasts",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/podcasts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/creator/podcasts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/creator/podcasts",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/cms/podcasts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/cms/podcasts",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
@@ -278,7 +350,7 @@
       }
     },
     {
-      "DownstreamPathTemplate": "/api/content/community/{everything}",
+      "DownstreamPathTemplate": "/api/user/community/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -286,8 +358,52 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/community/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "UpstreamPathTemplate": "/api/content/user/community/{everything}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/community/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/creator/community/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/community/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/cms/community/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/creator/upload/{everything}",
+      "UpstreamHttpMethod": [ "POST", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
@@ -447,6 +563,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/cms/subscriptions",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/me",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/recommendations/me",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -542,6 +674,22 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/recommendations/me/listened",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/recommendations/me/listened",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/cms/payment-methods",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -558,6 +706,22 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/recommendations/interaction",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/recommendations/interaction",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/cms/payment-methods/{id}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -568,6 +732,22 @@
       ],
       "UpstreamPathTemplate": "/api/cms/payment-methods/{id}",
       "UpstreamHttpMethod": [ "GET", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/user/{userId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/recommendations/user/{userId}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
@@ -595,7 +775,11 @@
         }
       ],
       "UpstreamPathTemplate": "/api/user/payment-methods/{id}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/payment-callback/momo/ipn",
@@ -608,6 +792,38 @@
       ],
       "UpstreamPathTemplate": "/api/payment-callback/momo/ipn",
       "UpstreamHttpMethod": [ "POST", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/batch",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/recommendations/batch",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/recommendations/model/info",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "podcastrecommendation-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/recommendations/model/info",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
     }
   ],
   "GlobalConfiguration": {

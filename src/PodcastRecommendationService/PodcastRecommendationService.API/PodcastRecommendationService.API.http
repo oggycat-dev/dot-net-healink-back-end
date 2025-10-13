@@ -1,0 +1,77 @@
+### PodcastRecommendationService API Testing
+
+# Variables
+@baseUrl = http://localhost:5005
+@authToken = YOUR_JWT_TOKEN_HERE
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Get Model Info (Admin only)
+GET {{baseUrl}}/api/recommendations/model/info
+Authorization: Bearer {{authToken}}
+
+### Get Personal Recommendations
+GET {{baseUrl}}/api/recommendations/me?limit=5&includeListened=false
+Authorization: Bearer {{authToken}}
+
+### Get Personal Recommendations (including listened)
+GET {{baseUrl}}/api/recommendations/me?limit=10&includeListened=true
+Authorization: Bearer {{authToken}}
+
+### Get User Recommendations (Admin only)
+GET {{baseUrl}}/api/recommendations/user/user_300?limit=5
+Authorization: Bearer {{authToken}}
+
+### Get My Listened Podcasts
+GET {{baseUrl}}/api/recommendations/me/listened
+Authorization: Bearer {{authToken}}
+
+### Track Interaction
+POST {{baseUrl}}/api/recommendations/interaction
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "podcastId": "p_123",
+  "interactionType": "click",
+  "sessionId": "sess_abc123",
+  "actualRating": 4.5,
+  "feedback": "Great recommendation!"
+}
+
+### Batch Recommendations (Admin only)
+POST {{baseUrl}}/api/recommendations/batch
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "userIds": ["user_300", "user_301", "user_302"],
+  "limit": 5,
+  "includeListened": false
+}
+
+###
+# Direct AI Service Tests (for development only)
+
+### Health check AI service
+GET http://localhost:8000/health
+
+### Model info from AI service
+GET http://localhost:8000/api/model/info
+
+### Direct recommendation from AI service
+GET http://localhost:8000/api/recommendations/user_300?limit=5&include_listened=false
+
+### User listened podcasts from AI service
+GET http://localhost:8000/api/users/user_300/listened
+
+### Batch recommendations from AI service
+POST http://localhost:8000/api/recommendations/batch
+Content-Type: application/json
+
+{
+  "user_ids": ["user_300", "user_301"],
+  "limit": 5,
+  "include_listened": false
+}

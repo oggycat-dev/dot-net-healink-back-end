@@ -162,19 +162,26 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
             _logger.LogInformation("RoleAddedToUserEvent added to outbox. UserId: {UserId}", application.User.UserId);
 
             // Publish UserRolesChangedEvent to update Redis cache in all services
-            // Get all current roles of user
-            var currentRoles = await _unitOfWork.Repository<UserBusinessRole>()
+            // Get current roles of user BEFORE adding ContentCreator
+            var oldRoles = await _unitOfWork.Repository<UserBusinessRole>()
                 .GetQueryable()
                 .Where(x => x.UserId == application.UserId)
                 .Select(x => x.BusinessRole.Name)
                 .ToListAsync(cancellationToken);
 
+            // Create new roles list including ContentCreator
+            var newRoles = new List<string>(oldRoles);
+            if (!newRoles.Contains("ContentCreator"))
+            {
+                newRoles.Add("ContentCreator");
+            }
+
             var rolesChangedEvent = new UserRolesChangedEvent
             {
                 UserId = application.User.UserId,
                 Email = application.User.Email,
-                OldRoles = currentRoles.Where(r => r != "ContentCreator").ToList(),
-                NewRoles = currentRoles,
+                OldRoles = oldRoles,
+                NewRoles = newRoles,
                 AddedRoles = new List<string> { "ContentCreator" },
                 RemovedRoles = new List<string>(),
                 ChangedBy = request.ReviewerId,
@@ -183,7 +190,7 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
 
             await _unitOfWork.AddOutboxEventAsync(rolesChangedEvent);
             _logger.LogInformation("UserRolesChangedEvent added to outbox to update Redis cache. UserId: {UserId}, NewRoles: {Roles}", 
-                application.User.UserId, string.Join(", ", currentRoles));
+                application.User.UserId, string.Join(", ", newRoles));
 
             // Save all changes with outbox events atomically
             await _unitOfWork.SaveChangesWithOutboxAsync(cancellationToken);

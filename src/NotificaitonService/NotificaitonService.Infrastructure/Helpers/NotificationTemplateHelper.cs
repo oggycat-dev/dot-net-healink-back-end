@@ -76,6 +76,13 @@ public static class NotificationTemplateHelper
             ["currency"] = currency,
             ["transactionId"] = transactionId,
             ["activatedDate"] = DateTime.UtcNow.ToString("MMMM dd, yyyy"),
+    public static NotificationRequest BuildCreatorApprovedNotification(string email, string applicationId, string approvedAt, string roleName, string? supportEmail = null, string? appName = null)
+    {
+        var templateData = new Dictionary<string, object>
+        {
+            ["ApplicationId"] = applicationId,
+            ["ApprovedAt"] = approvedAt,
+            ["RoleName"] = roleName,
             ["appName"] = appName ?? "Healink",
             ["supportEmail"] = supportEmail ?? "support@healink.com"
         };
@@ -91,6 +98,17 @@ public static class NotificationTemplateHelper
             Template = NotificationTemplateEnums.SubscriptionActivated,
             TemplateData = templateData,
             Priority = NotificationPriorityEnum.Normal
+        var htmlContent = ProcessCreatorApprovedTemplate(templateData);
+
+        return new NotificationRequest
+        {
+            To = email,
+            Subject = GetSubject(NotificationTemplateEnums.CreatorApproved, channel: NotificationChannelEnum.Email, appName: appName),
+            Content = htmlContent,
+            HtmlContent = htmlContent,
+            Template = NotificationTemplateEnums.CreatorApproved,
+            TemplateData = templateData,
+            Priority = NotificationPriorityEnum.High
         };
     }
 
@@ -151,6 +169,8 @@ public static class NotificationTemplateHelper
             },
             NotificationTemplateEnums.Welcome => $"Welcome to {appTitle}!",
             NotificationTemplateEnums.SubscriptionActivated => $"{appTitle} - Subscription Activated Successfully!",
+            NotificationTemplateEnums.CreatorApproved => $"{appTitle} - Content Creator Application Approved! 🎉",
+            NotificationTemplateEnums.CreatorRejected => $"{appTitle} - Content Creator Application Status",
             _ => $"{appTitle} Notification"
         };
     }
@@ -170,6 +190,9 @@ public static class NotificationTemplateHelper
     public static string ProcessSubscriptionActivatedTemplate(Dictionary<string, object> data)
     {
         var template = GetSubscriptionActivatedTemplate();
+    public static string ProcessCreatorApprovedTemplate(Dictionary<string, object> data)
+    {
+        var template = GetCreatorApprovedTemplate();
         return ProcessTemplate(template, data);
     }
 
@@ -290,6 +313,7 @@ public static class NotificationTemplateHelper
     }
 
     private static string GetSubscriptionActivatedTemplate()
+    private static string GetCreatorApprovedTemplate()
     {
         return @"
 <!DOCTYPE html>
@@ -309,6 +333,17 @@ public static class NotificationTemplateHelper
         .details-row:last-child { border-bottom: none; }
         .label { font-weight: bold; color: #555; }
         .value { color: #333; }
+    <title>Content Creator Application Approved!</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #27ae60; color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background-color: #f9f9f9; }
+        .footer { text-align: center; padding: 20px; color: #7f8c8d; font-size: 12px; }
+        .approval-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin: 20px 0; text-align: center; }
+        .info-box { background-color: white; border-left: 4px solid #27ae60; padding: 15px; margin: 15px 0; }
+        .action-button { display: inline-block; padding: 15px 30px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .emoji { font-size: 48px; }
     </style>
 </head>
 <body>
@@ -349,6 +384,50 @@ public static class NotificationTemplateHelper
         </div>
         <div class='footer'>
             <p>&copy; {{appName}}. All rights reserved.</p>
+            <div class='emoji'>🎉</div>
+            <h1>Congratulations!</h1>
+        </div>
+        <div class='content'>
+            <div class='approval-box'>
+                <h2>You Are Now a Content Creator!</h2>
+                <p style='font-size: 18px; margin: 15px 0;'>Your application has been approved</p>
+            </div>
+            
+            <div class='info-box'>
+                <p><strong>📋 Application ID:</strong> {{ApplicationId}}</p>
+                <p><strong>✅ Approved At:</strong> {{ApprovedAt}}</p>
+                <p><strong>🎭 New Role:</strong> {{RoleName}}</p>
+            </div>
+            
+            <p>We're excited to inform you that your Content Creator application has been <strong>approved</strong>!</p>
+            
+            <p>🚀 <strong>What's Next?</strong></p>
+            <ul>
+                <li>You can now create and publish podcasts</li>
+                <li>Access advanced creator tools and analytics</li>
+                <li>Build your audience and grow your channel</li>
+                <li>Monetize your content (if eligible)</li>
+            </ul>
+            
+            <div style='text-align: center;'>
+                <a href='#' class='action-button'>Start Creating Content →</a>
+            </div>
+            
+            <p><strong>💡 Tips for Success:</strong></p>
+            <ul>
+                <li>Create high-quality, engaging content consistently</li>
+                <li>Interact with your audience and respond to comments</li>
+                <li>Follow our community guidelines</li>
+                <li>Check out our Creator Resources for best practices</li>
+            </ul>
+            
+            <p>If you have any questions or need support, please contact us at {{supportEmail}}.</p>
+            
+            <p>Welcome to the creator community! 🎊</p>
+        </div>
+        <div class='footer'>
+            <p>&copy; {{appName}}. All rights reserved.</p>
+            <p>You're receiving this email because your Content Creator application was approved.</p>
         </div>
     </div>
 </body>

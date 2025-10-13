@@ -4,7 +4,9 @@ public enum NotificationTemplateEnums
 {
     Otp = 1,
     Welcome = 2,
-    SubscriptionActivated = 3,
-    SubscriptionCanceled = 4,
-    PaymentFailed = 5
+    CreatorApproved = 3,
+    CreatorRejected = 4,
+    SubscriptionActivated = 4,
+    SubscriptionCanceled = 5,
+    PaymentFailed = 6
 }

@@ -39,6 +39,9 @@ public static class ServiceConfiguration
                 policy.RequireRole("Admin"));
         });
 
+        // Configure Swagger with API groups
+        builder.Services.ConfigureSwaggerWithGroups("ContentService");
+
         // Add S3 File Storage from SharedLibrary
         builder.Services.AddS3FileStorage(builder.Configuration);
 
@@ -70,8 +73,24 @@ public static class ServiceConfiguration
     /// </summary>
     public static WebApplication ConfigurePipeline(this WebApplication app)
     {
-        // Use shared pipeline configuration
-        app.ConfigureSharedPipeline("ContentService");
+        // Use Swagger with API groups
+        app.UseSwaggerWithGroups("ContentService");
+        
+        app.UseHttpsRedirection();
+        
+        // Enable static files for any uploaded content
+        app.UseStaticFiles();
+        
+        // Enable CORS
+        app.UseCorsConfiguration();
+
+        // Shared middlewares
+        app.UseSharedMiddleware();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.MapControllers();
 
         return app;
     }

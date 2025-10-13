@@ -31,19 +31,19 @@ public record CreatePodcastResponse(
 
 public record UpdatePodcastCommand(
     Guid Id,
-    string Title,
-    string Description,
-    string? ThumbnailUrl,
-    string AudioUrl,
-    TimeSpan Duration,
+    string? Title,
+    string? Description,
+    TimeSpan? Duration,
     string? TranscriptUrl,
     string? HostName,
     string? GuestName,
-    int EpisodeNumber,
+    int? EpisodeNumber,
     string? SeriesName,
-    string[] Tags,
-    EmotionCategory[] EmotionCategories,
-    TopicCategory[] TopicCategories,
+    string[]? Tags,
+    EmotionCategory[]? EmotionCategories,
+    TopicCategory[]? TopicCategories,
+    IFormFile? AudioFile,
+    IFormFile? ThumbnailFile,
     Guid UpdatedBy
 ) : IRequest<UpdatePodcastResponse>;
 

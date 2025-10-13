@@ -4,6 +4,7 @@ using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
 using SharedLibrary.Commons.EventBus;
 using SharedLibrary.Contracts.Auth;
+using SharedLibrary.Contracts.User.Events;
 using NotificationService.Infrastructure.EventHandlers;
 using SharedLibrary.Commons.Extensions;
 
@@ -59,6 +60,7 @@ public static class ServiceConfiguration
         // Subscribe to auth events
         var eventBus = app.Services.GetRequiredService<IEventBus>();
         eventBus.Subscribe<ResetPasswordEvent, SendOtpResetPasswordEventHandler>();
+        eventBus.Subscribe<CreatorApplicationApprovedEvent, CreatorApplicationApprovedEventHandler>();
 
         app.Services.SubscribeToAuthEvents();
         
