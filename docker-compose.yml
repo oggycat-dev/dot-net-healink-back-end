@@ -196,7 +196,7 @@ services:
       - healink-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -275,7 +275,7 @@ services:
       # Environment variables will be loaded from .env file automatically by EnvironmentConfiguration
       SERVICE_NAME: SubscriptionService
     ports:
-      - "5005:80"
+      - "5007:80"
     volumes:
       - ./.env:/app/.env
     depends_on:

@@ -7,6 +7,7 @@ using SharedLibrary.Commons.Outbox;
 using SharedLibrary.Commons.Repositories;
 using SharedLibrary.Commons.Services;
 using SharedLibrary.Contracts.Subscription;
+using SharedLibrary.Contracts.Subscription.Events;
 using UserService.Infrastructure.Context;
 using UserService.Infrastructure.EventHandlers;
 
@@ -62,9 +63,16 @@ public static class UserInfrastructureDependencyInjection
         });
 
         // Register Event Handlers for User Activity Logging
+        
+        // Subscription Plan Events
         services.AddScoped<IIntegrationEventHandler<SubscriptionPlanCreatedEvent>, SubscriptionPlanCreatedEventHandler>();
         services.AddScoped<IIntegrationEventHandler<SubscriptionPlanUpdatedEvent>, SubscriptionPlanUpdatedEventHandler>();
         services.AddScoped<IIntegrationEventHandler<SubscriptionPlanDeletedEvent>, SubscriptionPlanDeletedEventHandler>();
+        
+        // Subscription Events
+        services.AddScoped<IIntegrationEventHandler<SubscriptionRegisteredActivityEvent>, SubscriptionRegisteredActivityEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<SubscriptionUpdatedEvent>, SubscriptionUpdatedEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<SubscriptionCanceledEvent>, SubscriptionCanceledEventHandler>();
 
         return services;
     }

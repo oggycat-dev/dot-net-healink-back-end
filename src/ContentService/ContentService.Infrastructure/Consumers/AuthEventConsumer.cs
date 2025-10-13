@@ -44,24 +44,29 @@ public class AuthEventConsumer :
 
         try
         {
-            // Track user activity for content personalization
-            var userState = new UserStateInfo
-            {
-                UserId = loginEvent.UserId,
-                Email = loginEvent.Email,
-                Roles = loginEvent.Roles,
-                Status = SharedLibrary.Commons.Enums.EntityStatusEnum.Active,
-                RefreshToken = loginEvent.RefreshToken,
-                RefreshTokenExpiryTime = loginEvent.RefreshTokenExpiryTime,
-                LastLoginAt = loginEvent.LoginAt
-            };
+            // ✅ Cache is already set by AuthService's LoginCommandHandler
+            // No need to write cache here (avoid double write)
             
-            await _userCache.SetUserStateAsync(userState);
+            // ✅ Verify cache exists (for monitoring)
+            var cachedState = await _userCache.GetUserStateAsync(loginEvent.UserId);
+            if (cachedState != null)
+            {
+                _logger.LogInformation(
+                    "User state verified in cache: UserId={UserId}, UserProfileId={UserProfileId}, HasSubscription={HasSubscription}",
+                    cachedState.UserId, cachedState.UserProfileId, cachedState.Subscription != null);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "User state NOT found in cache after login for UserId={UserId}. This may indicate a cache sync issue.",
+                    loginEvent.UserId);
+            }
 
             // TODO: Pre-load user's favorite content types, recent content, etc.
             // Could track login patterns for content recommendation algorithms
+            // Could initialize content preferences, load recommended content, etc.
 
-            _logger.LogDebug("User activity tracked for content personalization: {UserId}", loginEvent.UserId);
+            _logger.LogDebug("User login event processed for content personalization: {UserId}", loginEvent.UserId);
         }
         catch (Exception ex)
         {

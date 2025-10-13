@@ -22,15 +22,182 @@ namespace PaymentService.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("PaymentService.Domain.Entities.Invoice", b =>
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("Consumed")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceiveCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Received")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Delivered");
+
+                    b.ToTable("InboxState");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.Property<long>("SequenceNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("SequenceNumber"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DestinationAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("EnqueueTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FaultAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Headers")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("InboxConsumerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InboxMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("InitiatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OutboxId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Properties")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResponseAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("SentTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceAddress")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("SequenceNumber");
+
+                    b.HasIndex("EnqueueTime");
+
+                    b.HasIndex("ExpirationTime");
+
+                    b.HasIndex("OutboxId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("InboxMessageId", "InboxConsumerId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("OutboxMessage");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxState", b =>
+                {
+                    b.Property<Guid>("OutboxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("Delivered")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastSequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("OutboxId");
+
+                    b.HasIndex("Created");
+
+                    b.ToTable("OutboxState");
+                });
+
+            modelBuilder.Entity("PaymentService.Domain.Entities.PaymentMethod", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CorrelationId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<string>("Configuration")
+                        .HasColumnType("jsonb");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -40,45 +207,36 @@ namespace PaymentService.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Discounts")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("jsonb")
-                        .HasDefaultValue("[]");
-
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid>("PaymentProviderId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("Subtotal")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("Tax")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("Total")
-                        .HasColumnType("numeric(18,2)");
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -86,19 +244,16 @@ namespace PaymentService.Infrastructure.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserProfileId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CorrelationId")
+                    b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("UserProfileId");
+                    b.HasIndex("Status");
 
-                    b.HasIndex("Status", "DueDate");
+                    b.HasIndex("Type");
 
-                    b.ToTable("Invoices", (string)null);
+                    b.ToTable("PaymentMethods", (string)null);
                 });
 
             modelBuilder.Entity("PaymentService.Domain.Entities.PaymentTransaction", b =>
@@ -120,7 +275,8 @@ namespace PaymentService.Infrastructure.Migrations
 
                     b.Property<string>("Currency")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -129,31 +285,33 @@ namespace PaymentService.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ErrorCode")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("InvoiceId")
-                        .HasColumnType("uuid");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<Guid>("PaymentProviderId")
+                    b.Property<Guid>("PaymentMethodId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ProviderChargeRef")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ReferenceId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("TransactionType")
                         .HasColumnType("integer");
@@ -166,9 +324,11 @@ namespace PaymentService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProviderChargeRef");
+                    b.HasIndex("CreatedAt");
 
-                    b.HasIndex("InvoiceId", "Status");
+                    b.HasIndex("PaymentMethodId");
+
+                    b.HasIndex("TransactionId");
 
                     b.HasIndex("TransactionType", "ReferenceId");
 
@@ -246,6 +406,29 @@ namespace PaymentService.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("OutboxEvents");
+                });
+
+            modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
+                {
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
+                        .WithMany()
+                        .HasForeignKey("OutboxId");
+
+                    b.HasOne("MassTransit.EntityFrameworkCoreIntegration.InboxState", null)
+                        .WithMany()
+                        .HasForeignKey("InboxMessageId", "InboxConsumerId")
+                        .HasPrincipalKey("MessageId", "ConsumerId");
+                });
+
+            modelBuilder.Entity("PaymentService.Domain.Entities.PaymentTransaction", b =>
+                {
+                    b.HasOne("PaymentService.Domain.Entities.PaymentMethod", "PaymentMethod")
+                        .WithMany()
+                        .HasForeignKey("PaymentMethodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PaymentMethod");
                 });
 #pragma warning restore 612, 618
         }

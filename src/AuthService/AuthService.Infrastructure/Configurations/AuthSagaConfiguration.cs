@@ -3,6 +3,7 @@ using MassTransit.EntityFrameworkCoreIntegration;
 using AuthService.Infrastructure.Saga;
 using SharedLibrary.Contracts.User.Events;
 using SharedLibrary.Contracts.User.Saga;
+using System.Data;
 
 namespace AuthService.Infrastructure.Configurations;
 
@@ -31,18 +32,25 @@ public static class AuthSagaConfiguration
                 
                 // ReadCommitted isolation - Serializable was causing deadlocks/retries
                 // This allows proper saga creation without blocking on concurrent access
-                r.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;
+                r.IsolationLevel = IsolationLevel.ReadCommitted;
             });
     }
 
     /// <summary>
-    /// Configure saga endpoints with proper fault handling
+    /// Configure saga endpoints with Entity Framework Outbox and proper fault handling
+    /// Single-threaded saga processing to prevent race conditions
     /// </summary>
     public static void ConfigureSagaEndpoints(IRabbitMqBusFactoryConfigurator cfg, IBusRegistrationContext context)
     {
-        // Configure saga endpoint with proper fault handling
+        // Configure saga endpoint with Entity Framework Outbox
         cfg.ReceiveEndpoint("registration-saga", e =>
         {
+            // CRITICAL: Enable Entity Framework Outbox for transactional messaging
+            // This ensures saga state changes and published messages are atomic
+            // Prevents race conditions and duplicate saga instances
+            // Reference: https://masstransit.io/documentation/configuration/middleware/outbox
+            e.UseEntityFrameworkOutbox<Context.AuthDbContext>(context);
+
             e.ConfigureSaga<RegistrationSagaState>(context, s =>
             {
                 // Ensure saga correlation works properly with partitioning
@@ -60,7 +68,9 @@ public static class AuthSagaConfiguration
             e.DiscardFaultedMessages();
             e.DiscardSkippedMessages();
             
-            // Single threaded processing to prevent race conditions
+            // CRITICAL: Single threaded processing to prevent race conditions
+            // With Outbox, saga state is locked per correlation ID
+            // But we still need single-thread to prevent duplicate RegistrationStarted processing
             e.ConcurrentMessageLimit = 1;
             
             // Minimal prefetch to reduce duplicate processing  

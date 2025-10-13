@@ -1,5 +1,6 @@
 using PaymentService.Application;
 using PaymentService.Infrastructure;
+using PaymentService.Infrastructure.Context;
 using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
 using SharedLibrary.Commons.Extensions;
@@ -19,13 +20,18 @@ public static class ServiceConfiguration
         // Add distributed authentication
         builder.Services.AddMicroserviceDistributedAuth(builder.Configuration);
 
-        // Add MassTransit without Saga (PaymentService doesn't manage saga state)
-        builder.Services.AddMassTransitWithConsumers(
-            builder.Configuration, x =>
+        // CRITICAL: Add MassTransit with Entity Framework Outbox
+        // Reference: https://masstransit.io/documentation/configuration/middleware/outbox
+        // This enables transactional outbox for both HTTP handlers (Bus Outbox) and consumers
+        builder.Services.AddMassTransitWithConsumers<PaymentDbContext>(
+            builder.Configuration, 
+            configureConsumers: x =>
             {
-                // Register consumers for PaymentService
-                // TODO: Add payment consumers when needed
-            });
+                // Register Request-Response consumer for payment intent creation
+                x.AddConsumer<PaymentService.Infrastructure.Consumers.CreatePaymentIntentConsumer>();
+            },
+            useEntityFrameworkOutbox: true,  // Enable Entity Framework Outbox
+            useBusOutbox: true);             // Enable Bus Outbox for IPublishEndpoint
 
         // Application & Infrastructure layers
         builder.Services.AddPaymentApplication();

@@ -12,7 +12,7 @@ public record ContentCreatedEvent(
     string Description,
     ContentType ContentType,
     ContentStatus Status,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     DateTime CreatedAt,
     string[]? Tags = null
 ) : IntegrationEvent("ContentService");
@@ -26,7 +26,7 @@ public record ContentUpdatedEvent(
     string Description,
     ContentType ContentType,
     ContentStatus Status,
-    Guid UpdatedBy,
+    Guid? UpdatedBy,
     DateTime UpdatedAt,
     string[]? Tags = null
 ) : IntegrationEvent("ContentService");
@@ -38,7 +38,7 @@ public record ContentPublishedEvent(
     Guid ContentId,
     string Title,
     ContentType ContentType,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     Guid ApprovedBy,
     DateTime PublishedAt,
     string[]? Tags = null
@@ -51,7 +51,7 @@ public record ContentRejectedEvent(
     Guid ContentId,
     string Title,
     ContentType ContentType,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     Guid RejectedBy,
     string RejectionReason,
     DateTime RejectedAt
@@ -64,7 +64,7 @@ public record ContentDeletedEvent(
     Guid ContentId,
     string Title,
     ContentType ContentType,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     Guid? DeletedBy,
     DateTime DeletedAt
 ) : IntegrationEvent("ContentService");
@@ -76,7 +76,7 @@ public record ContentApprovedEvent(
     Guid ContentId,
     string Title,
     ContentType ContentType,
-    Guid CreatedBy,
+    Guid? CreatedBy,
     Guid ApprovedBy,
     DateTime ApprovedAt,
     string? ApprovalNotes = null

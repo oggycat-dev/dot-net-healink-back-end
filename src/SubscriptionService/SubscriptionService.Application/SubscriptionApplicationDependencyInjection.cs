@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using SharedLibrary.Commons.DependencyInjection;
+using SubscriptionService.Application.Commons.Services;
 
 namespace SubscriptionService.Application;
 
@@ -19,6 +20,9 @@ public static class SubscriptionApplicationDependencyInjection
         
         // Add AutoMapper
         services.AddAutoMapper(Assembly.GetExecutingAssembly());
+        
+        // Add QR Code Service
+        services.AddScoped<IQrCodeService, QrCodeService>();
         
         //TODO: Add Event Handlers
 

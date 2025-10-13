@@ -19,7 +19,4 @@ public class UpdateSubscriptionRequest
     
     [JsonPropertyName("currentPeriodEnd")]
     public DateTime? CurrentPeriodEnd { get; set; }
-    
-    [JsonPropertyName("cancelAt")]
-    public DateTime? CancelAt { get; set; }
 }
