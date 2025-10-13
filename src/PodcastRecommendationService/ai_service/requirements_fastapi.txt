@@ -1,5 +1,4 @@
-# 📦 FASTAPI REQUIREMENTS - LIGHTWEIGHT VERSION
-# Không cần TensorFlow, chỉ cần các library cơ bản
+# 📦 FASTAPI REQUIREMENTS
 
 # FastAPI framework
 fastapi==0.104.1
