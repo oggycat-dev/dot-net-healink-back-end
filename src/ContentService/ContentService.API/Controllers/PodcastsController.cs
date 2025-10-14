@@ -260,4 +260,31 @@ public class PodcastsController : ControllerBase
         // Implementation will be added later with analytics service
         return Ok(new { message = "Analytics feature coming soon", podcastId = id });
     }
+
+    /// <summary>
+    /// Increment view count for a podcast (public)
+    /// </summary>
+    [HttpPost("{id}/views")]
+    public async Task<ActionResult> IncrementView(Guid id)
+    {
+        var command = new IncrementPodcastViewCommand(id);
+        await _mediator.Send(command);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Toggle like for a podcast (requires authentication)
+    /// POST will like if not liked, unlike if already liked
+    /// </summary>
+    [HttpPost("{id}/likes")]
+    [Authorize]
+    public async Task<ActionResult<int>> ToggleLike(Guid id)
+    {
+        if (_currentUserService.UserId == null || !Guid.TryParse(_currentUserService.UserId, out var userId))
+            return Unauthorized();
+
+        var command = new TogglePodcastLikeCommand(id, userId);
+        var newLikeCount = await _mediator.Send(command);
+        return Ok(new { likes = newLikeCount });
+    }
 }

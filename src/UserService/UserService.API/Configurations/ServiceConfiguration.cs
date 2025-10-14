@@ -45,6 +45,9 @@ public static class ServiceConfiguration
         // Use shared pipeline configuration
         app.ConfigureSharedPipeline("UserService");
         
+        // ✨ Transform S3 URLs to presigned URLs in responses (must be after auth)
+        app.UseS3UrlTransformation();
+        
         return app;
     }
 }

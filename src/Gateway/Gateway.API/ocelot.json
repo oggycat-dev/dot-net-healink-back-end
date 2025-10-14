@@ -254,6 +254,30 @@
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
+      "DownstreamPathTemplate": "/api/user/podcasts/latest",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/user/podcasts/latest",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/trending",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/user/podcasts/trending",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
       "DownstreamPathTemplate": "/api/creator/podcasts/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
