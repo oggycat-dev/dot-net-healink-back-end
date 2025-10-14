@@ -156,19 +156,21 @@ terraform_healink/app-infra/.terraform.lock.hcl
 # PodcastRecommendation AI Model Files
 # ====================================
 
-# Large model files (should NOT be committed to git)
-# Use Git LFS or external storage for these files
-**/collaborative_filtering_model.h5
-**/mappings.pkl
-**/podcasts.pkl
-**/ratings.pkl
-**/users.pkl
+# TEMPORARILY ALLOW model files for CI/CD testing
+# TODO: Move to Git LFS or S3 for production
+# Large model files (currently allowed for testing)
+# **/collaborative_filtering_model.h5
+# **/mappings.pkl
+# **/podcasts.pkl
+# **/ratings.pkl
+# **/users.pkl
 
-# Allow small metadata and documentation files
-!**/model_metadata.json
-!**/training_summary.txt
-!**/training_history.pkl
-!**/training_visualization.png
+# Allow all model files for now (testing)
+!**/models/*.h5
+!**/models/*.pkl
+!**/models/*.json
+!**/models/*.txt
+!**/models/*.png
 !**/models/README.md
 
 # Python AI Service

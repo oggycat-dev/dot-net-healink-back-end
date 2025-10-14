@@ -52,6 +52,12 @@ jobs:
           - name: notificationservice
             path: src/NotificaitonService/NotificaitonService.API
             ecr_repo: healink/notification-service
+          - name: subscriptionservice
+            path: src/SubscriptionService/SubscriptionService.API
+            ecr_repo: healink/subscription-service
+          - name: paymentservice
+            path: src/PaymentService/PaymentService.API
+            ecr_repo: healink/payment-service
           - name: gateway
             path: src/Gateway/Gateway.API
             ecr_repo: healink/gateway
@@ -260,11 +266,13 @@ jobs:
           echo "Deployed at: $(date)"
           echo ""
           echo "Services deployed:"
+          echo "  - Gateway"
           echo "  - AuthService"
           echo "  - UserService"
           echo "  - ContentService"
           echo "  - NotificationService"
-          echo "  - Gateway"
+          echo "  - SubscriptionService"
+          echo "  - PaymentService"
           echo ""
           echo "Check Terraform outputs for service URLs"
 

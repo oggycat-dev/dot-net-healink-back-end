@@ -179,11 +179,11 @@ module "auth_service" {
   health_check_matcher  = "200,405"
 }
 
-# --- PRODUCT SERVICE MODULE ---
-module "product_service" {
+# --- USER SERVICE MODULE ---
+module "user_service" {
   source = "../modules/microservice"
 
-  service_name     = "product-service"
+  service_name     = "user-service"
   environment      = terraform.workspace
   project_name     = var.project_name
   
@@ -192,7 +192,247 @@ module "product_service" {
   task_memory      = "1024"
   desired_count    = terraform.workspace == "prod" ? 2 : 1
   
-  docker_image     = "${data.terraform_remote_state.stateful.outputs.product_service_ecr_url}:latest"
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.user_service_ecr_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    },
+    {
+      name  = "ConnectionStrings__DefaultConnection"
+      value = "Host=${data.terraform_remote_state.stateful.outputs.database_endpoint};Port=${data.terraform_remote_state.stateful.outputs.database_port};Database=${data.terraform_remote_state.stateful.outputs.database_name};Username=${data.terraform_remote_state.stateful.outputs.database_username};Password=${data.terraform_remote_state.stateful.outputs.database_password};"
+    },
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${data.terraform_remote_state.stateful.outputs.redis_endpoint}:${data.terraform_remote_state.stateful.outputs.redis_port}"
+    },
+    {
+      name  = "RabbitMQ__Host"
+      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+    },
+    {
+      name  = "RabbitMQ__Port"
+      value = "5671"
+    },
+    {
+      name  = "RabbitMQ__Username"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_username
+    },
+    {
+      name  = "RabbitMQ__Password"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_password
+    },
+    {
+      name  = "RabbitMQ__UseSsl"
+      value = "true"
+    }
+  ]
+  
+  vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
+  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200,405"
+}
+
+# --- CONTENT SERVICE MODULE ---
+module "content_service" {
+  source = "../modules/microservice"
+
+  service_name     = "content-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "512"
+  task_memory      = "1024"
+  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.content_service_ecr_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    },
+    {
+      name  = "ConnectionStrings__DefaultConnection"
+      value = "Host=${data.terraform_remote_state.stateful.outputs.database_endpoint};Port=${data.terraform_remote_state.stateful.outputs.database_port};Database=${data.terraform_remote_state.stateful.outputs.database_name};Username=${data.terraform_remote_state.stateful.outputs.database_username};Password=${data.terraform_remote_state.stateful.outputs.database_password};"
+    },
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${data.terraform_remote_state.stateful.outputs.redis_endpoint}:${data.terraform_remote_state.stateful.outputs.redis_port}"
+    },
+    {
+      name  = "RabbitMQ__Host"
+      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+    },
+    {
+      name  = "RabbitMQ__Port"
+      value = "5671"
+    },
+    {
+      name  = "RabbitMQ__Username"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_username
+    },
+    {
+      name  = "RabbitMQ__Password"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_password
+    },
+    {
+      name  = "RabbitMQ__UseSsl"
+      value = "true"
+    }
+  ]
+  
+  vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
+  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200,405"
+}
+
+# --- NOTIFICATION SERVICE MODULE ---
+module "notification_service" {
+  source = "../modules/microservice"
+
+  service_name     = "notification-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
+  
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.notification_service_ecr_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    },
+    {
+      name  = "ConnectionStrings__DefaultConnection"
+      value = "Host=${data.terraform_remote_state.stateful.outputs.database_endpoint};Port=${data.terraform_remote_state.stateful.outputs.database_port};Database=${data.terraform_remote_state.stateful.outputs.database_name};Username=${data.terraform_remote_state.stateful.outputs.database_username};Password=${data.terraform_remote_state.stateful.outputs.database_password};"
+    },
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${data.terraform_remote_state.stateful.outputs.redis_endpoint}:${data.terraform_remote_state.stateful.outputs.redis_port}"
+    },
+    {
+      name  = "RabbitMQ__Host"
+      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+    },
+    {
+      name  = "RabbitMQ__Port"
+      value = "5671"
+    },
+    {
+      name  = "RabbitMQ__Username"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_username
+    },
+    {
+      name  = "RabbitMQ__Password"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_password
+    },
+    {
+      name  = "RabbitMQ__UseSsl"
+      value = "true"
+    }
+  ]
+  
+  vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
+  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200,405"
+}
+
+# --- SUBSCRIPTION SERVICE MODULE ---
+module "subscription_service" {
+  source = "../modules/microservice"
+
+  service_name     = "subscription-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "512"
+  task_memory      = "1024"
+  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.subscription_service_ecr_url}:latest"
+  container_port   = 80
+  
+  environment_variables = [
+    {
+      name  = "ASPNETCORE_ENVIRONMENT"
+      value = terraform.workspace == "prod" ? "Production" : "Development"
+    },
+    {
+      name  = "ConnectionStrings__DefaultConnection"
+      value = "Host=${data.terraform_remote_state.stateful.outputs.database_endpoint};Port=${data.terraform_remote_state.stateful.outputs.database_port};Database=${data.terraform_remote_state.stateful.outputs.database_name};Username=${data.terraform_remote_state.stateful.outputs.database_username};Password=${data.terraform_remote_state.stateful.outputs.database_password};"
+    },
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${data.terraform_remote_state.stateful.outputs.redis_endpoint}:${data.terraform_remote_state.stateful.outputs.redis_port}"
+    },
+    {
+      name  = "RabbitMQ__Host"
+      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+    },
+    {
+      name  = "RabbitMQ__Port"
+      value = "5671"
+    },
+    {
+      name  = "RabbitMQ__Username"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_username
+    },
+    {
+      name  = "RabbitMQ__Password"
+      value = data.terraform_remote_state.stateful.outputs.rabbitmq_password
+    },
+    {
+      name  = "RabbitMQ__UseSsl"
+      value = "true"
+    }
+  ]
+  
+  vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
+  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+  
+  health_check_path     = "/health"
+  health_check_matcher  = "200,405"
+}
+
+# --- PAYMENT SERVICE MODULE ---
+module "payment_service" {
+  source = "../modules/microservice"
+
+  service_name     = "payment-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "512"
+  task_memory      = "1024"
+  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.payment_service_ecr_url}:latest"
   container_port   = 80
   
   environment_variables = [
