@@ -54,6 +54,11 @@ graph TB
         NOTI_DB[(Notification DB)]
     end
     
+    subgraph "ContentService"
+        CONTENT_CONSUMER[UserSubscriptionStatus<br/>ChangedConsumer]
+        CONTENT_API[Content API Layer]
+    end
+    
     subgraph "UserService"
         USER_ACTIVITY[Activity Log<br/>Handler]
         USER_DB[(User DB)]
@@ -88,8 +93,12 @@ graph TB
     RABBITMQ -->|11. Saga Continue| SUB_SAGA
     SUB_SAGA -->|12. Activate| SUB_CONSUMER1
     SUB_CONSUMER1 -->|13. Notification Event| RABBITMQ
+    SUB_CONSUMER1 -->|13a. Status Changed Event| RABBITMQ
+    RABBITMQ -->|14a. Cache Sync| CONTENT_CONSUMER
+    CONTENT_CONSUMER -->|14b. Update Cache| REDIS
     RABBITMQ -->|14. Send Email| NOTI_CONSUMER
     RABBITMQ -->|15. Activity Log| USER_ACTIVITY
+    CONTENT_API -.->|Query Subscription| REDIS
     
     SUB_HANDLER -.->|Query UserProfileId| REDIS
     PAY_HANDLER2 -.->|Verify IP| MOMO
@@ -177,6 +186,8 @@ sequenceDiagram
     participant Saga as RegisterSubscription<br/>Saga
     participant ActivateConsumer as Activate<br/>Consumer
     participant ActivateHandler as HandleSubscriptionSaga<br/>Handler
+    participant ContentConsumer as Content<br/>Cache Consumer
+    participant RedisCache as Redis<br/>Cache
     participant NotifyConsumer as Notification<br/>Consumer
     participant Email as Email<br/>Service
     
@@ -258,8 +269,16 @@ sequenceDiagram
         ActivateHandler->>SubDB: SaveChangesAsync()
         ActivateHandler-->>ActivateConsumer: Result<SubscriptionSagaResponse>
         
-        Note over ActivateConsumer: Phase 7: Fire-and-Forget Notification
+        Note over ActivateConsumer: Phase 7: Fire-and-Forget Events
         ActivateConsumer->>RabbitMQ: Publish SubscriptionActivatedNotificationEvent<br/>UserId: authUserId ✅
+        ActivateConsumer->>RabbitMQ: Publish UserSubscriptionStatusChangedEvent<br/>🔥 Cache Sync Event
+        
+        Note over ContentConsumer,RedisCache: Phase 8: Cache Synchronization
+        RabbitMQ->>ContentConsumer: UserSubscriptionStatusChangedEvent
+        ContentConsumer->>ContentConsumer: Extract Subscription Data<br/>{UserId, SubscriptionId, Status, Plan}
+        ContentConsumer->>RedisCache: SetAsync(user_subscription_{userId})<br/>Cache Subscription State
+        RedisCache-->>ContentConsumer: Cached Successfully
+        Note over ContentConsumer: ✅ Fast subscription checks<br/>without DB queries
         
         RabbitMQ->>NotifyConsumer: SubscriptionActivatedNotificationEvent
         NotifyConsumer->>Cache: GetUserStateAsync(authUserId) ✅
@@ -874,6 +893,185 @@ public class VerifyMomoIpnCommandHandler
     }
 }
 ```
+
+### 5. Cache Synchronization Pattern
+
+#### Overview
+
+After successful subscription activation, the system synchronizes subscription state to Redis cache for fast lookups without database queries. This improves performance when checking user subscription status across services (especially ContentService for content access control).
+
+#### Architecture
+
+```mermaid
+graph LR
+    subgraph "SubscriptionService"
+        ACTIVATE[ActivateSubscription<br/>Consumer] -->|Publish| EVENT1[UserSubscriptionStatus<br/>ChangedEvent]
+        ACTIVATE -->|Publish| EVENT2[SubscriptionActivated<br/>NotificationEvent]
+    end
+    
+    subgraph "RabbitMQ"
+        QUEUE[Message Queue]
+    end
+    
+    subgraph "ContentService"
+        CONSUMER[UserSubscriptionStatus<br/>ChangedConsumer]
+        API[Content API]
+    end
+    
+    subgraph "Redis Cache"
+        CACHE[(user_subscription_{userId})]
+    end
+    
+    EVENT1 --> QUEUE
+    QUEUE --> CONSUMER
+    CONSUMER -->|Cache Write| CACHE
+    API -->|Fast Read| CACHE
+    
+    style EVENT1 fill:#ffeb3b
+    style CONSUMER fill:#4caf50
+    style CACHE fill:#2196f3
+```
+
+#### Event Definition
+
+```csharp
+// Event published after subscription activation
+public record UserSubscriptionStatusChangedEvent
+{
+    public Guid UserId { get; init; }           // User identifier
+    public Guid SubscriptionId { get; init; }   // Subscription identifier
+    public int Status { get; init; }            // 0=Inactive, 1=Active, 2=Expired, 3=Canceled
+    public string Plan { get; init; }           // "Basic", "Premium", "Pro"
+    public DateTime? CurrentPeriodEnd { get; init; }  // Subscription expiry
+}
+```
+
+#### Consumer Implementation (ContentService)
+
+```csharp
+public class UserSubscriptionStatusChangedConsumer : IConsumer<UserSubscriptionStatusChangedEvent>
+{
+    private readonly IDistributedCache _cache;
+    private readonly ILogger<UserSubscriptionStatusChangedConsumer> _logger;
+    
+    public async Task Consume(ConsumeContext<UserSubscriptionStatusChangedEvent> context)
+    {
+        var message = context.Message;
+        
+        _logger.LogInformation(
+            "Processing subscription status change - UserId: {UserId}, Status: {Status}, Plan: {Plan}",
+            message.UserId, message.Status, message.Plan);
+        
+        // Cache key pattern: user_subscription_{userId}
+        var cacheKey = $"user_subscription_{message.UserId}";
+        
+        // Serialize subscription state
+        var cacheData = new
+        {
+            SubscriptionId = message.SubscriptionId,
+            Status = message.Status,
+            Plan = message.Plan,
+            CurrentPeriodEnd = message.CurrentPeriodEnd,
+            CachedAt = DateTime.UtcNow
+        };
+        
+        var serializedData = JsonSerializer.Serialize(cacheData);
+        
+        // Cache with TTL (e.g., 1 hour for active, 5 min for inactive)
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = message.Status == 1 
+                ? TimeSpan.FromHours(1)   // Active: longer TTL
+                : TimeSpan.FromMinutes(5)  // Inactive: shorter TTL
+        };
+        
+        await _cache.SetStringAsync(cacheKey, serializedData, cacheOptions);
+        
+        _logger.LogInformation(
+            "Successfully cached subscription status - SubscriptionId: {SubscriptionId}",
+            message.SubscriptionId);
+    }
+}
+```
+
+#### Cache Read Pattern (ContentService API)
+
+```csharp
+public class ContentAccessService
+{
+    private readonly IDistributedCache _cache;
+    private readonly ISubscriptionRepository _subscriptionRepo; // Fallback
+    
+    public async Task<bool> HasActiveSubscription(Guid userId)
+    {
+        // Step 1: Try cache first (fast path)
+        var cacheKey = $"user_subscription_{userId}";
+        var cachedData = await _cache.GetStringAsync(cacheKey);
+        
+        if (!string.IsNullOrEmpty(cachedData))
+        {
+            var subscription = JsonSerializer.Deserialize<SubscriptionCache>(cachedData);
+            
+            // Check if active and not expired
+            if (subscription.Status == 1 && 
+                subscription.CurrentPeriodEnd > DateTime.UtcNow)
+            {
+                return true; // ✅ Cache hit - super fast!
+            }
+        }
+        
+        // Step 2: Cache miss - query database (slow path)
+        var dbSubscription = await _subscriptionRepo
+            .GetActiveSubscriptionAsync(userId);
+        
+        // Optionally: warm cache for next request
+        if (dbSubscription != null)
+        {
+            await WarmCache(userId, dbSubscription);
+        }
+        
+        return dbSubscription != null;
+    }
+}
+```
+
+#### Benefits
+
+1. **Performance**: 
+   - Cache read: ~1-5ms (Redis in-memory)
+   - Database read: ~50-200ms (PostgreSQL query + network)
+   - **40-200x faster** for subscription checks
+
+2. **Reduced Database Load**:
+   - ContentService checks subscription for every protected content access
+   - Without cache: 1000 requests = 1000 DB queries
+   - With cache: 1000 requests = 1-2 DB queries (only cache misses)
+
+3. **Scalability**:
+   - Redis can handle 100K+ reads/sec per instance
+   - Database typically handles 1-5K queries/sec
+   - Cache enables horizontal scaling of read-heavy workloads
+
+4. **Cross-Service Data Access**:
+   - SubscriptionService owns subscription data
+   - ContentService needs read-only access for authorization
+   - Cache provides fast, eventually-consistent reads without tight coupling
+
+#### Cache Invalidation
+
+Cache is updated in real-time via event-driven pattern:
+- **Subscription Activated** → Publish event → Cache updated
+- **Subscription Expired** → Publish event → Cache updated
+- **Subscription Canceled** → Publish event → Cache updated
+- **TTL Expiry** → Cache auto-expires → Next request queries DB and warms cache
+
+#### Monitoring
+
+Key metrics to track:
+- Cache hit rate (target: >95%)
+- Cache miss latency (DB fallback time)
+- Event processing lag (Subscription update → Cache sync)
+- Cache memory usage (Redis memory consumption)
 
 ---
 
