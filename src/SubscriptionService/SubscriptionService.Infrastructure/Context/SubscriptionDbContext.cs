@@ -1,8 +1,10 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using SharedLibrary.Commons.Extensions;
 using SharedLibrary.Commons.Outbox;
 using SubscriptionService.Domain.Entities;
 using SubscriptionService.Domain.Enums;
+using SubscriptionService.Infrastructure.Extensions;
 
 namespace SubscriptionService.Infrastructure.Context;
 
@@ -19,6 +21,12 @@ public class SubscriptionDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // CRITICAL: Add MassTransit Outbox entities
+        // Reference: https://masstransit.io/documentation/configuration/middleware/outbox
+        builder.AddInboxStateEntity();      // For deduplication (consumer-side)
+        builder.AddOutboxMessageEntity();   // For storing published messages
+        builder.AddOutboxStateEntity();     // For tracking bus outbox delivery
 
         builder.Entity<SubscriptionPlan>(e =>
         {
@@ -46,6 +54,9 @@ public class SubscriptionDbContext : DbContext
         });
 
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
+        
+        // Add Subscription Saga entities
+        builder.AddSubscriptionSagaEntities();
     }
 }
 

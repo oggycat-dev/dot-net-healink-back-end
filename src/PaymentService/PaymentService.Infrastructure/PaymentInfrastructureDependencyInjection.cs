@@ -7,6 +7,9 @@ using SharedLibrary.Commons.Repositories;
 using SharedLibrary.Commons.Services;
 using SharedLibrary.Commons.Configs;
 using PaymentService.Infrastructure.Context;
+using PaymentService.Infrastructure.Factories;
+using PaymentService.Infrastructure.Services;
+using PaymentService.Application.Commons.Interfaces;
 
 namespace PaymentService.Infrastructure;
 
@@ -61,6 +64,15 @@ public static class PaymentInfrastructureDependencyInjection
         // Add Current User Service
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddHttpContextAccessor();
+        
+        // Register payment gateway services (concrete implementations)
+        services.AddScoped<MomoService>();
+        // FUTURE: Add other gateway services
+        // services.AddScoped<VnPayService>();
+        // services.AddScoped<PayPalService>();
+        
+        // Register payment gateway factory
+        services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
         // Add Redis cache
         services.AddStackExchangeRedisCache(options =>

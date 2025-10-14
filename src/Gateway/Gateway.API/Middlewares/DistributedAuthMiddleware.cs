@@ -138,10 +138,18 @@ public class DistributedAuthMiddleware
             "/health",
             "/api/auth/health",
             "/api/users/health",
+            "/api/subscription/health",
+            "/api/payment/health",
+            "/api/content/health",
+            "/api/notification/health",
             "/api/user/auth/register",
             "/api/user/auth/verify-otp", 
             "/api/user/auth/login",
+            "/api/user/auth/reset-password",
             "/api/cms/auth/login",
+            "/api/user/subscription-plans",        // Public - view subscription plans
+            "/api/user/payment-methods",           // Public - view payment methods
+            "/api/payment-callback/momo/ipn",      // Public - MoMo IPN callback
             "/swagger",
             "/api-docs"
         };

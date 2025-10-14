@@ -61,6 +61,16 @@ public interface IUserStateCache
     /// Cleanup expired tokens
     /// </summary>
     Task CleanupExpiredTokensAsync();
+    
+    /// <summary>
+    /// Update user subscription status trong cache
+    /// </summary>
+    Task UpdateUserSubscriptionAsync(Guid userId, UserSubscriptionInfo subscriptionInfo);
+    
+    /// <summary>
+    /// Check user có active subscription không
+    /// </summary>
+    Task<bool> HasActiveSubscriptionAsync(Guid userId);
 }
 
 /// <summary>
@@ -69,6 +79,7 @@ public interface IUserStateCache
 public record UserStateInfo
 {
     public Guid UserId { get; init; }
+    public Guid UserProfileId { get; init; }
     public string Email { get; init; } = string.Empty;
     public List<string> Roles { get; init; } = new();
     public EntityStatusEnum Status { get; init; }
@@ -77,9 +88,32 @@ public record UserStateInfo
     public DateTime LastLoginAt { get; init; }
     public DateTime CacheUpdatedAt { get; init; } = DateTime.UtcNow;
     
+    // ✅ Subscription Info
+    public UserSubscriptionInfo? Subscription { get; init; }
+    
     public bool IsActive => Status == EntityStatusEnum.Active;
     public bool IsRefreshTokenValid => 
         !string.IsNullOrEmpty(RefreshToken) && 
         RefreshTokenExpiryTime.HasValue && 
         RefreshTokenExpiryTime.Value > DateTime.UtcNow;
+    public bool HasActiveSubscription => Subscription?.IsActive ?? false;
+}
+
+/// <summary>
+/// Thông tin subscription của user trong cache
+/// </summary>
+public record UserSubscriptionInfo
+{
+    public Guid SubscriptionId { get; init; }
+    public Guid SubscriptionPlanId { get; init; }
+    public string SubscriptionPlanName { get; init; } = string.Empty;
+    public string SubscriptionPlanDisplayName { get; init; } = string.Empty;
+    public int SubscriptionStatus { get; init; } // 0=Pending, 1=Active, 2=Expired, 3=Canceled
+    public DateTime? CurrentPeriodStart { get; init; }
+    public DateTime? CurrentPeriodEnd { get; init; }
+    public DateTime? ActivatedAt { get; init; }
+    public DateTime? CanceledAt { get; init; }
+    
+    public bool IsActive => SubscriptionStatus == 1; // Active
+    public bool IsExpired => CurrentPeriodEnd.HasValue && CurrentPeriodEnd.Value < DateTime.UtcNow;
 }

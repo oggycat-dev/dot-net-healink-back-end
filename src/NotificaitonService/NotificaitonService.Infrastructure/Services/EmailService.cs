@@ -165,6 +165,32 @@ public class EmailService : IEmailService
                 htmlContent = built.HtmlContent ?? built.Content;
                 break;
             }
+            case NotificationTemplateEnums.SubscriptionActivated:
+            {
+                var contact = recipient.Email ?? message.To;
+                var fullName = recipient.FullName ?? (contact?.Contains("@") == true ? contact.Split('@')[0] : contact);
+                
+                // Extract data from TemplateData
+                var planName = message.TemplateData.TryGetValue("subscriptionPlanName", out var pn) ? pn?.ToString() ?? "Premium Plan" : "Premium Plan";
+                var amount = message.TemplateData.TryGetValue("amount", out var amt) ? decimal.TryParse(amt?.ToString(), out var a) ? a : 0 : 0;
+                var currency = message.TemplateData.TryGetValue("currency", out var cur) ? cur?.ToString() ?? "VND" : "VND";
+                var transactionId = message.TemplateData.TryGetValue("transactionId", out var tid) ? tid?.ToString() ?? "N/A" : "N/A";
+                
+                var built = NotificationTemplateHelper.BuildSubscriptionActivatedNotification(
+                    contact ?? string.Empty, 
+                    fullName ?? string.Empty,
+                    planName,
+                    amount,
+                    currency,
+                    transactionId,
+                    NotificationChannelEnum.Email, 
+                    _appSettings.SupportEmail, 
+                    _appSettings.AppName);
+                    
+                subject = built.Subject;
+                htmlContent = built.HtmlContent ?? built.Content;
+                break;
+            }
             default:
             {
                 subject = string.IsNullOrEmpty(subject) ? ($"{_appSettings.AppName} Notification") : subject;

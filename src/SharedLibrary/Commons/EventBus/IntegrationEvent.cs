@@ -19,6 +19,9 @@ public abstract record IntegrationEvent
     [JsonPropertyName("source_service")]
     public string SourceService { get; init; } = string.Empty;
 
+    public Guid? CreatedBy { get; init; }
+    public Guid? UpdatedBy { get; init; }
+    public Guid? DeletedBy { get; init; }
     /// <summary>
     /// IP Address of the user who triggered the event (null for system/background events)
     /// </summary>

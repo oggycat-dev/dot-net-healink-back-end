@@ -57,6 +57,43 @@ public static class NotificationTemplateHelper
         };
     }
 
+    public static NotificationRequest BuildSubscriptionActivatedNotification(
+        string contact, 
+        string fullName,
+        string planName,
+        decimal amount,
+        string currency,
+        string transactionId,
+        NotificationChannelEnum channel,
+        string? supportEmail = null,
+        string? appName = null)
+    {
+        var templateData = new Dictionary<string, object>
+        {
+            ["fullName"] = fullName,
+            ["planName"] = planName,
+            ["amount"] = amount.ToString("N2"),
+            ["currency"] = currency,
+            ["transactionId"] = transactionId,
+            ["activatedDate"] = DateTime.UtcNow.ToString("MMMM dd, yyyy"),
+            ["appName"] = appName ?? "Healink",
+            ["supportEmail"] = supportEmail ?? "support@healink.com"
+        };
+
+        var htmlContent = ProcessSubscriptionActivatedTemplate(templateData);
+
+        return new NotificationRequest
+        {
+            To = contact,
+            Subject = GetSubject(NotificationTemplateEnums.SubscriptionActivated, channel: channel, appName: appName),
+            Content = htmlContent,
+            HtmlContent = htmlContent,
+            Template = NotificationTemplateEnums.SubscriptionActivated,
+            TemplateData = templateData,
+            Priority = NotificationPriorityEnum.Normal
+        };
+    }
+
     public static NotificationRequest BuildCreatorApprovedNotification(string email, string applicationId, string approvedAt, string roleName, string? supportEmail = null, string? appName = null)
     {
         var templateData = new Dictionary<string, object>
@@ -138,8 +175,8 @@ public static class NotificationTemplateHelper
                 _ => $"{appTitle} - Verification Code"
             },
             NotificationTemplateEnums.Welcome => $"Welcome to {appTitle}!",
+            NotificationTemplateEnums.SubscriptionActivated => $"{appTitle} - Subscription Activated Successfully!",
             NotificationTemplateEnums.CreatorApproved => $"{appTitle} - Content Creator Application Approved! 🎉",
-            NotificationTemplateEnums.CreatorRejected => $"{appTitle} - Content Creator Application Status",
             _ => $"{appTitle} Notification"
         };
     }
@@ -153,6 +190,12 @@ public static class NotificationTemplateHelper
     public static string ProcessWelcomeTemplate(Dictionary<string, object> data)
     {
         var template = GetWelcomeTemplate();
+        return ProcessTemplate(template, data);
+    }
+
+    public static string ProcessSubscriptionActivatedTemplate(Dictionary<string, object> data)
+    {
+        var template = GetSubscriptionActivatedTemplate();
         return ProcessTemplate(template, data);
     }
 
@@ -269,6 +312,72 @@ public static class NotificationTemplateHelper
             <p>You can now enjoy all the features and benefits of our platform.</p>
             
             <p>If you have any questions or need assistance, don't hesitate to contact our support team at {{supportEmail}}.</p>
+        </div>
+        <div class='footer'>
+            <p>&copy; {{appName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private static string GetSubscriptionActivatedTemplate()
+    {
+        return @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Subscription Activated - {{appName}}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #3498db; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; background-color: #f9f9f9; }
+        .footer { text-align: center; padding: 20px; color: #7f8c8d; font-size: 12px; }
+        .success-message { background-color: #d5f4e6; border: 1px solid #27ae60; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
+        .details { background-color: white; border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .details-row { padding: 10px 0; border-bottom: 1px solid #eee; }
+        .details-row:last-child { border-bottom: none; }
+        .label { font-weight: bold; color: #555; }
+        .value { color: #333; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>✅ Subscription Activated!</h1>
+        </div>
+        <div class='content'>
+            <div class='success-message'>
+                <h2>🎉 Congratulations {{fullName}}!</h2>
+                <p>Your subscription has been successfully activated.</p>
+            </div>
+            
+            <p>Thank you for subscribing to {{appName}}!</p>
+            
+            <div class='details'>
+                <div class='details-row'>
+                    <span class='label'>Plan:</span> 
+                    <span class='value'>{{planName}}</span>
+                </div>
+                <div class='details-row'>
+                    <span class='label'>Amount:</span> 
+                    <span class='value'>{{amount}} {{currency}}</span>
+                </div>
+                <div class='details-row'>
+                    <span class='label'>Activated Date:</span> 
+                    <span class='value'>{{activatedDate}}</span>
+                </div>
+                <div class='details-row'>
+                    <span class='label'>Transaction ID:</span> 
+                    <span class='value'>{{transactionId}}</span>
+                </div>
+            </div>
+            
+            <p>You now have access to all the premium features included in your subscription plan.</p>
+            
+            <p>If you have any questions or need assistance, please contact our support team at {{supportEmail}}.</p>
         </div>
         <div class='footer'>
             <p>&copy; {{appName}}. All rights reserved.</p>

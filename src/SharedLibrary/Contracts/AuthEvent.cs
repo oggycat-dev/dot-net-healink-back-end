@@ -14,6 +14,9 @@ public record UserLoggedInEvent : IntegrationEvent
     [JsonPropertyName("user_id")]
     public Guid UserId { get; init; }
 
+    [JsonPropertyName("user_profile_id")]
+    public Guid UserProfileId { get; init; } // ✅ Added for business logic & activity logging
+
     [JsonPropertyName("email")]
     public string Email { get; init; } = string.Empty;
 
@@ -29,7 +32,7 @@ public record UserLoggedInEvent : IntegrationEvent
     [JsonPropertyName("login_at")]
     public DateTime LoginAt { get; init; }
 
-    // IpAddress and UserAgent inherited from IntegrationEvent base class
+    // IpAddress and UserAgent inherited from IntegrationEvent base class for activity logging
 
     public UserLoggedInEvent() : base("AuthService") { }
 }
@@ -42,6 +45,9 @@ public record UserLoggedOutEvent : IntegrationEvent
     [JsonPropertyName("user_id")]
     public Guid UserId { get; init; }
 
+    [JsonPropertyName("user_profile_id")]
+    public Guid UserProfileId { get; init; } // ✅ Added for activity logging
+
     [JsonPropertyName("email")]
     public string Email { get; init; } = string.Empty;
 
@@ -50,6 +56,8 @@ public record UserLoggedOutEvent : IntegrationEvent
 
     [JsonPropertyName("logout_type")]
     public string LogoutType { get; init; } = "Manual"; // Manual, Force, TokenExpired
+
+    // IpAddress and UserAgent inherited from IntegrationEvent base class for activity logging
 
     public UserLoggedOutEvent() : base("AuthService") { }
 }
@@ -89,6 +97,9 @@ public record UserStatusChangedEvent : IntegrationEvent
     [JsonPropertyName("user_id")]
     public Guid UserId { get; init; }
 
+    [JsonPropertyName("user_profile_id")]
+    public Guid UserProfileId { get; init; } // ✅ Added for activity logging
+
     [JsonPropertyName("email")]
     public string Email { get; init; } = string.Empty;
 
@@ -106,6 +117,8 @@ public record UserStatusChangedEvent : IntegrationEvent
 
     [JsonPropertyName("reason")]
     public string? Reason { get; init; }
+
+    // IpAddress and UserAgent inherited from IntegrationEvent base class for activity logging
 
     public UserStatusChangedEvent() : base("AuthService") { }
 }
@@ -151,6 +164,9 @@ public record UserRolesChangedEvent : IntegrationEvent
     [JsonPropertyName("user_id")]
     public Guid UserId { get; init; }
 
+    [JsonPropertyName("user_profile_id")]
+    public Guid UserProfileId { get; init; } // ✅ Added for activity logging
+
     [JsonPropertyName("email")]
     public string Email { get; init; } = string.Empty;
 
@@ -171,6 +187,8 @@ public record UserRolesChangedEvent : IntegrationEvent
 
     [JsonPropertyName("changed_at")]
     public DateTime ChangedAt { get; init; }
+
+    // IpAddress and UserAgent inherited from IntegrationEvent base class for activity logging
 
     public UserRolesChangedEvent() : base("AuthService") { }
 }

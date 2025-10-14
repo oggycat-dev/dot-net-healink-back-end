@@ -282,6 +282,62 @@ public class UserStateCache : IUserStateCache
         }
     }
 
+    public async Task UpdateUserSubscriptionAsync(Guid userId, UserSubscriptionInfo subscriptionInfo)
+    {
+        try
+        {
+            var userState = await GetUserStateAsync(userId);
+            if (userState != null)
+            {
+                var updatedState = userState with
+                {
+                    Subscription = subscriptionInfo,
+                    CacheUpdatedAt = DateTime.UtcNow
+                };
+                
+                await SetUserStateAsync(updatedState);
+                _logger.LogInformation(
+                    "Subscription cached for user {UserId}: SubscriptionId={SubscriptionId}, Status={Status}, Plan={Plan}",
+                    userId, subscriptionInfo.SubscriptionId, subscriptionInfo.SubscriptionStatus, subscriptionInfo.SubscriptionPlanName);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Cannot update subscription for user {UserId} - user not found in cache",
+                    userId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating subscription for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<bool> HasActiveSubscriptionAsync(Guid userId)
+    {
+        try
+        {
+            var userState = await GetUserStateAsync(userId);
+            if (userState == null)
+            {
+                _logger.LogDebug("User {UserId} not found in cache - no active subscription", userId);
+                return false;
+            }
+
+            var hasActiveSubscription = userState.HasActiveSubscription;
+            _logger.LogDebug(
+                "User {UserId} active subscription status: {HasActiveSubscription}",
+                userId, hasActiveSubscription);
+            return hasActiveSubscription;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking active subscription for user {UserId}", userId);
+            return false;
+        }
+    }
+
     private string GetUserStateKey(Guid userId) => $"{USER_STATE_PREFIX}{userId}";
 
     private async Task UpdateActiveUsersListAsync(UserStateInfo userState)

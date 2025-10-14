@@ -90,11 +90,11 @@ public static class SubscriptionQueryBuilder
         {
             if (filter.HasCancelScheduled.Value)
             {
-                predicate = predicate.CombineAnd(x => x.CancelAt != null || x.CancelAtPeriodEnd);
+                predicate = predicate.CombineAnd(x => x.CanceledAt != null || x.CancelAtPeriodEnd);
             }
             else
             {
-                predicate = predicate.CombineAnd(x => x.CancelAt == null && !x.CancelAtPeriodEnd);
+                predicate = predicate.CombineAnd(x => x.CanceledAt == null && !x.CancelAtPeriodEnd);
             }
         }
 

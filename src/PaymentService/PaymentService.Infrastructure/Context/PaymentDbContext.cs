@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using SharedLibrary.Commons.Extensions;
 using SharedLibrary.Commons.Outbox;
@@ -8,7 +9,7 @@ namespace PaymentService.Infrastructure.Context;
 public class PaymentDbContext : DbContext
 {
     public DbSet<OutboxEvent> OutboxEvents { get; set; }
-    public DbSet<Invoice> Invoices { get; set; }
+    public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
 
     public PaymentDbContext(DbContextOptions<PaymentDbContext> options) : base(options)
@@ -19,27 +20,51 @@ public class PaymentDbContext : DbContext
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<Invoice>(e =>
+        // CRITICAL: Add MassTransit Outbox entities
+        // Reference: https://masstransit.io/documentation/configuration/middleware/outbox
+        builder.AddInboxStateEntity();      // For deduplication (consumer-side)
+        builder.AddOutboxMessageEntity();   // For storing published messages
+        builder.AddOutboxStateEntity();     // For tracking bus outbox delivery
+
+        // PaymentMethod configuration
+        builder.Entity<PaymentMethod>(entity =>
         {
-            e.ToTable("Invoices");
-            e.HasIndex(x => x.UserProfileId);
-            e.HasIndex(x => new { x.Status, x.DueDate });
-            e.HasIndex(x => x.CorrelationId).IsUnique();
-            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
-            e.Property(x => x.Subtotal).HasColumnType("numeric(18,2)");
-            e.Property(x => x.Tax).HasColumnType("numeric(18,2)");
-            e.Property(x => x.Total).HasColumnType("numeric(18,2)");
-            e.Property(x => x.Discounts).HasColumnType("jsonb").HasDefaultValue("[]");
+            entity.ToTable("PaymentMethods");
+            
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.ProviderName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Configuration).HasColumnType("jsonb"); // PostgreSQL JSON
+            entity.Property(e => e.Type).HasConversion<int>().IsRequired();
+            
+            // Indexes
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => e.Status);
         });
 
-        builder.Entity<PaymentTransaction>(e =>
+        // PaymentTransaction configuration
+        builder.Entity<PaymentTransaction>(entity =>
         {
-            e.ToTable("PaymentTransactions");
-            e.HasIndex(x => new { x.InvoiceId, x.Status });
-            e.HasIndex(x => new { x.TransactionType, x.ReferenceId });
-            e.HasIndex(x => x.ProviderChargeRef);
-            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
-            e.Property(x => x.TransactionType).HasConversion<int>();
+            entity.ToTable("PaymentTransactions");
+            
+            entity.Property(e => e.Amount).HasColumnType("numeric(18,2)").IsRequired();
+            entity.Property(e => e.Currency).HasMaxLength(3).IsRequired();
+            entity.Property(e => e.TransactionId).HasMaxLength(200);
+            entity.Property(e => e.ErrorCode).HasMaxLength(50);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
+            entity.Property(e => e.TransactionType).HasConversion<int>().IsRequired();
+            
+            // Indexes for performance
+            entity.HasIndex(e => new { e.TransactionType, e.ReferenceId });
+            entity.HasIndex(e => e.TransactionId);
+            entity.HasIndex(e => e.CreatedAt); // For temporal queries
+            
+            // Foreign key relationship
+            entity.HasOne(e => e.PaymentMethod)
+                .WithMany()
+                .HasForeignKey(e => e.PaymentMethodId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
