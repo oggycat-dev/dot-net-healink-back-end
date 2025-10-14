@@ -183,6 +183,169 @@ dot-net-healink-back-end/
 **...review architecture**
 → Read: `SAGA_ARCHITECTURE_GUIDE.md` + `SAGA_ARCHITECTURE_DIAGRAMS.md`
 
+---
+
+## 🔥 Subscription Payment System (Complete Documentation)
+
+### 7. SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md
+**Path**: `register-subscription-payment/SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md`  
+**Purpose**: Complete guide to subscription registration with payment integration  
+**Audience**: Architects, Developers, DevOps  
+**Contains**:
+- System overview with architecture diagrams
+- Complete sequence diagrams (success & failure flows)
+- Saga state machine documentation
+- Payment gateway integration (MoMo)
+- **Cache synchronization pattern** (Redis)
+- Security & validation
+- Database schema
+- API endpoints
+- Monitoring & observability
+
+**When to use**:
+- Understanding subscription payment flow
+- Implementing similar payment features
+- Debugging subscription issues
+- Performance optimization with cache
+- Training new developers on payment integration
+
+**Key Features Documented**:
+- ✅ MassTransit Saga orchestration
+- ✅ Entity Framework Outbox pattern
+- ✅ Payment gateway abstraction (Factory pattern)
+- ✅ MoMo IPN callback handling
+- ✅ Redis cache synchronization (NEW)
+- ✅ Event-driven architecture
+- ✅ Compensation logic for failures
+
+---
+
+### 8. CACHE_SYNC_DOCUMENTATION_UPDATE.md
+**Path**: `register-subscription-payment/CACHE_SYNC_DOCUMENTATION_UPDATE.md`  
+**Purpose**: Summary of cache synchronization feature added to subscription system  
+**Audience**: Developers, Tech Leads  
+**Contains**:
+- What was updated in main documentation
+- Implementation details (event publishing, consumer, cache pattern)
+- Real-world validation with MoMo payment logs
+- Cache data structure and TTL strategy
+- Benefits analysis (40-200x performance improvement)
+- Next steps for enhancements
+
+**When to use**:
+- Understanding what changed in documentation
+- Reviewing cache sync implementation
+- Validating cache performance
+- Planning similar cache patterns in other services
+
+**Real Validation**:
+- ✅ Tested with real MoMo payment (TransactionId: 4593081137)
+- ✅ Cache logs confirmed (UserId, SubscriptionId, Status, Plan)
+- ✅ "siêu mượt và khớp tuyệt đối" (super smooth and perfectly matched)
+
+---
+
+### 9. CACHE_SYNC_VISUAL_COMPARISON.md
+**Path**: `register-subscription-payment/CACHE_SYNC_VISUAL_COMPARISON.md`  
+**Purpose**: Visual before/after comparison of subscription system architecture  
+**Audience**: Everyone (especially visual learners)  
+**Contains**:
+- 🔴 BEFORE: Direct database queries (50-200ms latency)
+- 🟢 AFTER: Cache-first pattern (1-5ms latency)
+- Performance comparison table (40-200x improvement)
+- Cache data structure examples
+- Event-driven cache invalidation flow
+- Code changes summary
+- Monitoring dashboard recommendations
+
+**When to use**:
+- Quick visual understanding of cache sync
+- Explaining architecture changes to stakeholders
+- Performance optimization presentations
+- Training sessions on caching patterns
+
+**Key Metrics**:
+- ⚡ **40-200x faster** subscription checks
+- 🎯 **99%+ reduction** in database load
+- 🔄 **Real-time** cache updates via events
+- 📈 **100K+ reads/sec** scalability
+
+---
+
+## 📂 Subscription Payment Documentation Structure
+
+```
+docs/register-subscription-payment/
+├── SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md  (Main comprehensive guide)
+├── CACHE_SYNC_DOCUMENTATION_UPDATE.md             (Update summary)
+└── CACHE_SYNC_VISUAL_COMPARISON.md                (Visual before/after)
+```
+
+### How These Docs Work Together
+
+```mermaid
+graph TD
+    A[SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md] -->|Contains| B[Architecture Diagrams]
+    A -->|Contains| C[Sequence Diagrams]
+    A -->|Contains| D[Cache Sync Pattern]
+    A -->|Contains| E[Code Examples]
+    
+    F[CACHE_SYNC_DOCUMENTATION_UPDATE.md] -->|Explains Updates to| A
+    F -->|References| G[Real Validation Logs]
+    
+    H[CACHE_SYNC_VISUAL_COMPARISON.md] -->|Visualizes Changes in| A
+    H -->|Shows| I[Before/After Performance]
+    
+    style A fill:#4caf50
+    style F fill:#ffeb3b
+    style H fill:#2196f3
+```
+
+### Reading Flow for Subscription System
+
+**For Quick Overview**:
+1. Read `CACHE_SYNC_VISUAL_COMPARISON.md` (5 min)
+2. Skim `CACHE_SYNC_DOCUMENTATION_UPDATE.md` (10 min)
+
+**For Implementation**:
+1. Read `SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md` → Technical Components → Cache Sync (30 min)
+2. Review code examples and event definitions
+3. Check monitoring recommendations
+
+**For Architecture Review**:
+1. Read all three documents in order
+2. Focus on sequence diagrams and state machines
+3. Review performance metrics and validation logs
+
+---
+
+## 🔍 When to Read Subscription Docs
+
+**I want to...**
+
+**...understand subscription payment flow**
+→ Read: `SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md` → Sequence Diagrams
+
+**...implement cache synchronization**
+→ Read: `SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md` → Technical Components → Section 5
+
+**...see performance improvements**
+→ Read: `CACHE_SYNC_VISUAL_COMPARISON.md` → Performance Comparison
+
+**...debug cache issues**
+→ Read: `CACHE_SYNC_DOCUMENTATION_UPDATE.md` → Implementation Details → Real Validation
+
+**...integrate MoMo payment**
+→ Read: `SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md` → Payment Gateway Integration Flow
+
+**...understand saga orchestration**
+→ Read: `SUBSCRIPTION_SYSTEM_COMPLETE_DOCUMENTATION.md` → Saga Pattern with Compensation
+
+**...optimize subscription queries**
+→ Read: `CACHE_SYNC_VISUAL_COMPARISON.md` → Before/After + Code Changes
+
+---
+
 ## 📊 Document Relationships
 
 ```
@@ -275,6 +438,7 @@ dot-net-healink-back-end/
 
 ---
 
-**Last Updated**: 2025-10-03  
+**Last Updated**: 2024-11-20  
 **Maintained By**: Development Team  
-**Version**: 1.0 (Initial Saga Refactor)
+**Version**: 1.1 (Added Subscription Payment & Cache Sync Documentation)
+
