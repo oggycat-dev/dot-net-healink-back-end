@@ -3,7 +3,7 @@ PODCAST RECOMMENDATION FASTAPI SERVICE
 """
 
 from fastapi import FastAPI, HTTPException, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
 import pandas as pd
 import numpy as np
@@ -23,12 +23,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Pydantic Models
+def to_camel(string: str) -> str:
+    """Convert snake_case to camelCase"""
+    components = string.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+
+# Pydantic Models with camelCase output
 class UserRecommendationRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    
     user_id: str
     num_recommendations: int = 5
 
 class PodcastRecommendation(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    
     podcast_id: str
     title: str
     predicted_rating: float
@@ -38,6 +47,8 @@ class PodcastRecommendation(BaseModel):
     content_url: Optional[str] = None
 
 class RecommendationResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    
     user_id: str
     recommendations: List[PodcastRecommendation]
     total_count: int
@@ -55,6 +66,24 @@ app = FastAPI(
     description="AI-powered podcast recommendations using Kaggle trained model",
     version="2.0.0"
 )
+
+# Configure response model to use aliases (camelCase)
+from fastapi.responses import JSONResponse
+from fastapi import Response
+
+@app.middleware("http")
+async def add_response_model_serialization(request, call_next):
+    """Ensure response models are serialized with by_alias=True for camelCase"""
+    response = await call_next(request)
+    return response
+
+# Override default response class to use by_alias
+class CamelCaseJSONResponse(JSONResponse):
+    def render(self, content) -> bytes:
+        # Pydantic models will be serialized with by_alias=True
+        return super().render(content)
+
+app.default_response_class = CamelCaseJSONResponse
 
 class RecommendationService:
     """Service để handle model và data integration"""
@@ -375,7 +404,7 @@ async def get_model_info():
         }
     }
 
-@app.post("/recommendations", response_model=RecommendationResponse)
+@app.post("/recommendations", response_model=RecommendationResponse, response_model_by_alias=True)
 async def get_recommendations(request: UserRecommendationRequest):
     """Get podcast recommendations cho user"""
     
@@ -398,7 +427,7 @@ async def get_recommendations(request: UserRecommendationRequest):
         logger.error(f"❌ Recommendation error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@app.get("/recommendations/{user_id}", response_model=RecommendationResponse)
+@app.get("/recommendations/{user_id}", response_model=RecommendationResponse, response_model_by_alias=True)
 async def get_user_recommendations(
     user_id: str,
     num_recommendations: int = Query(default=5, ge=1, le=20)

@@ -67,9 +67,29 @@ output "auth_service_ecr_url" {
   value       = aws_ecr_repository.auth_service.repository_url
 }
 
-output "product_service_ecr_url" {
-  description = "Product Service ECR repository URL"
-  value       = aws_ecr_repository.product_service.repository_url
+output "user_service_ecr_url" {
+  description = "User Service ECR repository URL"
+  value       = aws_ecr_repository.user_service.repository_url
+}
+
+output "content_service_ecr_url" {
+  description = "Content Service ECR repository URL"
+  value       = aws_ecr_repository.content_service.repository_url
+}
+
+output "notification_service_ecr_url" {
+  description = "Notification Service ECR repository URL"
+  value       = aws_ecr_repository.notification_service.repository_url
+}
+
+output "subscription_service_ecr_url" {
+  description = "Subscription Service ECR repository URL"
+  value       = aws_ecr_repository.subscription_service.repository_url
+}
+
+output "payment_service_ecr_url" {
+  description = "Payment Service ECR repository URL"
+  value       = aws_ecr_repository.payment_service.repository_url
 }
 
 output "gateway_ecr_url" {
