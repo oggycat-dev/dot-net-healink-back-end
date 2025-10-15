@@ -1,137 +1,122 @@
-# Outputs for Application Infrastructure
+# Application Infrastructure Outputs
+# Optimized: Only Gateway has public ALB
 
-# === MICROSERVICE OUTPUTS ===
-output "gateway_alb_dns" {
-  description = "Gateway ALB DNS name"
-  value       = module.gateway.alb_dns_name
-}
-
-output "gateway_url" {
-  description = "Gateway public URL"
-  value       = "http://${module.gateway.alb_dns_name}"
-}
-
-output "auth_service_alb_dns" {
-  description = "Auth Service ALB DNS name"
-  value       = module.auth_service.alb_dns_name
-}
-
-output "auth_service_url" {
-  description = "Auth Service public URL"
-  value       = "http://${module.auth_service.alb_dns_name}"
-}
-
-output "user_service_alb_dns" {
-  description = "User Service ALB DNS name"
-  value       = module.user_service.alb_dns_name
-}
-
-output "user_service_url" {
-  description = "User Service public URL"
-  value       = "http://${module.user_service.alb_dns_name}"
-}
-
-output "content_service_alb_dns" {
-  description = "Content Service ALB DNS name"
-  value       = module.content_service.alb_dns_name
-}
-
-output "content_service_url" {
-  description = "Content Service public URL"
-  value       = "http://${module.content_service.alb_dns_name}"
-}
-
-output "notification_service_alb_dns" {
-  description = "Notification Service ALB DNS name"
-  value       = module.notification_service.alb_dns_name
-}
-
-output "notification_service_url" {
-  description = "Notification Service public URL"
-  value       = "http://${module.notification_service.alb_dns_name}"
-}
-
-output "subscription_service_alb_dns" {
-  description = "Subscription Service ALB DNS name"
-  value       = module.subscription_service.alb_dns_name
-}
-
-output "subscription_service_url" {
-  description = "Subscription Service public URL"
-  value       = "http://${module.subscription_service.alb_dns_name}"
-}
-
-output "payment_service_alb_dns" {
-  description = "Payment Service ALB DNS name"
-  value       = module.payment_service.alb_dns_name
-}
-
-output "payment_service_url" {
-  description = "Payment Service public URL"
-  value       = "http://${module.payment_service.alb_dns_name}"
-}
-
-# === ENVIRONMENT INFO ===
-output "environment" {
-  description = "Current Terraform workspace/environment"
-  value       = terraform.workspace
-}
-
+# === ECS CLUSTER ===
 output "cluster_name" {
   description = "ECS cluster name"
   value       = aws_ecs_cluster.healink_cluster.name
 }
 
-# === QUICK ACCESS COMMANDS ===
-output "docker_commands" {
-  description = "Docker commands for building and pushing images"
+output "cluster_arn" {
+  description = "ECS cluster ARN"
+  value       = aws_ecs_cluster.healink_cluster.arn
+}
+
+# === GATEWAY (PUBLIC) ===
+output "gateway_url" {
+  description = "Gateway ALB URL (public endpoint)"
+  value       = module.gateway.alb_dns_name
+}
+
+output "gateway_alb_arn" {
+  description = "Gateway ALB ARN"
+  value       = module.gateway.alb_arn
+}
+
+output "gateway_service_name" {
+  description = "Gateway ECS service name"
+  value       = module.gateway.service_name
+}
+
+# === INTERNAL SERVICES ===
+# These services don't have ALBs, only accessible via Gateway or internally
+
+output "auth_service_name" {
+  description = "Auth Service ECS service name (internal)"
+  value       = module.auth_service.service_name
+}
+
+output "user_service_name" {
+  description = "User Service ECS service name (internal)"
+  value       = module.user_service.service_name
+}
+
+output "content_service_name" {
+  description = "Content Service ECS service name (internal)"
+  value       = module.content_service.service_name
+}
+
+output "notification_service_name" {
+  description = "Notification Service ECS service name (internal)"
+  value       = module.notification_service.service_name
+}
+
+output "subscription_service_name" {
+  description = "Subscription Service ECS service name (internal)"
+  value       = module.subscription_service.service_name
+}
+
+output "payment_service_name" {
+  description = "Payment Service ECS service name (internal)"
+  value       = module.payment_service.service_name
+}
+
+output "podcast_recommendation_service_name" {
+  description = "Podcast Recommendation Service ECS service name (internal)"
+  value       = module.podcast_recommendation_service.service_name
+}
+
+# === DEPLOYMENT INFO ===
+output "deployment_summary" {
+  description = "Deployment summary"
   value = {
-    auth_service = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.auth_service_ecr_url}:latest -f src/AuthService/AuthService.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.auth_service_ecr_url}:latest"
-    }
-    user_service = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.user_service_ecr_url}:latest -f src/UserService/UserService.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.user_service_ecr_url}:latest"
-    }
-    content_service = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.content_service_ecr_url}:latest -f src/ContentService/ContentService.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.content_service_ecr_url}:latest"
-    }
-    notification_service = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.notification_service_ecr_url}:latest -f src/NotificaitonService/NotificaitonService.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.notification_service_ecr_url}:latest"
-    }
-    subscription_service = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.subscription_service_ecr_url}:latest -f src/SubscriptionService/SubscriptionService.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.subscription_service_ecr_url}:latest"
-    }
-    payment_service = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.payment_service_ecr_url}:latest -f src/PaymentService/PaymentService.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.payment_service_ecr_url}:latest"
-    }
-    gateway = {
-      build = "docker build -t ${data.terraform_remote_state.stateful.outputs.gateway_ecr_url}:latest -f src/Gateway/Gateway.API/Dockerfile ."
-      push  = "docker push ${data.terraform_remote_state.stateful.outputs.gateway_ecr_url}:latest"
-    }
+    environment          = terraform.workspace
+    cluster             = aws_ecs_cluster.healink_cluster.name
+    gateway_endpoint    = module.gateway.alb_dns_name
+    total_services      = 8
+    public_services     = 1
+    internal_services   = 7
+    cost_optimization   = "Eliminated 7 ALBs, saves ~$96/month"
   }
 }
 
-# === STATEFUL REFERENCES ===
-output "stateful_info" {
-  description = "Reference to stateful infrastructure"
-  value = {
-    database_endpoint  = data.terraform_remote_state.stateful.outputs.database_endpoint
-    redis_endpoint     = data.terraform_remote_state.stateful.outputs.redis_endpoint
-    rabbitmq_endpoint  = data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint
-    ecr_repositories = {
-      auth_service         = data.terraform_remote_state.stateful.outputs.auth_service_ecr_url
-      user_service         = data.terraform_remote_state.stateful.outputs.user_service_ecr_url
-      content_service      = data.terraform_remote_state.stateful.outputs.content_service_ecr_url
-      notification_service = data.terraform_remote_state.stateful.outputs.notification_service_ecr_url
-      subscription_service = data.terraform_remote_state.stateful.outputs.subscription_service_ecr_url
-      payment_service      = data.terraform_remote_state.stateful.outputs.payment_service_ecr_url
-      gateway              = data.terraform_remote_state.stateful.outputs.gateway_ecr_url
-    }
-  }
+# === CLOUDWATCH LOGS ===
+output "gateway_logs" {
+  description = "Gateway CloudWatch log group"
+  value       = module.gateway.cloudwatch_log_group
+}
+
+output "auth_service_logs" {
+  description = "Auth Service CloudWatch log group"
+  value       = module.auth_service.cloudwatch_log_group
+}
+
+output "user_service_logs" {
+  description = "User Service CloudWatch log group"
+  value       = module.user_service.cloudwatch_log_group
+}
+
+output "content_service_logs" {
+  description = "Content Service CloudWatch log group"
+  value       = module.content_service.cloudwatch_log_group
+}
+
+output "notification_service_logs" {
+  description = "Notification Service CloudWatch log group"
+  value       = module.notification_service.cloudwatch_log_group
+}
+
+output "subscription_service_logs" {
+  description = "Subscription Service CloudWatch log group"
+  value       = module.subscription_service.cloudwatch_log_group
+}
+
+output "payment_service_logs" {
+  description = "Payment Service CloudWatch log group"
+  value       = module.payment_service.cloudwatch_log_group
+}
+
+output "podcast_recommendation_service_logs" {
+  description = "Podcast Recommendation Service CloudWatch log group"
+  value       = module.podcast_recommendation_service.cloudwatch_log_group
 }

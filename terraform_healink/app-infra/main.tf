@@ -1,6 +1,6 @@
-# Healink Application Infrastructure
-# Contains ephemeral resources: ECS, ALB, Auto Scaling
-# These resources can be destroyed and recreated frequently
+# Healink Application Infrastructure - Optimized for Free Tier
+# Only Gateway has public ALB, other services are internal
+# Saves ~$96/month (7 ALBs eliminated)
 
 terraform {
   backend "s3" {
@@ -22,7 +22,6 @@ variable "project_name" {
 }
 
 # --- DATA SOURCES ---
-# Get stateful infrastructure outputs
 data "terraform_remote_state" "stateful" {
   backend = "s3"
   config = {
@@ -87,7 +86,11 @@ resource "aws_ecs_cluster" "healink_cluster" {
   }
 }
 
-# --- GATEWAY MODULE ---
+# ============================================
+# GATEWAY (PUBLIC - WITH ALB)
+# ============================================
+# Only service exposed to internet
+
 module "gateway" {
   source = "../modules/microservice"
 
@@ -106,7 +109,35 @@ module "gateway" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
+    },
+    {
+      name  = "AUTH_SERVICE_URL"
+      value = "http://${module.auth_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    {
+      name  = "USER_SERVICE_URL"
+      value = "http://${module.user_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    {
+      name  = "CONTENT_SERVICE_URL"
+      value = "http://${module.content_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    {
+      name  = "NOTIFICATION_SERVICE_URL"
+      value = "http://${module.notification_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    {
+      name  = "SUBSCRIPTION_SERVICE_URL"
+      value = "http://${module.subscription_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    {
+      name  = "PAYMENT_SERVICE_URL"
+      value = "http://${module.payment_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    {
+      name  = "PODCAST_RECOMMENDATION_SERVICE_URL"
+      value = "http://${module.podcast_recommendation_service.service_name}.${var.project_name}-${terraform.workspace}.local"
     }
   ]
   
@@ -119,18 +150,23 @@ module "gateway" {
   health_check_matcher  = "200"
 }
 
-# --- AUTH SERVICE MODULE ---
+# ============================================
+# INTERNAL SERVICES (NO ALB)
+# ============================================
+# These services communicate via Gateway or internal service discovery
+
+# --- AUTH SERVICE ---
 module "auth_service" {
-  source = "../modules/microservice"
+  source = "../modules/internal-microservice"
 
   service_name     = "auth-service"
   environment      = terraform.workspace
   project_name     = var.project_name
   
   ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
-  task_cpu         = "512"
-  task_memory      = "1024"
-  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
   
   docker_image     = "${data.terraform_remote_state.stateful.outputs.auth_service_ecr_url}:latest"
   container_port   = 80
@@ -138,7 +174,7 @@ module "auth_service" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
     },
     {
       name  = "ConnectionStrings__DefaultConnection"
@@ -150,7 +186,7 @@ module "auth_service" {
     },
     {
       name  = "RabbitMQ__Host"
-      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+      value = replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")
     },
     {
       name  = "RabbitMQ__Port"
@@ -172,25 +208,21 @@ module "auth_service" {
   
   vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
   subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
-  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
-  
-  health_check_path     = "/health"
-  health_check_matcher  = "200,405"
 }
 
-# --- USER SERVICE MODULE ---
+# --- USER SERVICE ---
 module "user_service" {
-  source = "../modules/microservice"
+  source = "../modules/internal-microservice"
 
   service_name     = "user-service"
   environment      = terraform.workspace
   project_name     = var.project_name
   
   ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
-  task_cpu         = "512"
-  task_memory      = "1024"
-  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
   
   docker_image     = "${data.terraform_remote_state.stateful.outputs.user_service_ecr_url}:latest"
   container_port   = 80
@@ -198,7 +230,7 @@ module "user_service" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
     },
     {
       name  = "ConnectionStrings__DefaultConnection"
@@ -210,7 +242,7 @@ module "user_service" {
     },
     {
       name  = "RabbitMQ__Host"
-      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+      value = replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")
     },
     {
       name  = "RabbitMQ__Port"
@@ -232,25 +264,21 @@ module "user_service" {
   
   vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
   subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
-  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
-  
-  health_check_path     = "/health"
-  health_check_matcher  = "200,405"
 }
 
-# --- CONTENT SERVICE MODULE ---
+# --- CONTENT SERVICE ---
 module "content_service" {
-  source = "../modules/microservice"
+  source = "../modules/internal-microservice"
 
   service_name     = "content-service"
   environment      = terraform.workspace
   project_name     = var.project_name
   
   ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
-  task_cpu         = "512"
-  task_memory      = "1024"
-  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
   
   docker_image     = "${data.terraform_remote_state.stateful.outputs.content_service_ecr_url}:latest"
   container_port   = 80
@@ -258,7 +286,7 @@ module "content_service" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
     },
     {
       name  = "ConnectionStrings__DefaultConnection"
@@ -270,7 +298,7 @@ module "content_service" {
     },
     {
       name  = "RabbitMQ__Host"
-      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+      value = replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")
     },
     {
       name  = "RabbitMQ__Port"
@@ -292,16 +320,12 @@ module "content_service" {
   
   vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
   subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
-  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
-  
-  health_check_path     = "/health"
-  health_check_matcher  = "200,405"
 }
 
-# --- NOTIFICATION SERVICE MODULE ---
+# --- NOTIFICATION SERVICE ---
 module "notification_service" {
-  source = "../modules/microservice"
+  source = "../modules/internal-microservice"
 
   service_name     = "notification-service"
   environment      = terraform.workspace
@@ -318,7 +342,7 @@ module "notification_service" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
     },
     {
       name  = "ConnectionStrings__DefaultConnection"
@@ -330,7 +354,7 @@ module "notification_service" {
     },
     {
       name  = "RabbitMQ__Host"
-      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+      value = replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")
     },
     {
       name  = "RabbitMQ__Port"
@@ -352,25 +376,21 @@ module "notification_service" {
   
   vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
   subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
-  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
-  
-  health_check_path     = "/health"
-  health_check_matcher  = "200,405"
 }
 
-# --- SUBSCRIPTION SERVICE MODULE ---
+# --- SUBSCRIPTION SERVICE ---
 module "subscription_service" {
-  source = "../modules/microservice"
+  source = "../modules/internal-microservice"
 
   service_name     = "subscription-service"
   environment      = terraform.workspace
   project_name     = var.project_name
   
   ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
-  task_cpu         = "512"
-  task_memory      = "1024"
-  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
   
   docker_image     = "${data.terraform_remote_state.stateful.outputs.subscription_service_ecr_url}:latest"
   container_port   = 80
@@ -378,7 +398,7 @@ module "subscription_service" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
     },
     {
       name  = "ConnectionStrings__DefaultConnection"
@@ -390,7 +410,7 @@ module "subscription_service" {
     },
     {
       name  = "RabbitMQ__Host"
-      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+      value = replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")
     },
     {
       name  = "RabbitMQ__Port"
@@ -412,25 +432,21 @@ module "subscription_service" {
   
   vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
   subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
-  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
-  
-  health_check_path     = "/health"
-  health_check_matcher  = "200,405"
 }
 
-# --- PAYMENT SERVICE MODULE ---
+# --- PAYMENT SERVICE ---
 module "payment_service" {
-  source = "../modules/microservice"
+  source = "../modules/internal-microservice"
 
   service_name     = "payment-service"
   environment      = terraform.workspace
   project_name     = var.project_name
   
   ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
-  task_cpu         = "512"
-  task_memory      = "1024"
-  desired_count    = terraform.workspace == "prod" ? 2 : 1
+  task_cpu         = "256"
+  task_memory      = "512"
+  desired_count    = 1
   
   docker_image     = "${data.terraform_remote_state.stateful.outputs.payment_service_ecr_url}:latest"
   container_port   = 80
@@ -438,7 +454,7 @@ module "payment_service" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = terraform.workspace == "prod" ? "Production" : "Development"
+      value = "Development"
     },
     {
       name  = "ConnectionStrings__DefaultConnection"
@@ -450,7 +466,7 @@ module "payment_service" {
     },
     {
       name  = "RabbitMQ__Host"
-      value = "${replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")}"
+      value = replace(data.terraform_remote_state.stateful.outputs.rabbitmq_endpoint, "amqps://", "")
     },
     {
       name  = "RabbitMQ__Port"
@@ -472,9 +488,53 @@ module "payment_service" {
   
   vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
   subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
-  alb_subnet_ids           = data.terraform_remote_state.stateful.outputs.public_subnets
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+}
+
+# --- PODCAST RECOMMENDATION SERVICE ---
+module "podcast_recommendation_service" {
+  source = "../modules/internal-microservice"
+
+  service_name     = "podcast-recommendation-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
   
-  health_check_path     = "/health"
-  health_check_matcher  = "200,405"
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "512"
+  task_memory      = "1024"
+  desired_count    = 1
+  
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.podcast_recommendation_service_ecr_url}:latest"
+  container_port   = 8000
+  
+  environment_variables = [
+    {
+      name  = "ENVIRONMENT"
+      value = "production"
+    },
+    {
+      name  = "DB_HOST"
+      value = data.terraform_remote_state.stateful.outputs.database_endpoint
+    },
+    {
+      name  = "DB_PORT"
+      value = tostring(data.terraform_remote_state.stateful.outputs.database_port)
+    },
+    {
+      name  = "DB_NAME"
+      value = data.terraform_remote_state.stateful.outputs.database_name
+    },
+    {
+      name  = "DB_USER"
+      value = data.terraform_remote_state.stateful.outputs.database_username
+    },
+    {
+      name  = "DB_PASSWORD"
+      value = data.terraform_remote_state.stateful.outputs.database_password
+    }
+  ]
+  
+  vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
 }

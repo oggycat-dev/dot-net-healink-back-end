@@ -141,6 +141,9 @@ launchSettings.json
 *.tfvars
 *.tfstate.backup
 
+# Generated API endpoints for Frontend
+api-endpoints/
+
 # Terraform layers state files
 terraform_healink/stateful-infra/.terraform/
 terraform_healink/stateful-infra/*.tfstate

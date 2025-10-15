@@ -97,6 +97,11 @@ output "gateway_ecr_url" {
   value       = aws_ecr_repository.gateway.repository_url
 }
 
+output "podcast_recommendation_service_ecr_url" {
+  description = "Podcast Recommendation Service ECR repository URL"
+  value       = aws_ecr_repository.podcast_recommendation_service.repository_url
+}
+
 # === NETWORK OUTPUTS ===
 output "vpc_id" {
   description = "VPC ID"
