@@ -4,9 +4,10 @@
 
 terraform {
   backend "s3" {
-    bucket = "healink-tf-state-2025-oggycatdev"
-    key    = "stateful/terraform.tfstate"
-    region = "ap-southeast-2"
+    bucket         = "healink-tf-state-2025-oggycatdev"
+    key            = "stateful/terraform.tfstate"
+    region         = "ap-southeast-2"
+    workspace_key_prefix = "env:"
   }
 }
 
