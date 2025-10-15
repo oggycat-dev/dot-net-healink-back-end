@@ -92,35 +92,35 @@ jobs:
         service:
           - name: gateway
             path: src/Gateway/Gateway.API
-            ecr: healink/gateway
+            ecr: healink-free/gateway
           
           - name: auth-service
             path: src/AuthService/AuthService.API
-            ecr: healink/auth-service
+            ecr: healink-free/auth-service
           
           - name: user-service
             path: src/UserService/UserService.API
-            ecr: healink/user-service
+            ecr: healink-free/user-service
           
           - name: content-service
             path: src/ContentService/ContentService.API
-            ecr: healink/content-service
+            ecr: healink-free/content-service
           
           - name: notification-service
             path: src/NotificaitonService/NotificaitonService.API
-            ecr: healink/notification-service
+            ecr: healink-free/notification-service
           
           - name: subscription-service
             path: src/SubscriptionService/SubscriptionService.API
-            ecr: healink/subscription-service
+            ecr: healink-free/subscription-service
           
           - name: payment-service
             path: src/PaymentService/PaymentService.API
-            ecr: healink/payment-service
+            ecr: healink-free/payment-service
           
           - name: podcast-recommendation-service
             path: src/PodcastRecommendationService/PodcastRecommendationService.API
-            ecr: healink/podcast-recommendation-service
+            ecr: healink-free/podcast-recommendation-service
     
     steps:
       - name: 📥 Checkout
