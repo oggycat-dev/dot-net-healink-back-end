@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace AuthService.Application.Commons.DTOs;
 
 public class AuthResponse

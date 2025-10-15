@@ -1,0 +1,181 @@
+@startuml AI_Recommendation_Full_Flow
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title AI Podcast Recommendation Service - Full Flow Sequence Diagram
+
+actor "Client/Mobile App" as Client
+participant "API Gateway" as Gateway
+participant "Auth Middleware" as Auth
+participant "PodcastRecommendation\nService.API" as RcmAPI
+participant "RecommendationService\n(C# .NET)" as RcmService
+participant "AI Service\n(FastAPI Python)" as AIService
+participant "ContentService\nInternal API" as ContentAPI
+participant "UserService\nInternal API" as UserAPI
+database "PostgreSQL\nDatabase" as DB
+database "Redis Cache" as Cache
+collections "ML Model\n(Trained)" as MLModel
+
+== 1. Client Request Phase ==
+
+Client -> Gateway: GET /api/recommendations/me?limit=10\nAuthorization: Bearer {token}
+activate Gateway
+
+Gateway -> Auth: Validate JWT Token
+activate Auth
+
+Auth -> Cache: Check token in Redis
+Cache --> Auth: Token valid, User: 4a426ae0-34b4...
+Auth --> Gateway: User authenticated
+deactivate Auth
+
+Gateway -> RcmAPI: Forward request with UserId\nX-User-Id: 4a426ae0-34b4...
+activate RcmAPI
+
+== 2. .NET Service Processing ==
+
+RcmAPI -> RcmAPI: Extract UserId from token\n(CurrentUserService)
+RcmAPI -> RcmService: GetRecommendationsAsync\n(userId, limit=10, includeListened=false)
+activate RcmService
+
+RcmService -> RcmService: Validate inputs\n(userId not empty, limit 1-50)
+RcmService -> RcmService: Build AI Service URL\nhttp://podcast-ai-service:8000/api/recommendations/{userId}
+
+== 3. AI Service Communication ==
+
+RcmService -> AIService: GET /api/recommendations/{userId}?limit=10\nHTTP Client request, Timeout: 30s
+activate AIService
+
+AIService -> AIService: Validate user_id format
+AIService -> AIService: Check if user exists in mappings
+
+== 4. Real-time Data Fetching ==
+
+par Fetch User Data
+    AIService -> UserAPI: GET /api/internal/users/{userId}
+    activate UserAPI
+    UserAPI -> DB: SELECT * FROM "Users" WHERE "Id" = {userId}
+    activate DB
+    DB --> UserAPI: User data (role, status, etc.)
+    deactivate DB
+    UserAPI --> AIService: User profile data
+    deactivate UserAPI
+and Fetch All Podcasts
+    AIService -> ContentAPI: GET /api/internal/podcasts?page=1&pageSize=100\nInternal API - No auth required
+    activate ContentAPI
+    ContentAPI -> DB: SELECT * FROM "Contents"\nWHERE "ContentType" = 1\nAND "ContentStatus" = 5\n(Podcast Type=1, Published Status=5)
+    activate DB
+    DB --> ContentAPI: 6 published podcasts with metadata
+    deactivate DB
+    ContentAPI --> AIService: JSON response with podcasts array
+    deactivate ContentAPI
+end
+
+AIService -> AIService: Parse podcast data\nExtract: id, title, duration, tags,\nemotionCategories, topicCategories
+AIService -> AIService: Convert duration "HH:MM:SS" to integer minutes\nExample: "00:32:15" → 32 minutes
+
+== 5. Machine Learning Prediction ==
+
+AIService -> MLModel: Load model artifacts
+activate MLModel
+MLModel --> AIService: model.pkl, user_mapping.json,\npodcast_mapping.json, metadata.json
+deactivate MLModel
+
+AIService -> AIService: Map user_id to internal index\nusing user_mapping.json
+
+loop For each podcast (6 podcasts)
+    AIService -> AIService: Map podcast_id to internal index\nusing podcast_mapping.json
+    
+    AIService -> MLModel: Predict rating\nmodel.predict(user_idx, podcast_idx)
+    activate MLModel
+    note right: Collaborative Filtering\nMatrix Factorization
+    MLModel --> AIService: Predicted rating (0-5 scale)
+    deactivate MLModel
+    
+    AIService -> AIService: Store: (podcast_id, predicted_rating)
+end
+
+AIService -> AIService: Sort podcasts by predicted_rating DESC
+AIService -> AIService: Take top N recommendations (limit=10)
+AIService -> AIService: Filter already listened (if includeListened=false)
+
+== 6. Response Assembly ==
+
+AIService -> AIService: Format response JSON\n{\n  "user_id": "4a426ae0...",\n  "recommendations": [{\n    "podcast_id": "6975c94e...",\n    "title": "Quản Lý Thời Gian",\n    "predicted_rating": 4.05,\n    "duration_minutes": 32\n  }],\n  "total_count": 2,\n  "timestamp": "2025-10-10T09:40:39"\n}
+
+AIService --> RcmService: HTTP 200 OK + JSON
+deactivate AIService
+
+RcmService -> RcmService: Deserialize JSON\nAIRecommendationResponse
+RcmService -> RcmService: Map to PodcastRecommendationResponse
+RcmService -> RcmService: Wrap in Result<T> pattern
+
+== 7. Final Response Delivery ==
+
+RcmService --> RcmAPI: Result<PodcastRecommendationResponse>
+deactivate RcmService
+
+RcmAPI -> RcmAPI: Check IsSuccess flag
+RcmAPI -> RcmAPI: Log success metrics
+RcmAPI --> Gateway: HTTP 200 OK + Result<T>
+deactivate RcmAPI
+
+Gateway --> Client: JSON Response\n{\n  "isSuccess": true,\n  "data": {\n    "userId": "4a426ae0...",\n    "recommendations": [...],\n    "totalFound": 2\n  },\n  "message": "Success"\n}
+deactivate Gateway
+
+== 8. Error Handling Scenarios ==
+
+group AI Service Unavailable
+    RcmService -> AIService: GET /api/recommendations/{userId}
+    AIService --> RcmService: Connection refused / Timeout
+    RcmService -> RcmService: Catch HttpRequestException
+    RcmService --> RcmAPI: Result.Failure("AI service unavailable")
+    RcmAPI --> Client: HTTP 500 + Error message
+end
+
+group ContentService Returns 500
+    AIService -> ContentAPI: GET /api/internal/podcasts
+    ContentAPI --> AIService: HTTP 500 Internal Error
+    AIService -> AIService: Fallback to training data\nUse cached podcasts from training dataset
+    AIService --> RcmService: HTTP 200 with training data
+end
+
+group Invalid JWT Token
+    Gateway -> Auth: Validate JWT Token
+    Auth --> Gateway: Token expired / invalid
+    Gateway --> Client: HTTP 401 Unauthorized
+end
+
+== 9. Caching & Performance Optimization ==
+
+opt Cache ML Model in Memory
+    AIService -> AIService: Load model on startup\nSingleton pattern, Model stays in memory
+end
+
+opt Cache Podcast Data
+    AIService -> Cache: Check cached podcasts\nKey: "podcasts:all"
+    alt Cache Hit
+        Cache --> AIService: Cached podcast list
+        AIService -> AIService: Use cached data
+    else Cache Miss
+        AIService -> ContentAPI: Fetch fresh data
+        ContentAPI --> AIService: Latest podcasts
+        AIService -> Cache: SET "podcasts:all" TTL=300s
+    end
+end
+
+opt Cache User Recommendations
+    RcmService -> Cache: Check cached recommendations\nKey: "rcm:user:{userId}"
+    alt Cache Hit (< 5 minutes old)
+        Cache --> RcmService: Cached recommendations
+        RcmService --> RcmAPI: Return cached result
+    else Cache Miss
+        note over RcmService, AIService: Proceed with full flow
+        AIService --> RcmService: Fresh recommendations
+        RcmService -> Cache: SET "rcm:user:{userId}" TTL=300s
+    end
+end
+
+@enduml

@@ -1,6 +1,6 @@
 using MediatR;
 using AuthService.Application.Commons.DTOs;
-using ProductAuthMicroservice.Commons.Models;
+using SharedLibrary.Commons.Models;
 
 namespace AuthService.Application.Features.Auth.Commands.Login;
 

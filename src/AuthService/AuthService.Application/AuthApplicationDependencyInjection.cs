@@ -1,9 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using ProductAuthMicroservice.Commons.DependencyInjection;
-using ProductAuthMicroservice.Commons.EventBus;
-using ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.ProductEventHandlers;
-using ProductAuthMicroservice.Shared.Contracts.Events;
+using SharedLibrary.Commons.DependencyInjection;
 
 namespace AuthService.Application;
 
@@ -20,16 +17,8 @@ public static class AuthApplicationDependencyInjection
         // Add AutoMapper
         services.AddAutoMapper(Assembly.GetExecutingAssembly());
         
-        // Register Event Handlers
-        services.AddScoped<IIntegrationEventHandler<ProductCreatedEvent>, ProductCreatedEventHandler>();
-        services.AddScoped<IIntegrationEventHandler<ProductUpdatedEvent>, ProductUpdatedEventHandler>();
-        services.AddScoped<IIntegrationEventHandler<ProductInventoryCreatedEvent>, ProductInventoryCreatedEventHandler>();
-        
-        // Add Category event handlers
-        services.AddScoped<IIntegrationEventHandler<CategoryCreatedEvent>, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.CategoryEventHandlers.CategoryCreatedEventHandler>();
-        services.AddScoped<IIntegrationEventHandler<CategoryUpdatedEvent>, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.CategoryEventHandlers.CategoryUpdatedEventHandler>();
-        services.AddScoped<IIntegrationEventHandler<CategoryDeletedEvent>, ProductAuthMicroservice.AuthService.Application.Features.EventHandlers.CategoryEventHandlers.CategoryDeletedEventHandler>();
-        
+        //To do: Add Event Handlers
+
         return services;
     }
 }

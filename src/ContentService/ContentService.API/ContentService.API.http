@@ -1,0 +1,21 @@
+# Content Service API Endpoints
+
+## Health Check
+GET {{host}}/health
+
+## Podcasts
+GET {{host}}/api/podcasts
+GET {{host}}/api/podcasts/{{podcastId}}
+POST {{host}}/api/podcasts
+PUT {{host}}/api/podcasts/{{podcastId}}
+DELETE {{host}}/api/podcasts/{{podcastId}}
+POST {{host}}/api/podcasts/{{podcastId}}/approve
+
+## Community Stories
+GET {{host}}/api/content/community/stories
+POST {{host}}/api/content/community/stories
+POST {{host}}/api/content/community/stories/{{storyId}}/approve
+POST {{host}}/api/content/community/stories/{{storyId}}/reject
+POST {{host}}/api/content/community/stories/{{storyId}}/helpful
+
+@host = https://localhost:7000

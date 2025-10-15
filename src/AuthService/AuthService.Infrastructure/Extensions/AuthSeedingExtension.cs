@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using ProductAuthMicroservice.Commons.Enums;
+using AuthService.Domain.Entities;
+using AuthService.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
+using SharedLibrary.Commons.Enums;
 
 namespace AuthService.Infrastructure.Extensions;
 
@@ -36,6 +38,9 @@ public static class AuthSeedingExtension
 
         // Seed roles
         await SeedRolesAsync(roleManager, logger);
+
+        // Seed permissions
+        await SeedPermissionsAsync(scope.ServiceProvider, logger);
 
         // Seed admin user
         await SeedAdminUserAsync(userManager, configuration, logger);
@@ -94,6 +99,7 @@ public static class AuthSeedingExtension
 
         var adminEmail = configuration.GetSection("DefaultAdminAccount").GetValue<string>("Email")?.Trim();
         var adminPassword = configuration.GetSection("DefaultAdminAccount").GetValue<string>("Password");
+        var adminDefaultUserId = configuration.GetSection("DefaultAdminAccount").GetValue<Guid>("UserId");
 
         if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
         {
@@ -106,14 +112,12 @@ public static class AuthSeedingExtension
         {
             var admin = new AppUser
             {
-                Id = Guid.NewGuid(),
+                Id = adminDefaultUserId,
                 UserName = adminEmail,
                 Email = adminEmail,
                 EmailConfirmed = true,
-                FirstName = "System",
-                LastName = "Admin",
-                JoiningAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
+                CreatedBy = Guid.Empty,
                 Status = EntityStatusEnum.Active
             };
 
@@ -153,5 +157,121 @@ public static class AuthSeedingExtension
         var roles = await userManager.GetRolesAsync(existingAdmin);
         logger.LogInformation("AuthService: Admin user {Email} roles: {Roles}", 
             existingAdmin.Email, string.Join(", ", roles));
+    }
+
+    /// <summary>
+    /// Seed core permissions for the system
+    /// </summary>
+    private static async Task SeedPermissionsAsync(IServiceProvider serviceProvider, ILogger logger)
+    {
+        logger.LogInformation("AuthService: Seeding system permissions...");
+
+        var context = serviceProvider.GetRequiredService<AuthDbContext>();
+        var roleManager = serviceProvider.GetRequiredService<RoleManager<AppRole>>();
+
+        // Define core permissions based on modules
+        var corePermissions = new List<(string Name, string DisplayName, string Description, PermissionModuleEnum Module)>
+        {
+            // Authentication Module
+            ("auth.manage", "Manage Authentication", "Full control over authentication system", PermissionModuleEnum.Authentication),
+            ("auth.users.view", "View Users", "View user accounts and profiles", PermissionModuleEnum.Authentication),
+            ("auth.users.create", "Create Users", "Create new user accounts", PermissionModuleEnum.Authentication),
+            ("auth.users.edit", "Edit Users", "Edit user accounts and profiles", PermissionModuleEnum.Authentication),
+            ("auth.users.delete", "Delete Users", "Delete user accounts", PermissionModuleEnum.Authentication),
+            ("auth.roles.manage", "Manage Roles", "Manage system roles and permissions", PermissionModuleEnum.Authentication),
+
+            // User Module
+            ("user.profile.view", "View User Profiles", "View detailed user profiles", PermissionModuleEnum.User),
+            ("user.profile.edit", "Edit User Profiles", "Edit user profiles", PermissionModuleEnum.User),
+            ("user.business_roles.manage", "Manage Business Roles", "Assign/revoke business roles", PermissionModuleEnum.User),
+            ("user.applications.view", "View Creator Applications", "View creator applications", PermissionModuleEnum.User),
+            ("user.applications.approve", "Approve Creator Applications", "Approve/reject creator applications", PermissionModuleEnum.User),
+
+            // Content Module  
+            ("content.create", "Create Content", "Create new content", PermissionModuleEnum.Content),
+            ("content.edit", "Edit Content", "Edit existing content", PermissionModuleEnum.Content),
+            ("content.delete", "Delete Content", "Delete content", PermissionModuleEnum.Content),
+            ("content.publish", "Publish Content", "Publish/unpublish content", PermissionModuleEnum.Content),
+            ("content.moderate", "Moderate Content", "Moderate community content", PermissionModuleEnum.Content),
+            ("content.podcast.manage", "Manage Podcasts", "Full control over podcast content", PermissionModuleEnum.Content),
+            ("content.flashcard.manage", "Manage Flashcards", "Full control over flashcard content", PermissionModuleEnum.Content),
+            ("content.community_story.moderate", "Moderate Community Stories", "Moderate user-generated stories", PermissionModuleEnum.Content),
+
+            // System Module
+            ("system.admin", "System Administration", "Full system administration access", PermissionModuleEnum.System),
+            ("system.settings.manage", "Manage System Settings", "Configure system settings", PermissionModuleEnum.System),
+            ("system.logs.view", "View System Logs", "Access to system logs", PermissionModuleEnum.System),
+            ("system.monitoring.view", "View System Monitoring", "Access to system monitoring", PermissionModuleEnum.System),
+
+            // Notification Module
+            ("notification.send", "Send Notifications", "Send notifications to users", PermissionModuleEnum.Notification),
+            ("notification.manage", "Manage Notifications", "Manage notification templates and settings", PermissionModuleEnum.Notification)
+        };
+
+        // Create permissions
+        foreach (var (name, displayName, description, module) in corePermissions)
+        {
+            if (!await context.Permissions.AnyAsync(p => p.Name == name))
+            {
+                var permission = new Permission
+                {
+                    Id = Guid.NewGuid(),
+                    Name = name,
+                    DisplayName = displayName,
+                    Description = description,
+                    Module = module,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = EntityStatusEnum.Active
+                };
+
+                context.Permissions.Add(permission);
+                logger.LogInformation("AuthService: Created permission: {Permission}", name);
+            }
+        }
+
+        await context.SaveChangesAsync();
+
+        // Assign all permissions to Admin role
+        await AssignPermissionsToAdminRole(context, roleManager, logger);
+
+        logger.LogInformation("AuthService: Permission seeding completed");
+    }
+
+    /// <summary>
+    /// Assign all permissions to Admin role
+    /// </summary>
+    private static async Task AssignPermissionsToAdminRole(AuthDbContext context, RoleManager<AppRole> roleManager, ILogger logger)
+    {
+        logger.LogInformation("AuthService: Assigning permissions to Admin role...");
+
+        var adminRole = await roleManager.FindByNameAsync(RoleEnum.Admin.ToString());
+        if (adminRole == null)
+        {
+            logger.LogWarning("AuthService: Admin role not found, skipping permission assignment");
+            return;
+        }
+
+        var allPermissions = await context.Permissions.ToListAsync();
+        
+        foreach (var permission in allPermissions)
+        {
+            if (!await context.RolePermissions.AnyAsync(rp => rp.RoleId == adminRole.Id && rp.PermissionId == permission.Id))
+            {
+                var rolePermission = new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRole.Id,
+                    PermissionId = permission.Id,
+                    AssignedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = EntityStatusEnum.Active
+                };
+
+                context.RolePermissions.Add(rolePermission);
+            }
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("AuthService: Admin role assigned {Count} permissions", allPermissions.Count);
     }
 }

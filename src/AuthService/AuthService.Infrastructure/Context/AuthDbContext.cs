@@ -1,17 +1,18 @@
 using AuthService.Domain.Entities;
+using AuthService.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using ProductAuthMicroservice.Commons.Extensions;
-using ProductAuthMicroservice.Commons.Outbox;
+using SharedLibrary.Commons.Extensions;
+using SharedLibrary.Commons.Outbox;
 
 namespace AuthService.Infrastructure.Context;
 
 public class AuthDbContext : IdentityDbContext<AppUser, AppRole, Guid>
 {
-    public DbSet<UserAction> UserActions { get; set; }
     public DbSet<OutboxEvent> OutboxEvents { get; set; }
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
     
     public AuthDbContext(DbContextOptions<AuthDbContext> options) : base(options)
     {
@@ -32,26 +33,10 @@ public class AuthDbContext : IdentityDbContext<AppUser, AppRole, Guid>
 
         builder.Entity<AppUser>(entity =>
         {
-            entity.Property(x => x.Status).HasConversion<int>();
             // Performance indexes
             entity.HasIndex(x => x.Status);
-            entity.HasIndex(x => x.JoiningAt);
             entity.HasIndex(x => x.LastLoginAt).HasFilter("\"LastLoginAt\" IS NOT NULL");
-            entity.HasIndex(x => new { x.Status, x.JoiningAt });
-            // navigation property
-            entity.HasMany(x => x.UserActions).WithOne(x => x.User).HasForeignKey(x => x.UserId);
-        });
-
-        builder.Entity<UserAction>(entity =>
-        {
-            entity.HasIndex(x => x.UserId);
-            entity.HasIndex(x => x.Action);
-            entity.HasIndex(x => x.EntityId);
-        });
-
-        builder.Entity<AppRole>(entity =>
-        {
-            entity.Property(x => x.Status).HasConversion<int>();
+            entity.HasIndex(x => new { x.Status, x.CreatedAt });
         });
 
         // Configure OutboxEvent
@@ -70,6 +55,46 @@ public class AuthDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             entity.HasKey(ur => new { ur.UserId, ur.RoleId });
         });
 
+        // Configure Permission entity
+        builder.Entity<Permission>(entity =>
+        {
+            entity.ToTable("Permissions");
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.HasIndex(x => x.Module);
+            entity.HasIndex(x => new { x.Module, x.Name });
+            
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Module).HasConversion<int>();
+        });
+
+        // Configure RolePermission entity
+        builder.Entity<RolePermission>(entity =>
+        {
+            entity.ToTable("RolePermissions");
+            entity.HasIndex(x => new { x.RoleId, x.PermissionId }).IsUnique();
+            entity.HasIndex(x => x.AssignedAt);
+            
+            // Foreign key relationships
+            entity.HasOne(x => x.Role)
+                .WithMany(x => x.RolePermissions)
+                .HasForeignKey(x => x.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(x => x.Permission)
+                .WithMany(x => x.RolePermissions)
+                .HasForeignKey(x => x.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.Property(x => x.AssignedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp with time zone");
+        });
+
         BaseEntityConfigExtension.ConfigureBaseEntities(builder);
+        
+        // Add Saga entities for AuthService (RegistrationSaga)
+        builder.AddAuthSagaEntities();
     }
 }

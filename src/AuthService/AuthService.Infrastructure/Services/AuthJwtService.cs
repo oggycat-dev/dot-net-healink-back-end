@@ -6,9 +6,9 @@ using AuthService.Application.Commons.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using ProductAuthMicroservice.AuthService.Domain.Entities;
-using ProductAuthMicroservice.Commons.Configs;
-using ProductAuthMicroservice.Commons.Services;
+using AuthService.Domain.Entities;
+using SharedLibrary.Commons.Configs;
+using SharedLibrary.Commons.Services;
 
 namespace AuthService.Infrastructure.Services;
 
@@ -51,7 +51,7 @@ public class AuthJwtService : JwtService, IAuthJwtService
             issuer: _jwtConfig.Issuer,
             audience: _jwtConfig.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwtConfig.ExpireInMinutes),
+            expires: DateTime.UtcNow.AddMinutes(_jwtConfig.ExpiresInMinutes),
             signingCredentials: creds
         );
 
@@ -64,8 +64,8 @@ public class AuthJwtService : JwtService, IAuthJwtService
     public (string token, List<string> roles, int expiresInMinutes, DateTime expiresAt) GenerateJwtTokenWithExpiration(AppUser user, string? requestOrigin = null)
     {
         var (token, roles) = GenerateJwtToken(user, requestOrigin);
-        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpireInMinutes);
-        return (token, roles, _jwtConfig.ExpireInMinutes, expiresAt);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpiresInMinutes);
+        return (token, roles, _jwtConfig.ExpiresInMinutes, expiresAt);
     }
 
 
@@ -77,7 +77,7 @@ public class AuthJwtService : JwtService, IAuthJwtService
         var randomNumber = new byte[64];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
-        return (Convert.ToBase64String(randomNumber), DateTime.UtcNow.AddDays(_jwtConfig.RefreshTokenExpireInDays));
+        return (Convert.ToBase64String(randomNumber), DateTime.UtcNow.AddDays(_jwtConfig.RefreshTokenExpiresInDays));
     }
 
 }

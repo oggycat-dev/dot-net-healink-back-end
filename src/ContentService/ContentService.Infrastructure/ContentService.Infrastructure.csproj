@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only AWS Extensions not in SharedLibrary -->
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ContentService.Application\ContentService.Application.csproj" />
+    <ProjectReference Include="..\ContentService.Domain\ContentService.Domain.csproj" />
+    <ProjectReference Include="..\..\SharedLibrary\SharedLibrary.csproj" />
+  </ItemGroup>
+
+</Project>

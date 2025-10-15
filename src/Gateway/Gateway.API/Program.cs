@@ -1,92 +1,33 @@
-using Ocelot.DependencyInjection;
-using Ocelot.Middleware;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using ProductAuthMicroservice.Gateway.API.Middlewares;
-using ProductAuthMicroservice.Commons.Extensions;
-using ProductAuthMicroservice.Commons.Services;
-using ProductAuthMicroservice.Commons.Configs;
-using ProductAuthMicroservice.Commons.Configurations;
+using Gateway.API.Configuration;
+using SharedLibrary.Commons.Configurations;
 
-var builder = WebApplication.CreateBuilder(args);
+// Create startup logger
+var logger = LoggingConfiguration.CreateStartupLogger("Gateway");
 
-// Add services to the container
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Configure Ocelot
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
-
-// Configure Authentication for Ocelot with specific scheme name
-var jwtConfig = builder.Configuration.GetSection(JwtConfig.SectionName).Get<JwtConfig>();
-if (jwtConfig != null)
+try
 {
-    var key = System.Text.Encoding.UTF8.GetBytes(jwtConfig.Key);
+    logger.LogInformation("Starting Gateway API...");
     
-    builder.Services.AddAuthentication()
-        .AddJwtBearer("Bearer", options =>
-        {
-            options.SaveToken = true;
-            options.RequireHttpsMetadata = false;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = jwtConfig.ValidateIssuer,
-                ValidateAudience = jwtConfig.ValidateAudience,
-                ValidIssuer = jwtConfig.Issuer,
-                ValidAudience = jwtConfig.Audience,
-                ValidateIssuerSigningKey = jwtConfig.ValidateIssuerSigningKey,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateLifetime = jwtConfig.ValidateLifetime,
-                ClockSkew = TimeSpan.FromMinutes(jwtConfig.ClockSkewMinutes)
-            };
-        });
+    var builder = WebApplication.CreateBuilder(args);
+    
+    // Configure all services
+    builder.ConfigureServices();
+    
+    var app = builder.Build();
+    
+    // Configure pipeline
+    await app.ConfigurePipelineAsync();
+    
+    logger.LogInformation("Gateway API configured successfully");
+    
+    app.Run();
 }
-
-builder.Services.AddOcelot(builder.Configuration);
-
-// Add Authorization
-builder.Services.AddAuthorization();
-
-// Configure JWT
-builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection(JwtConfig.SectionName));
-builder.Services.AddSingleton<IJwtService, JwtService>();
-
-// Add distributed authentication
-builder.Services.AddGatewayDistributedAuth(builder.Configuration);
-
-// Add current user service
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddHttpClient(); // Add HttpClientFactory for CurrentUserService
-builder.Services.AddHttpClient("AuthService", client =>
+catch (Exception ex)
 {
-    client.BaseAddress = new Uri("http://authservice-api");
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-
-// CORS not needed for API Gateway - handled by downstream services
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    logger.LogCritical(ex, "Gateway API failed to start");
+    throw;
 }
-
-app.UseHttpsRedirection();
-
-// Use distributed auth middleware
-app.UseMiddleware<DistributedAuthMiddleware>();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-
-// Use Ocelot
-await app.UseOcelot();
-
-app.Run();
+finally
+{
+    logger.LogInformation("Gateway API shutting down");
+}
