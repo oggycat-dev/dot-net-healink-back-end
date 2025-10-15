@@ -138,8 +138,17 @@ launchSettings.json
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
-*.tfvars
 *.tfstate.backup
+
+# Ignore auto-generated tfvars (secrets)
+terraform.tfvars
+*.auto.tfvars
+*-secrets.tfvars
+
+# But keep environment config files
+!free-tier.tfvars
+!dev.tfvars
+!prod.tfvars
 
 # Generated API endpoints for Frontend
 api-endpoints/
