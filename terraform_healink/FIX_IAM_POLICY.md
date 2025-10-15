@@ -27,6 +27,8 @@ Click vào role → Tab **Permissions** → Click **Add permissions** → **Crea
 
 ### Bước 3: Thêm JSON Policy này
 
+**⚠️ QUAN TRỌNG**: Policy này bao gồm TẤT CẢ quyền cần thiết cho Terraform deployment của Healink project.
+
 ```json
 {
   "Version": "2012-10-17",
@@ -55,6 +57,173 @@ Click vào role → Tab **Permissions** → Click **Add permissions** → **Crea
         "dynamodb:DescribeTable"
       ],
       "Resource": "arn:aws:dynamodb:ap-southeast-2:855160720656:table/healink-tf-lock"
+    },
+    {
+      "Sid": "EC2NetworkAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:CreateTags",
+        "ec2:DeleteTags",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECRAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:ListImages",
+        "ecr:DescribeImages",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:GetAuthorizationToken",
+        "ecr:PutImageScanningConfiguration",
+        "ecr:PutImageTagMutability",
+        "ecr:TagResource",
+        "ecr:UntagResource",
+        "ecr:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RDSAccess",
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:DescribeDBInstances",
+        "rds:ModifyDBInstance",
+        "rds:CreateDBSubnetGroup",
+        "rds:DeleteDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:AddTagsToResource",
+        "rds:RemoveTagsFromResource",
+        "rds:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ElastiCacheAccess",
+      "Effect": "Allow",
+      "Action": [
+        "elasticache:CreateCacheCluster",
+        "elasticache:DeleteCacheCluster",
+        "elasticache:DescribeCacheClusters",
+        "elasticache:ModifyCacheCluster",
+        "elasticache:CreateCacheSubnetGroup",
+        "elasticache:DeleteCacheSubnetGroup",
+        "elasticache:DescribeCacheSubnetGroups",
+        "elasticache:AddTagsToResource",
+        "elasticache:RemoveTagsFromResource",
+        "elasticache:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "MQAccess",
+      "Effect": "Allow",
+      "Action": [
+        "mq:CreateBroker",
+        "mq:DeleteBroker",
+        "mq:DescribeBroker",
+        "mq:UpdateBroker",
+        "mq:ListBrokers",
+        "mq:CreateTags",
+        "mq:DeleteTags",
+        "mq:ListTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECSAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:CreateCluster",
+        "ecs:DeleteCluster",
+        "ecs:DescribeClusters",
+        "ecs:RegisterTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:CreateService",
+        "ecs:DeleteService",
+        "ecs:DescribeServices",
+        "ecs:UpdateService",
+        "ecs:TagResource",
+        "ecs:UntagResource",
+        "ecs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ELBAccess",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:DeleteTargetGroup",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:DeleteListener",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:RemoveTags",
+        "elasticloadbalancing:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMPassRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole",
+        "iam:GetRole",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogsAccess",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:PutRetentionPolicy",
+        "logs:TagLogGroup",
+        "logs:UntagLogGroup",
+        "logs:ListTagsLogGroup"
+      ],
+      "Resource": "*"
     }
   ]
 }
@@ -62,8 +231,22 @@ Click vào role → Tab **Permissions** → Click **Add permissions** → **Crea
 
 ### Bước 4: Đặt tên cho Policy
 
-- **Policy name**: `TerraformStateAccess`
+- **Policy name**: `TerraformFullAccess` 
 - Click **Create policy**
+
+**📋 Tổng kết permissions**:
+
+Policy này cấp quyền cho Terraform tạo/quản lý các AWS services:
+- ✅ **S3 + DynamoDB**: Terraform state management
+- ✅ **EC2**: VPC, Security Groups, Tags
+- ✅ **ECR**: Docker image repositories
+- ✅ **RDS**: PostgreSQL database
+- ✅ **ElastiCache**: Redis cache
+- ✅ **Amazon MQ**: RabbitMQ message broker
+- ✅ **ECS**: Fargate containers
+- ✅ **ELB**: Application Load Balancers
+- ✅ **IAM**: ECS task execution roles
+- ✅ **CloudWatch Logs**: Container logging
 
 ---
 
@@ -72,8 +255,8 @@ Click vào role → Tab **Permissions** → Click **Add permissions** → **Crea
 Nếu bạn có AWS CLI đã cấu hình:
 
 ```bash
-# 1. Tạo file policy
-cat > /tmp/terraform-state-policy.json << 'EOF'
+# 1. Tạo file policy (copy từ section "Bước 3" ở trên)
+cat > /tmp/terraform-full-policy.json << 'EOF'
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -101,6 +284,173 @@ cat > /tmp/terraform-state-policy.json << 'EOF'
         "dynamodb:DescribeTable"
       ],
       "Resource": "arn:aws:dynamodb:ap-southeast-2:855160720656:table/healink-tf-lock"
+    },
+    {
+      "Sid": "EC2NetworkAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:CreateTags",
+        "ec2:DeleteTags",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECRAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:ListImages",
+        "ecr:DescribeImages",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:GetAuthorizationToken",
+        "ecr:PutImageScanningConfiguration",
+        "ecr:PutImageTagMutability",
+        "ecr:TagResource",
+        "ecr:UntagResource",
+        "ecr:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RDSAccess",
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:DescribeDBInstances",
+        "rds:ModifyDBInstance",
+        "rds:CreateDBSubnetGroup",
+        "rds:DeleteDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:AddTagsToResource",
+        "rds:RemoveTagsFromResource",
+        "rds:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ElastiCacheAccess",
+      "Effect": "Allow",
+      "Action": [
+        "elasticache:CreateCacheCluster",
+        "elasticache:DeleteCacheCluster",
+        "elasticache:DescribeCacheClusters",
+        "elasticache:ModifyCacheCluster",
+        "elasticache:CreateCacheSubnetGroup",
+        "elasticache:DeleteCacheSubnetGroup",
+        "elasticache:DescribeCacheSubnetGroups",
+        "elasticache:AddTagsToResource",
+        "elasticache:RemoveTagsFromResource",
+        "elasticache:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "MQAccess",
+      "Effect": "Allow",
+      "Action": [
+        "mq:CreateBroker",
+        "mq:DeleteBroker",
+        "mq:DescribeBroker",
+        "mq:UpdateBroker",
+        "mq:ListBrokers",
+        "mq:CreateTags",
+        "mq:DeleteTags",
+        "mq:ListTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECSAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:CreateCluster",
+        "ecs:DeleteCluster",
+        "ecs:DescribeClusters",
+        "ecs:RegisterTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:CreateService",
+        "ecs:DeleteService",
+        "ecs:DescribeServices",
+        "ecs:UpdateService",
+        "ecs:TagResource",
+        "ecs:UntagResource",
+        "ecs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ELBAccess",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:DeleteTargetGroup",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:DeleteListener",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:RemoveTags",
+        "elasticloadbalancing:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMPassRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole",
+        "iam:GetRole",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogsAccess",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:PutRetentionPolicy",
+        "logs:TagLogGroup",
+        "logs:UntagLogGroup",
+        "logs:ListTagsLogGroup"
+      ],
+      "Resource": "*"
     }
   ]
 }
@@ -109,13 +459,13 @@ EOF
 # 2. Attach policy vào role
 aws iam put-role-policy \
   --role-name GitHubActionRole-Healink \
-  --policy-name TerraformStateAccess \
-  --policy-document file:///tmp/terraform-state-policy.json
+  --policy-name TerraformFullAccess \
+  --policy-document file:///tmp/terraform-full-policy.json
 
 # 3. Verify
 aws iam get-role-policy \
   --role-name GitHubActionRole-Healink \
-  --policy-name TerraformStateAccess
+  --policy-name TerraformFullAccess
 ```
 
 ---
