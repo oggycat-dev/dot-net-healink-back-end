@@ -54,3 +54,7 @@ public record UpdatePodcastResponse(
 );
 
 public record DeletePodcastCommand(Guid Id, Guid DeletedBy) : IRequest<bool>;
+
+public record IncrementPodcastViewCommand(Guid Id) : IRequest;
+
+public record TogglePodcastLikeCommand(Guid Id, Guid UserId) : IRequest<int>;

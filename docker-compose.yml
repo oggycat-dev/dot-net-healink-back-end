@@ -370,6 +370,7 @@ services:
       # Service URLs (from .env)
       - USER_SERVICE_URL=${USER_SERVICE_URL}
       - CONTENT_SERVICE_URL=${CONTENT_SERVICE_URL}
+      - GATEWAY_URL=http://gateway-api:80
       # Model settings (from .env)
       - MODEL_PATH=${MODEL_PATH}
       - MODEL_RELOAD_ON_STARTUP=${MODEL_RELOAD_ON_STARTUP}

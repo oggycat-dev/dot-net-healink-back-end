@@ -265,6 +265,8 @@ resource "aws_mq_broker" "healink_rabbitmq" {
 }
 
 # --- ECR REPOSITORIES ---
+# All Healink microservices
+
 resource "aws_ecr_repository" "auth_service" {
   name                 = "${var.project_name}/auth-service"
   image_tag_mutability = "MUTABLE"
@@ -280,8 +282,8 @@ resource "aws_ecr_repository" "auth_service" {
   }
 }
 
-resource "aws_ecr_repository" "product_service" {
-  name                 = "${var.project_name}/product-service"
+resource "aws_ecr_repository" "user_service" {
+  name                 = "${var.project_name}/user-service"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
@@ -290,7 +292,67 @@ resource "aws_ecr_repository" "product_service" {
   }
 
   tags = {
-    Name        = "${var.project_name}-product-service-ecr"
+    Name        = "${var.project_name}-user-service-ecr"
+    Environment = terraform.workspace
+  }
+}
+
+resource "aws_ecr_repository" "content_service" {
+  name                 = "${var.project_name}/content-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-content-service-ecr"
+    Environment = terraform.workspace
+  }
+}
+
+resource "aws_ecr_repository" "notification_service" {
+  name                 = "${var.project_name}/notification-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-notification-service-ecr"
+    Environment = terraform.workspace
+  }
+}
+
+resource "aws_ecr_repository" "subscription_service" {
+  name                 = "${var.project_name}/subscription-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-subscription-service-ecr"
+    Environment = terraform.workspace
+  }
+}
+
+resource "aws_ecr_repository" "payment_service" {
+  name                 = "${var.project_name}/payment-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-payment-service-ecr"
     Environment = terraform.workspace
   }
 }
