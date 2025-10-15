@@ -180,7 +180,7 @@ resource "aws_db_subnet_group" "healink_db_subnet_group" {
 resource "aws_db_instance" "healink_db" {
   identifier     = "${var.project_name}-db-${terraform.workspace}"
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "16.3"  # Updated to latest stable version
   instance_class = var.db_instance_class
 
   allocated_storage     = var.db_allocated_storage
@@ -244,7 +244,7 @@ resource "aws_elasticache_replication_group" "healink_redis" {
 resource "aws_mq_broker" "healink_rabbitmq" {
   broker_name        = "${var.project_name}-rabbitmq-${terraform.workspace}"
   engine_type        = "RabbitMQ"
-  engine_version     = "3.11.20"
+  engine_version     = "3.13"  # Updated to valid version for RabbitMQ
   host_instance_type = var.rabbitmq_instance_type
   security_groups    = [aws_security_group.rabbitmq_sg.id]
   subnet_ids         = [var.public_subnets[0]]
