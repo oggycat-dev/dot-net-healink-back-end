@@ -225,7 +225,7 @@ jobs:
         working-directory: ./terraform_healink/app-infra
         run: |
           # Initialize workspace
-          terraform workspace select ${{ env.ENVIRONMENT }}
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           
           # Get Gateway URL
           GATEWAY_URL=$(terraform output -raw gateway_url)
@@ -281,7 +281,7 @@ jobs:
       - name: 📋 Create Job Summary
         working-directory: ./terraform_healink/app-infra
         run: |
-          terraform workspace select ${{ env.ENVIRONMENT }}
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           GATEWAY_URL=$(terraform output -raw gateway_url)
           
           cat >> $GITHUB_STEP_SUMMARY << EOF
@@ -389,7 +389,7 @@ jobs:
       - name: ✅ Deployment Summary
         run: |
           cd terraform_healink/app-infra
-          terraform workspace select ${{ env.ENVIRONMENT }}
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           GATEWAY_URL=$(terraform output -raw gateway_url 2>/dev/null || echo "Not available")
           
           echo "╔═══════════════════════════════════════════════════════════╗"
