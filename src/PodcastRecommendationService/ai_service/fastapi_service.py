@@ -95,8 +95,9 @@ class RecommendationService:
         self.metadata = None
         self.is_loaded = False
         
-        # Service URLs
+        # Service URLs - use Gateway for external API calls
         self.userservice_url = os.getenv('USER_SERVICE_URL', 'http://userservice-api')
+        self.gateway_url = os.getenv('GATEWAY_URL', 'http://gateway-api:80')  # Use Gateway instead of direct service call
         self.contentservice_url = os.getenv('CONTENT_SERVICE_URL', 'http://contentservice-api')
         
         # Model paths
@@ -214,35 +215,34 @@ class RecommendationService:
             return []
     
     async def get_real_podcasts(self) -> pd.DataFrame:
-        """Lấy danh sách podcasts thật từ ContentService Internal API"""
+        """Lấy danh sách podcasts thật từ Gateway Public User API"""
         try:
-            async with httpx.AsyncClient() as client:
-                # Use internal API instead of public user API
-                response = await client.get(f"{self.contentservice_url}/api/internal/podcasts?page=1&pageSize=100")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Use Gateway public user API - get all podcasts (paginated)
+                response = await client.get(f"{self.gateway_url}/api/content/user/podcasts?page=1&pageSize=50")
                 if response.status_code == 200:
                     podcasts_data = response.json()
-                    logger.info(f"📦 Response keys: {list(podcasts_data.keys()) if isinstance(podcasts_data, dict) else 'not a dict'}")
+                    logger.info(f"📦 Response structure: {list(podcasts_data.keys()) if isinstance(podcasts_data, dict) else type(podcasts_data)}")
                     
-                    # Convert to DataFrame
-                    # Try different possible response structures
-                    podcasts_list = podcasts_data.get('podcasts', podcasts_data.get('data', podcasts_data))
-                    logger.info(f"📋 Podcasts list type: {type(podcasts_list)}, length: {len(podcasts_list) if isinstance(podcasts_list, list) else 'N/A'}")
+                    # Gateway returns { podcasts: [...], totalCount, page, pageSize }
+                    if isinstance(podcasts_data, dict):
+                        podcasts_list = podcasts_data.get('podcasts', podcasts_data.get('items', podcasts_data.get('data', [])))
+                    else:
+                        podcasts_list = podcasts_data if isinstance(podcasts_data, list) else []
+                    
+                    logger.info(f"📋 Found {len(podcasts_list)} podcasts from Gateway")
                     
                     if isinstance(podcasts_list, list) and len(podcasts_list) > 0:
                         df = pd.DataFrame(podcasts_list)
                         
-                        # Standardize column names
+                        # Standardize column names for Gateway response
                         column_mapping = {
                             'id': 'podcast_id',
-                            'contentId': 'podcast_id',
-                            'content_id': 'podcast_id',
-                            'name': 'title',
                             'title': 'title',
-                            'description': 'topics',
-                            'category': 'category',
-                            'duration': 'duration_minutes',
-                            'url': 'content_url',
-                            'contentUrl': 'content_url'
+                            'description': 'topics',  # Use description as topic
+                            'duration': 'duration_raw',  # Format: "00:11:27"
+                            'audioUrl': 'content_url',
+                            'thumbnailUrl': 'thumbnail_url'
                         }
                         
                         # Rename columns if they exist
@@ -264,8 +264,33 @@ class RecommendationService:
                         # Convert podcast_id to string
                         df['podcast_id'] = df['podcast_id'].astype(str)
                         
-                        # Parse duration to minutes if exists
-                        if 'duration_minutes' in df.columns:
+                        # Parse duration from "00:11:27" (HH:MM:SS) string to minutes
+                        if 'duration_raw' in df.columns:
+                            def parse_duration_hhmmss(duration_str):
+                                if pd.isna(duration_str) or duration_str is None:
+                                    return None
+                                try:
+                                    # Parse "00:11:27" or "05:00:00" format
+                                    import re
+                                    parts = str(duration_str).split(':')
+                                    if len(parts) == 3:  # HH:MM:SS
+                                        hours, minutes, seconds = map(int, parts)
+                                        return hours * 60 + minutes + (1 if seconds > 30 else 0)
+                                    elif len(parts) == 2:  # MM:SS
+                                        minutes, seconds = map(int, parts)
+                                        return minutes + (1 if seconds > 30 else 0)
+                                    # Try to extract number from "11 phút" format as fallback
+                                    match = re.search(r'(\d+)', str(duration_str))
+                                    if match:
+                                        return int(match.group(1))
+                                    return None
+                                except Exception as e:
+                                    logger.warning(f"Failed to parse duration '{duration_str}': {e}")
+                                    return None
+                            
+                            df['duration_minutes'] = df['duration_raw'].apply(parse_duration_hhmmss)
+                            logger.info(f"✅ Parsed duration. Sample: {df['duration_raw'].iloc[0] if len(df) > 0 else 'N/A'} -> {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
+                        elif 'duration_minutes' in df.columns:
                             logger.info(f"🔧 Parsing duration column. Sample before: {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
                             df['duration_minutes'] = df['duration_minutes'].apply(self.parse_duration_to_minutes)
                             logger.info(f"✅ Duration parsed. Sample after: {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")

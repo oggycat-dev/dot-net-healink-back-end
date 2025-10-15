@@ -239,7 +239,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/content/user/podcasts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
     },
     {
       "DownstreamPathTemplate": "/api/user/podcasts",

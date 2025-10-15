@@ -54,8 +54,8 @@ public class RecommendationService : IRecommendationService
 
             limit = Math.Max(1, Math.Min(limit, 50)); // Ensure limit is between 1-50
 
-            // Build request URL
-            var url = $"{_aiServiceBaseUrl}/api/recommendations/{Uri.EscapeDataString(userId)}?limit={limit}&include_listened={includeListened}";
+            // Build request URL (FastAPI endpoints don't have /api prefix)
+            var url = $"{_aiServiceBaseUrl}/recommendations/{Uri.EscapeDataString(userId)}?num_recommendations={limit}";
             
             // Make HTTP request to AI service
             var response = await _httpClient.GetAsync(url);
@@ -102,14 +102,17 @@ public class RecommendationService : IRecommendationService
                 {
                     PodcastId = r.PodcastId,
                     Title = r.Title,
-                    Topic = r.Topic,
+                    Topic = r.Topic ?? r.Topics ?? "",
                     PredictedRating = r.PredictedRating,
                     ConfidenceScore = r.ConfidenceScore,
-                    RecommendationReason = r.RecommendationReason
+                    RecommendationReason = r.RecommendationReason,
+                    Category = r.Category,
+                    DurationMinutes = r.DurationMinutes,
+                    ContentUrl = r.ContentUrl
                 }).ToList(),
-                TotalFound = aiResponse.TotalFound,
-                FilteredListened = aiResponse.FilteredListened,
-                GeneratedAt = aiResponse.GeneratedAt
+                TotalFound = aiResponse.TotalCount,
+                FilteredListened = includeListened,
+                GeneratedAt = DateTime.TryParse(aiResponse.Timestamp, out var timestamp) ? timestamp : DateTime.UtcNow
             };
 
             _logger.LogInformation("Successfully generated {Count} recommendations for user {UserId}", 
@@ -186,7 +189,7 @@ public class RecommendationService : IRecommendationService
             var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
 
             // Make HTTP request to AI service
-            var response = await _httpClient.PostAsync($"{_aiServiceBaseUrl}/api/recommendations/batch", content);
+            var response = await _httpClient.PostAsync($"{_aiServiceBaseUrl}/recommendations/batch", content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -221,19 +224,22 @@ public class RecommendationService : IRecommendationService
                     {
                         PodcastId = r.PodcastId,
                         Title = r.Title,
-                        Topic = r.Topic,
+                        Topic = r.Topic ?? r.Topics ?? "",
                         PredictedRating = r.PredictedRating,
                         ConfidenceScore = r.ConfidenceScore,
-                        RecommendationReason = r.RecommendationReason
+                        RecommendationReason = r.RecommendationReason,
+                        Category = r.Category,
+                        DurationMinutes = r.DurationMinutes,
+                        ContentUrl = r.ContentUrl
                     }).ToList() ?? new List<RecommendationItem>(),
-                    TotalFound = recommendation.TotalFound,
-                    FilteredListened = recommendation.FilteredListened,
-                    GeneratedAt = recommendation.GeneratedAt
+                    TotalFound = recommendation.TotalCount,
+                    FilteredListened = includeListened,
+                    GeneratedAt = DateTime.TryParse(recommendation.Timestamp, out var ts) ? ts : DateTime.UtcNow
                 }).ToList(),
                 TotalUsers = aiResponse.TotalUsers,
                 SuccessfulUsers = aiResponse.BatchResults.Count,
                 FailedUsers = new List<string>(),
-                GeneratedAt = aiResponse.GeneratedAt
+                GeneratedAt = DateTime.UtcNow
             };
 
             _logger.LogInformation("Successfully generated batch recommendations for {UserCount} users", 
@@ -316,7 +322,7 @@ public class RecommendationService : IRecommendationService
             }
 
             // Make HTTP request to AI service
-            var url = $"{_aiServiceBaseUrl}/api/users/{Uri.EscapeDataString(userId)}/listened";
+            var url = $"{_aiServiceBaseUrl}/users/{Uri.EscapeDataString(userId)}/listened";
             var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
@@ -378,7 +384,7 @@ public class RecommendationService : IRecommendationService
             _logger.LogInformation("Getting AI model information");
 
             // Make HTTP request to AI service
-            var response = await _httpClient.GetAsync($"{_aiServiceBaseUrl}/api/model/info");
+            var response = await _httpClient.GetAsync($"{_aiServiceBaseUrl}/model/info");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -435,14 +441,13 @@ public class RecommendationService : IRecommendationService
     }
 }
 
-// Internal DTOs for AI service communication
+// Internal DTOs for AI service communication (matching FastAPI camelCase response)
 internal class AIRecommendationResponse
 {
     public string UserId { get; set; } = string.Empty;
     public List<AIRecommendationItem> Recommendations { get; set; } = new();
-    public int TotalFound { get; set; }
-    public bool FilteredListened { get; set; }
-    public DateTime GeneratedAt { get; set; }
+    public int TotalCount { get; set; } // FastAPI uses totalCount not totalFound
+    public string Timestamp { get; set; } = string.Empty; // FastAPI uses timestamp not generatedAt
     public string? Error { get; set; }
 }
 
@@ -450,10 +455,14 @@ internal class AIRecommendationItem
 {
     public string PodcastId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
-    public string Topic { get; set; } = string.Empty;
+    public string? Topic { get; set; }
+    public string? Topics { get; set; } // FastAPI might use topics (plural)
     public decimal PredictedRating { get; set; }
     public decimal ConfidenceScore { get; set; }
     public string RecommendationReason { get; set; } = string.Empty;
+    public string? Category { get; set; }
+    public int? DurationMinutes { get; set; }
+    public string? ContentUrl { get; set; }
 }
 
 internal class AIBatchRecommendationResponse
