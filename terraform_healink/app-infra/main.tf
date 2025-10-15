@@ -15,13 +15,6 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-# --- VARIABLES ---
-variable "project_name" {
-  description = "Project name prefix"
-  type        = string
-  default     = "healink"
-}
-
 # --- DATA SOURCES ---
 data "terraform_remote_state" "stateful" {
   backend = "s3"
