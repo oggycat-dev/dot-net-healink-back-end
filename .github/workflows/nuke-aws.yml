@@ -14,9 +14,10 @@ on:
         required: true
         type: choice
         options:
+          - free
           - dev
           - prod
-        default: 'dev'
+        default: 'free'
       confirmation:
         description: 'Type "NUKE" to confirm destruction'
         required: true
