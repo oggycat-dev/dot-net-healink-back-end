@@ -10,7 +10,8 @@ public record GetPodcastsQuery(
     EmotionCategory[]? EmotionCategories = null,
     TopicCategory[]? TopicCategories = null,
     string? SearchTerm = null,
-    string? SeriesName = null
+    string? SeriesName = null,
+    bool IsInternalRequest = false
 ) : IRequest<GetPodcastsResponse>;
 
 public record GetPodcastsResponse(

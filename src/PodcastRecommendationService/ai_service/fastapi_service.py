@@ -94,6 +94,8 @@ class RecommendationService:
         self.podcasts_df = None
         self.metadata = None
         self.is_loaded = False
+        self._real_podcasts_cache = None  # type: Optional[pd.DataFrame]
+        self._real_cache_ts = None        # type: Optional[datetime]
         
         # Service URLs - use Gateway for external API calls
         self.userservice_url = os.getenv('USER_SERVICE_URL', 'http://userservice-api')
@@ -215,97 +217,126 @@ class RecommendationService:
             return []
     
     async def get_real_podcasts(self) -> pd.DataFrame:
-        """Lấy danh sách podcasts thật từ Gateway Public User API"""
+        """Lấy danh sách podcasts thật từ INTERNAL API của ContentService."""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # Use Gateway public user API - get all podcasts (paginated)
-                response = await client.get(f"{self.gateway_url}/api/content/user/podcasts?page=1&pageSize=50")
-                if response.status_code == 200:
-                    podcasts_data = response.json()
-                    logger.info(f"📦 Response structure: {list(podcasts_data.keys()) if isinstance(podcasts_data, dict) else type(podcasts_data)}")
+                # ONLY use Internal API (no auth required, direct access)
+                internal_url = f"{self.contentservice_url}/api/internal/podcasts?page=1&pageSize=1000"
+                logger.info(f"🔎 Fetching real podcasts from INTERNAL API: {internal_url}")
+                
+                response = await client.get(internal_url)
+                
+                if response.status_code != 200:
+                    logger.error(f"❌ Internal API returned {response.status_code}")
+                    return pd.DataFrame()
+                
+                data = response.json()
+                podcasts_list = data.get('podcasts', data.get('items', data.get('data', [])))
+                logger.info(f"✅ INTERNAL API returned {len(podcasts_list)} podcasts")
+                
+                if isinstance(podcasts_list, list) and len(podcasts_list) > 0:
+                    df = pd.DataFrame(podcasts_list)
                     
-                    # Gateway returns { podcasts: [...], totalCount, page, pageSize }
-                    if isinstance(podcasts_data, dict):
-                        podcasts_list = podcasts_data.get('podcasts', podcasts_data.get('items', podcasts_data.get('data', [])))
-                    else:
-                        podcasts_list = podcasts_data if isinstance(podcasts_data, list) else []
+                    # Standardize column names for Internal API response
+                    column_mapping = {
+                        'id': 'podcast_id',
+                        'title': 'title',
+                        'description': 'topics',  # Use description as topic
+                        'duration': 'duration_raw',  # Format: "00:11:27"
+                        'audioUrl': 'content_url',
+                        'thumbnailUrl': 'thumbnail_url'
+                    }
                     
-                    logger.info(f"📋 Found {len(podcasts_list)} podcasts from Gateway")
+                    # Rename columns if they exist
+                    for old_col, new_col in column_mapping.items():
+                        if old_col in df.columns and new_col not in df.columns:
+                            df = df.rename(columns={old_col: new_col})
                     
-                    if isinstance(podcasts_list, list) and len(podcasts_list) > 0:
-                        df = pd.DataFrame(podcasts_list)
+                    logger.info(f"📋 DataFrame columns after rename: {list(df.columns)}")
+                    
+                    # Ensure required columns exist
+                    required_columns = ['podcast_id', 'title']
+                    for col in required_columns:
+                        if col not in df.columns:
+                            if col == 'podcast_id':
+                                df['podcast_id'] = df.index.astype(str)
+                            elif col == 'title':
+                                df['title'] = f"Podcast {df.index + 1}"
+                    
+                    # Convert podcast_id to string
+                    df['podcast_id'] = df['podcast_id'].astype(str)
+                    
+                    # Parse duration from "00:11:27" (HH:MM:SS) string to minutes
+                    if 'duration_raw' in df.columns:
+                        def parse_duration_hhmmss(duration_str):
+                            if pd.isna(duration_str) or duration_str is None:
+                                return None
+                            try:
+                                # Parse "00:11:27" or "05:00:00" format
+                                import re
+                                parts = str(duration_str).split(':')
+                                if len(parts) == 3:  # HH:MM:SS
+                                    hours, minutes, seconds = map(int, parts)
+                                    return hours * 60 + minutes + (1 if seconds > 30 else 0)
+                                elif len(parts) == 2:  # MM:SS
+                                    minutes, seconds = map(int, parts)
+                                    return minutes + (1 if seconds > 30 else 0)
+                                # Try to extract number from "11 phút" format as fallback
+                                match = re.search(r'(\d+)', str(duration_str))
+                                if match:
+                                    return int(match.group(1))
+                                return None
+                            except Exception as e:
+                                logger.warning(f"Failed to parse duration '{duration_str}': {e}")
+                                return None
                         
-                        # Standardize column names for Gateway response
-                        column_mapping = {
-                            'id': 'podcast_id',
-                            'title': 'title',
-                            'description': 'topics',  # Use description as topic
-                            'duration': 'duration_raw',  # Format: "00:11:27"
-                            'audioUrl': 'content_url',
-                            'thumbnailUrl': 'thumbnail_url'
-                        }
-                        
-                        # Rename columns if they exist
-                        for old_col, new_col in column_mapping.items():
-                            if old_col in df.columns and new_col not in df.columns:
-                                df = df.rename(columns={old_col: new_col})
-                        
-                        logger.info(f"📋 DataFrame columns after rename: {list(df.columns)}")
-                        
-                        # Ensure required columns exist
-                        required_columns = ['podcast_id', 'title']
-                        for col in required_columns:
-                            if col not in df.columns:
-                                if col == 'podcast_id':
-                                    df['podcast_id'] = df.index.astype(str)
-                                elif col == 'title':
-                                    df['title'] = f"Podcast {df.index + 1}"
-                        
-                        # Convert podcast_id to string
-                        df['podcast_id'] = df['podcast_id'].astype(str)
-                        
-                        # Parse duration from "00:11:27" (HH:MM:SS) string to minutes
-                        if 'duration_raw' in df.columns:
-                            def parse_duration_hhmmss(duration_str):
-                                if pd.isna(duration_str) or duration_str is None:
-                                    return None
-                                try:
-                                    # Parse "00:11:27" or "05:00:00" format
-                                    import re
-                                    parts = str(duration_str).split(':')
-                                    if len(parts) == 3:  # HH:MM:SS
-                                        hours, minutes, seconds = map(int, parts)
-                                        return hours * 60 + minutes + (1 if seconds > 30 else 0)
-                                    elif len(parts) == 2:  # MM:SS
-                                        minutes, seconds = map(int, parts)
-                                        return minutes + (1 if seconds > 30 else 0)
-                                    # Try to extract number from "11 phút" format as fallback
-                                    match = re.search(r'(\d+)', str(duration_str))
-                                    if match:
-                                        return int(match.group(1))
-                                    return None
-                                except Exception as e:
-                                    logger.warning(f"Failed to parse duration '{duration_str}': {e}")
-                                    return None
-                            
-                            df['duration_minutes'] = df['duration_raw'].apply(parse_duration_hhmmss)
-                            logger.info(f"✅ Parsed duration. Sample: {df['duration_raw'].iloc[0] if len(df) > 0 else 'N/A'} -> {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
-                        elif 'duration_minutes' in df.columns:
-                            logger.info(f"🔧 Parsing duration column. Sample before: {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
-                            df['duration_minutes'] = df['duration_minutes'].apply(self.parse_duration_to_minutes)
-                            logger.info(f"✅ Duration parsed. Sample after: {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
-                        
-                        logger.info(f"✅ Fetched {len(df)} real podcasts from ContentService")
-                        return df
-                    else:
-                        logger.warning("⚠️ No podcasts data found in response")
-                        return pd.DataFrame()
+                        df['duration_minutes'] = df['duration_raw'].apply(parse_duration_hhmmss)
+                        logger.info(f"✅ Parsed duration. Sample: {df['duration_raw'].iloc[0] if len(df) > 0 else 'N/A'} -> {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
+                    elif 'duration_minutes' in df.columns:
+                        logger.info(f"🔧 Parsing duration column. Sample before: {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
+                        df['duration_minutes'] = df['duration_minutes'].apply(self.parse_duration_to_minutes)
+                        logger.info(f"✅ Duration parsed. Sample after: {df['duration_minutes'].iloc[0] if len(df) > 0 else 'N/A'}")
+                    
+                    logger.info(f"✅ Fetched {len(df)} real podcasts from INTERNAL API")
+                    return df
                 else:
-                    logger.warning(f"⚠️ ContentService returned {response.status_code}")
+                    logger.warning("⚠️ No podcasts data found from INTERNAL API")
                     return pd.DataFrame()
         except Exception as e:
             logger.error(f"❌ Error fetching podcasts: {e}")
             return pd.DataFrame()
+
+    async def get_real_podcasts_cached(self, ttl_seconds: int = 300) -> pd.DataFrame:
+        """Return cached real podcasts if cache is fresh; otherwise refresh.
+        Falls back to previous cache on transient fetch errors.
+        """
+        try:
+            now = datetime.utcnow()
+            # Use cache if fresh
+            if self._real_podcasts_cache is not None and self._real_cache_ts is not None:
+                age = (now - self._real_cache_ts).total_seconds()
+                if age < ttl_seconds and not self._real_podcasts_cache.empty:
+                    logger.info(f"🗃️ Using cached real podcasts (age={int(age)}s, rows={len(self._real_podcasts_cache)})")
+                    return self._real_podcasts_cache
+
+            # Refresh cache
+            df = await self.get_real_podcasts()
+            if df is not None and not df.empty:
+                self._real_podcasts_cache = df
+                self._real_cache_ts = now
+                logger.info(f"🆕 Refreshed real podcasts cache (rows={len(df)})")
+                return df
+
+            # Fallback to previous cache even if stale
+            if self._real_podcasts_cache is not None and not self._real_podcasts_cache.empty:
+                logger.warning("⚠️ Failed to refresh real podcasts; using stale cache")
+                return self._real_podcasts_cache
+
+            # Nothing available
+            return pd.DataFrame()
+        except Exception as e:
+            logger.error(f"❌ Cached fetch error: {e}")
+            return self._real_podcasts_cache if self._real_podcasts_cache is not None else pd.DataFrame()
     
     def calculate_similarity_score(self, user_id: str, podcast_id: str) -> float:
         """Tính similarity score dựa trên training data patterns"""
@@ -350,18 +381,27 @@ class RecommendationService:
         if not self.is_loaded:
             raise HTTPException(status_code=500, detail="Model service not loaded")
         
-        # Lấy danh sách podcasts thật từ database
-        real_podcasts_df = await self.get_real_podcasts()
-        
-        if real_podcasts_df.empty:
-            # Fallback to training data
-            logger.warning("⚠️ Using training podcasts as fallback")
-            candidate_podcasts_df = self.podcasts_df.copy() if not self.podcasts_df.empty else pd.DataFrame()
-            
-            if candidate_podcasts_df.empty:
-                raise HTTPException(status_code=404, detail="No podcasts available")
+        # Lấy danh sách podcasts thật (có cache để tránh fallback nhầm)
+        real_podcasts_df = await self.get_real_podcasts_cached()
+
+        # Chỉ cho phép GUIDs (loại bỏ p_00xxx)
+        def is_guid(s: Any) -> bool:
+            try:
+                import re
+                return bool(re.match(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", str(s)))
+            except Exception:
+                return False
+
+        if real_podcasts_df is not None and not real_podcasts_df.empty:
+            candidate_podcasts_df = real_podcasts_df[real_podcasts_df['podcast_id'].apply(is_guid)].copy()
+            logger.info(f"🎯 Filtered real podcasts to GUIDs: {len(candidate_podcasts_df)} rows")
         else:
-            candidate_podcasts_df = real_podcasts_df
+            candidate_podcasts_df = pd.DataFrame()
+
+        # Không fallback training ở môi trường này để đảm bảo ID thật
+        if candidate_podcasts_df.empty:
+            logger.error("❌ No real podcasts available (GUID). Refusing to fallback to training data.")
+            raise HTTPException(status_code=404, detail="No real podcasts available")
         
         # Generate scores cho tất cả podcasts
         recommendations = []
