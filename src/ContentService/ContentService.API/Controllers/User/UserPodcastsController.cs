@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using ContentService.Application.Features.Podcasts.Queries;
+using ContentService.Application.Features.Podcasts.Commands;
 using ContentService.Domain.Enums;
+using SharedLibrary.Commons.Services;
 
 namespace ContentService.API.Controllers.User;
 
@@ -15,11 +17,16 @@ namespace ContentService.API.Controllers.User;
 public class UserPodcastsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<UserPodcastsController> _logger;
 
-    public UserPodcastsController(IMediator mediator, ILogger<UserPodcastsController> logger)
+    public UserPodcastsController(
+        IMediator mediator, 
+        ICurrentUserService currentUserService,
+        ILogger<UserPodcastsController> logger)
     {
         _mediator = mediator;
+        _currentUserService = currentUserService;
         _logger = logger;
     }
 
@@ -258,9 +265,49 @@ public class UserPodcastsController : ControllerBase
         return Ok(result);
     }
 
-    // TODO: Implement interaction endpoints
-    // POST {id}/view - Track view count
-    // POST {id}/like - Like podcast
-    // POST {id}/favorite - Add to favorites
-    // GET /favorites - Get user's favorite podcasts (requires authentication)
+    /// <summary>
+    /// Increment view count for a podcast (Public access)
+    /// </summary>
+    /// <remarks>
+    /// This endpoint should be called when a user starts playing or viewing a podcast.
+    /// It increments the view count and records an anonymous view interaction.
+    /// </remarks>
+    [HttpPost("{id}/views")]
+    [AllowAnonymous]
+    public async Task<ActionResult> IncrementView(Guid id)
+    {
+        var command = new IncrementPodcastViewCommand(id);
+        await _mediator.Send(command);
+        
+        _logger.LogInformation("View recorded for podcast: {PodcastId}", id);
+        
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Toggle like/unlike for a podcast (Requires authentication)
+    /// </summary>
+    /// <remarks>
+    /// If the user has not liked the podcast, this will add a like.
+    /// If the user has already liked it, this will remove the like (unlike).
+    /// Returns the current total like count after the operation.
+    /// </remarks>
+    [HttpPost("{id}/likes")]
+    [Authorize]
+    public async Task<ActionResult<object>> ToggleLike(Guid id)
+    {
+        if (_currentUserService.UserId == null || !Guid.TryParse(_currentUserService.UserId, out var userId))
+        {
+            _logger.LogWarning("Unauthorized like attempt for podcast: {PodcastId}", id);
+            return Unauthorized(new { message = "User must be authenticated to like podcasts" });
+        }
+
+        var command = new TogglePodcastLikeCommand(id, userId);
+        var newLikeCount = await _mediator.Send(command);
+        
+        _logger.LogInformation("Like toggled for podcast: {PodcastId} by user: {UserId}, New count: {LikeCount}", 
+            id, userId, newLikeCount);
+        
+        return Ok(new { likes = newLikeCount });
+    }
 }

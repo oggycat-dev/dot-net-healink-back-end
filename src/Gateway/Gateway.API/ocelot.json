@@ -239,7 +239,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/content/user/podcasts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
     },
     {
       "DownstreamPathTemplate": "/api/user/podcasts",
@@ -251,6 +251,30 @@
         }
       ],
       "UpstreamPathTemplate": "/api/content/user/podcasts",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/latest",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/user/podcasts/latest",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/trending",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/user/podcasts/trending",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {

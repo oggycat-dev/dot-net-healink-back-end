@@ -89,6 +89,9 @@ public static class ServiceConfiguration
 
         app.UseAuthentication();
         app.UseAuthorization();
+        
+        // ✨ Transform S3 URLs to presigned URLs in responses (must be after auth)
+        app.UseS3UrlTransformation();
 
         app.MapControllers();
 
