@@ -1,5 +1,4 @@
 using AuthService.Application.Commons.Interfaces;
-using AuthService.Application.Helpers;
 using AuthService.Domain.Entities;
 using AutoMapper;
 using MassTransit;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SharedLibrary.Commons.Cache;
 using SharedLibrary.Commons.Enums;
+using SharedLibrary.Commons.Helpers;
 using SharedLibrary.Commons.Models;
 using SharedLibrary.Commons.Repositories;
 using SharedLibrary.Contracts.User.Saga;
