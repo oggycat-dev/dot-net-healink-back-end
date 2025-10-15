@@ -60,4 +60,3 @@ output "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group (alias for compatibility)"
   value       = aws_cloudwatch_log_group.microservice_logs.name
 }
-}
