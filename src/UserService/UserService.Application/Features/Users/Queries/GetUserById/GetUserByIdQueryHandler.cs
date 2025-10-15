@@ -56,42 +56,50 @@ public class GetUserByIdQueryHandler
             // Map to response DTO (without roles yet)
             var response = _mapper.Map<UserProfileResponse>(userProfile);
 
-            // ✅ Fetch roles from AuthService via RPC
-            _logger.LogInformation("Fetching roles for UserId: {UserId}", userProfile.UserId);
-
-            try
+            // ✅ Fetch roles from AuthService via RPC (only if UserId is set)
+            if (userProfile.UserId.HasValue)
             {
-                // RPC call with timeout
-                var rolesResponse = await _rolesClient.GetResponse<GetUserRolesResponse>(
-                    new GetUserRolesRequest { UserIds = new List<Guid> { userProfile.UserId } },
-                    cancellationToken,
-                    timeout: RequestTimeout.After(s: RpcTimeoutSeconds)
-                );
+                _logger.LogInformation("Fetching roles for UserId: {UserId}", userProfile.UserId.Value);
 
-                if (rolesResponse.Message.Success &&
-                    rolesResponse.Message.UserRoles.TryGetValue(userProfile.UserId, out var roles))
+                try
                 {
-                    response.Roles = roles;
-                    _logger.LogInformation(
-                        "Successfully fetched {Count} roles for UserId: {UserId}",
-                        roles.Count, userProfile.UserId);
+                    // RPC call with timeout
+                    var rolesResponse = await _rolesClient.GetResponse<GetUserRolesResponse>(
+                        new GetUserRolesRequest { UserIds = new List<Guid> { userProfile.UserId.Value } },
+                        cancellationToken,
+                        timeout: RequestTimeout.After(s: RpcTimeoutSeconds)
+                    );
+
+                    if (rolesResponse.Message.Success &&
+                        rolesResponse.Message.UserRoles.TryGetValue(userProfile.UserId.Value, out var roles))
+                    {
+                        response.Roles = roles;
+                        _logger.LogInformation(
+                            "Successfully fetched {Count} roles for UserId: {UserId}",
+                            roles.Count, userProfile.UserId.Value);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No roles found for UserId: {UserId}", userProfile.UserId.Value);
+                        response.Roles = new List<string>();
+                    }
                 }
-                else
+                catch (RequestTimeoutException ex)
                 {
-                    _logger.LogWarning("No roles found for UserId: {UserId}", userProfile.UserId);
+                    _logger.LogError(ex, "RPC timeout getting user roles after {Timeout}s", RpcTimeoutSeconds);
+                    // Continue without roles
+                    response.Roles = new List<string>();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error getting user roles via RPC for UserId: {UserId}", userProfile.UserId.Value);
+                    // Continue without roles
                     response.Roles = new List<string>();
                 }
             }
-            catch (RequestTimeoutException ex)
+            else
             {
-                _logger.LogError(ex, "RPC timeout getting user roles after {Timeout}s", RpcTimeoutSeconds);
-                // Continue without roles
-                response.Roles = new List<string>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting user roles via RPC for UserId: {UserId}", userProfile.UserId);
-                // Continue without roles
+                _logger.LogWarning("UserProfile {ProfileId} has no UserId set yet (pending state)", userProfile.Id);
                 response.Roles = new List<string>();
             }
 

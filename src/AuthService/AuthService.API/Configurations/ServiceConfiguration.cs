@@ -46,8 +46,11 @@ public static class ServiceConfiguration
                 x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserByAdminConsumer>();
                 x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserByAdminConsumer>();
                 
-                // ✅ Register RPC consumer for getting user roles
+                // ✅ Register RPC consumers
                 x.AddConsumer<AuthService.Infrastructure.Consumers.GetUserRolesConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.UpdateUserInfoConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.UpdateUserStatusConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.UpdateUserRolesConsumer>();// ✅ RPC only
             },
             configureEndpoints: (cfg, context) =>
             {

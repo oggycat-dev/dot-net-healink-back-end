@@ -137,7 +137,7 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
             var approvedEvent = new CreatorApplicationApprovedEvent
             {
                 ApplicationId = application.Id,
-                UserId = application.User.UserId,  // AuthUser ID from UserProfile
+                UserId = application.User.UserId ?? Guid.Empty,  // AuthUser ID from UserProfile (use Empty if null)
                 UserEmail = application.User.Email,
                 ReviewerId = request.ReviewerId,
                 ApprovedAt = application.ReviewedAt.Value,
@@ -151,7 +151,7 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
             // Add system role to AuthUser via event
             var roleAddEvent = new RoleAddedToUserEvent
             {
-                UserId = application.User.UserId,  // AuthUser ID from UserProfile
+                UserId = application.User.UserId ?? Guid.Empty,  // AuthUser ID from UserProfile (use Empty if null)
                 Email = application.User.Email,
                 RoleName = "ContentCreator",
                 AddedBy = request.ReviewerId,
@@ -178,7 +178,7 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
 
             var rolesChangedEvent = new UserRolesChangedEvent
             {
-                UserId = application.User.UserId,
+                UserId = application.User.UserId ?? Guid.Empty,
                 Email = application.User.Email,
                 OldRoles = oldRoles,
                 NewRoles = newRoles,
@@ -205,7 +205,7 @@ public class ApproveCreatorApplicationHandler : IRequestHandler<ApproveCreatorAp
             {
                 Success = true,
                 ApplicationId = application.Id,
-                UserId = application.User.UserId,
+                UserId = application.User.UserId ?? Guid.Empty,
                 UserEmail = application.User.Email,
                 ApprovedAt = application.ReviewedAt.Value,
                 Message = "Đã phê duyệt đơn đăng ký Content Creator thành công và cấp quyền cho người dùng"

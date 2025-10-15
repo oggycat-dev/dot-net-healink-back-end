@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using ContentService.Application.Features.Podcasts.Queries;
 using ContentService.Domain.Entities;
 using SharedLibrary.Commons.Repositories;
+using SharedLibrary.Commons.Cache;
+using SharedLibrary.Commons.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace ContentService.Application.Features.Podcasts.Handlers;
@@ -10,13 +12,19 @@ namespace ContentService.Application.Features.Podcasts.Handlers;
 public class GetPodcastsQueryHandler : IRequestHandler<GetPodcastsQuery, GetPodcastsResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IUserStateCache _userStateCache;
+    private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<GetPodcastsQueryHandler> _logger;
 
     public GetPodcastsQueryHandler(
         IUnitOfWork unitOfWork,
+        IUserStateCache userStateCache,
+        ICurrentUserService currentUserService,
         ILogger<GetPodcastsQueryHandler> logger)
     {
         _unitOfWork = unitOfWork;
+        _userStateCache = userStateCache;
+        _currentUserService = currentUserService;
         _logger = logger;
     }
 
@@ -24,6 +32,9 @@ public class GetPodcastsQueryHandler : IRequestHandler<GetPodcastsQuery, GetPodc
     {
         try
         {
+            // ✅ Check subscription requirement from cache
+            await ValidateSubscriptionAccessAsync();
+            
             var query = _unitOfWork.Repository<Podcast>().GetQueryable();
 
             // Apply filters
@@ -108,5 +119,50 @@ public class GetPodcastsQueryHandler : IRequestHandler<GetPodcastsQuery, GetPodc
             _logger.LogError(ex, "Error retrieving podcasts");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Validate subscription access from cache
+    /// ✅ Admin, Staff, ContentCreator: No subscription required
+    /// ❌ User: Must have active subscription
+    /// </summary>
+    private async Task ValidateSubscriptionAccessAsync()
+    {
+        var userId = _currentUserService.UserId;
+        
+        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+        {
+            _logger.LogWarning("Unauthorized access attempt - No valid user ID");
+            throw new UnauthorizedAccessException("Authentication required to view podcasts");
+        }
+
+        // Get user state from cache
+        var userState = await _userStateCache.GetUserStateAsync(userGuid);
+        
+        if (userState == null || !userState.IsActive)
+        {
+            _logger.LogWarning("Access denied - User {UserId} is not active or not found in cache", userGuid);
+            throw new UnauthorizedAccessException("User account is not active");
+        }
+
+        // ✅ Check roles - Admin, Staff, ContentCreator bypass subscription check
+        var exemptRoles = new[] { "Admin", "Staff", "ContentCreator" };
+        var hasExemptRole = userState.Roles.Any(role => exemptRoles.Contains(role, StringComparer.OrdinalIgnoreCase));
+        
+        if (hasExemptRole)
+        {
+            _logger.LogInformation("User {UserId} has exempt role ({Roles}) - Subscription check bypassed", 
+                userGuid, string.Join(", ", userState.Roles));
+            return;
+        }
+
+        // ❌ Regular User - Must have active subscription
+        if (!userState.HasActiveSubscription)
+        {
+            _logger.LogWarning("Access denied - User {UserId} does not have active subscription", userGuid);
+            throw new UnauthorizedAccessException("Active subscription required to view podcasts. Please subscribe to continue.");
+        }
+
+        _logger.LogInformation("User {UserId} has active subscription - Access granted", userGuid);
     }
 }

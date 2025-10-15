@@ -72,7 +72,11 @@ public class GetUsersQueryHandler
             }
 
             // ✅ Fetch roles for all users in ONE RPC call (batch request)
-            var userIds = items.Select(x => x.UserId).ToList();
+            // Filter out users with no UserId (pending state)
+            var userIds = items
+                .Where(x => x.UserId.HasValue)
+                .Select(x => x.UserId!.Value)
+                .ToList();
             
             _logger.LogInformation(
                 "Fetching roles for {Count} users via RPC (Page: {Page}, PageSize: {PageSize})",
@@ -80,40 +84,50 @@ public class GetUsersQueryHandler
 
             try
             {
-                // RPC call with timeout
-                var rolesResponse = await _rolesClient.GetResponse<GetUserRolesResponse>(
-                    new GetUserRolesRequest { UserIds = userIds },
-                    cancellationToken,
-                    timeout: RequestTimeout.After(s: RpcTimeoutSeconds)
-                );
-
-                if (rolesResponse.Message.Success)
+                // RPC call with timeout (only if there are users with valid UserId)
+                if (userIds.Any())
                 {
-                    var userRolesDictionary = rolesResponse.Message.UserRoles;
+                    var rolesResponse = await _rolesClient.GetResponse<GetUserRolesResponse>(
+                        new GetUserRolesRequest { UserIds = userIds },
+                        cancellationToken,
+                        timeout: RequestTimeout.After(s: RpcTimeoutSeconds)
+                    );
 
-                    // ✅ Map roles to response using dictionary O(1) lookup
-                    foreach (var user in response)
+                    if (rolesResponse.Message.Success)
                     {
-                        if (userRolesDictionary.TryGetValue(user.UserId, out var roles))
-                        {
-                            user.Roles = roles;
-                        }
-                        else
-                        {
-                            _logger.LogWarning("No roles found for UserId: {UserId}", user.UserId);
-                            user.Roles = new List<string>();
-                        }
-                    }
+                        var userRolesDictionary = rolesResponse.Message.UserRoles;
 
-                    _logger.LogInformation(
-                        "Successfully fetched roles for {Count} users",
-                        userRolesDictionary.Count);
+                        // ✅ Map roles to response using dictionary O(1) lookup
+                        foreach (var user in response)
+                        {
+                            if (user.UserId.HasValue && userRolesDictionary.TryGetValue(user.UserId.Value, out var roles))
+                            {
+                                user.Roles = roles;
+                            }
+                            else
+                            {
+                                if (user.UserId.HasValue)
+                                {
+                                    _logger.LogWarning("No roles found for UserId: {UserId}", user.UserId.Value);
+                                }
+                                user.Roles = new List<string>();
+                            }
+                        }
+
+                        _logger.LogInformation(
+                            "Successfully fetched roles for {Count} users",
+                            userRolesDictionary.Count);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "RPC GetUserRoles failed: {Error}",
+                            rolesResponse.Message.ErrorMessage);
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "RPC GetUserRoles failed: {Error}",
-                        rolesResponse.Message.ErrorMessage);
+                    _logger.LogInformation("No users with valid UserId to fetch roles for");
                 }
             }
             catch (RequestTimeoutException ex)

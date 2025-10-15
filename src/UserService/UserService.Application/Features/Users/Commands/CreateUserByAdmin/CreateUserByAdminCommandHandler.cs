@@ -73,10 +73,10 @@ public class CreateUserByAdminCommandHandler : IRequestHandler<CreateUserByAdmin
                 FullName = request.FullName,
                 PhoneNumber = request.PhoneNumber,
                 Address = request.Address,
+                UserId = null, // ⚠️ Nullable - will be set by saga when AuthUser is created
                 Status = EntityStatusEnum.Pending, // ⚠️ Pending until saga completes
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
-                // UserId will be set by saga when AuthUser is created
             };
 
             userProfile.InitializeEntity(Guid.Parse(_currentUserService.UserId));
@@ -133,7 +133,7 @@ public class CreateUserByAdminCommandHandler : IRequestHandler<CreateUserByAdmin
                 }
 
                 // Check if saga completed successfully
-                if (updatedProfile.Status == EntityStatusEnum.Active && updatedProfile.UserId != Guid.Empty)
+                if (updatedProfile.Status == EntityStatusEnum.Active && updatedProfile.UserId != null && updatedProfile.UserId != Guid.Empty)
                 {
                     _logger.LogInformation("Saga completed successfully - ProfileId: {ProfileId}, UserId: {UserId}, Attempts: {Attempts}",
                         userProfile.Id, updatedProfile.UserId, pollAttempt);

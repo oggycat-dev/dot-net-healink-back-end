@@ -112,7 +112,7 @@ public class InternalController : ControllerBase
 
             var user = new
             {
-                Id = userProfile.UserId.ToString(),
+                Id = userProfile.UserId?.ToString() ?? string.Empty,
                 Email = userProfile.Email,
                 FirstName = userProfile.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty,
                 LastName = userProfile.FullName.Contains(' ') ? userProfile.FullName.Substring(userProfile.FullName.IndexOf(' ') + 1) : string.Empty,

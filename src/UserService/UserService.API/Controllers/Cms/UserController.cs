@@ -7,6 +7,9 @@ using Swashbuckle.AspNetCore.Annotations;
 using UserService.Application.Commons.DTOs;
 using UserService.Application.Features.Profile.Queries.GetProfile;
 using UserService.Application.Features.Users.Commands.CreateUserByAdmin;
+using UserService.Application.Features.Users.Commands.UpdateUserInfo;
+using UserService.Application.Features.Users.Commands.UpdateUserRoles;
+using UserService.Application.Features.Users.Commands.UpdateUserStatus;
 using UserService.Application.Features.Users.Queries.GetUsers;
 using UserService.Application.Features.Users.Queries.GetUserById;
 
@@ -166,6 +169,144 @@ public class UserController : ControllerBase
     {
         var query = new GetUserByIdQuery(id);
         var result = await _mediator.Send(query);
+        return StatusCode(result.GetHttpStatusCode(), result);
+    }
+    
+    /// <summary>
+    /// Update user information (Admin only)
+    /// Updates UserService → Syncs to AuthService via RPC → Updates cache → Logs activity
+    /// Email/Phone changes trigger RPC sync with 10s timeout. If timeout, changes are rolled back.
+    /// Validation checks cache (not JWT) for user status.
+    /// Sample request:
+    /// 
+    ///     PUT /api/cms/users/{id}
+    ///     {
+    ///         "fullName": "Updated Name",
+    ///         "email": "newemail@example.com",
+    ///         "phoneNumber": "+84901234567",
+    ///         "address": "New Address"
+    ///     }
+    /// 
+    /// </summary>
+    /// <param name="id">User ID (Auth Service User ID)</param>
+    /// <param name="request">User info to update</param>
+    /// <returns>Updated user profile</returns>
+    /// <response code="200">User updated successfully</response>
+    /// <response code="400">Validation error or RPC sync failed</response>
+    /// <response code="404">User not found</response>
+    /// <response code="401">Not authorized</response>
+    /// <response code="403">No access (requires Admin role)</response>
+    [HttpPut("{id:guid}")]
+    [AuthorizeRoles("Admin")]
+    [ProducesResponseType(typeof(Result<UserProfileResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<UserProfileResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result<UserProfileResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result<UserProfileResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result<UserProfileResponse>), StatusCodes.Status403Forbidden)]
+    [SwaggerOperation(
+        Summary = "Update user information",
+        Description = "Updates user info. Email/Phone changes sync to AuthService via RPC with timeout. Validation uses cache, not JWT. Logs activity with IP and UserAgent.",
+        OperationId = "UpdateUserInfo",
+        Tags = new[] { "CMS", "CMS_User" }
+    )]
+    public async Task<IActionResult> UpdateUserInfo(Guid id, [FromBody] UpdateUserInfoRequest request)
+    {
+        var command = new UpdateUserInfoCommand { UserId = id, Request = request };
+        var result = await _mediator.Send(command);
+        return StatusCode(result.GetHttpStatusCode(), result);
+    }
+    
+    /// <summary>
+    /// Update user roles (Admin only)
+    /// Publishes event to AuthService → Updates cache immediately → Logs activity
+    /// Cache is source of truth, not JWT. Validation checks cache.
+    /// Sample request:
+    /// 
+    ///     PUT /api/cms/users/{id}/roles
+    ///     {
+    ///         "rolesToAdd": [3, 1],
+    ///         "rolesToRemove": [2]
+    ///     }
+    /// 
+    /// Role values: 0=Admin, 1=Staff, 2=User, 3=ContentCreator
+    /// </summary>
+    /// <param name="id">User ID (Auth Service User ID)</param>
+    /// <param name="request">Roles to add/remove (enum values)</param>
+    /// <returns>Success result</returns>
+    /// <response code="200">Roles updated successfully</response>
+    /// <response code="400">Validation error</response>
+    /// <response code="404">User not found</response>
+    /// <response code="401">Not authorized</response>
+    /// <response code="403">No access (requires Admin role)</response>
+    [HttpPut("{id:guid}/roles")]
+    [AuthorizeRoles("Admin")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [SwaggerOperation(
+        Summary = "Update user roles",
+        Description = "Add or remove user roles using enum values (0=Admin, 1=Staff, 2=User, 3=ContentCreator). Updates AuthService and syncs to cache immediately. Validation uses cache, not JWT. Logs activity with IP and UserAgent.",
+        OperationId = "UpdateUserRoles",
+        Tags = new[] { "CMS", "CMS_User" }
+    )]
+    public async Task<IActionResult> UpdateUserRoles(Guid id, [FromBody] UpdateUserRolesRequest request)
+    {
+        var command = new UpdateUserRolesCommand 
+        { 
+            UserId = id, 
+            RolesToAdd = request.RolesToAdd, 
+            RolesToRemove = request.RolesToRemove 
+        };
+        var result = await _mediator.Send(command);
+        return StatusCode(result.GetHttpStatusCode(), result);
+    }
+    
+    /// <summary>
+    /// Update user status (Admin only)
+    /// Updates UserService → Publishes event to AuthService → Updates cache immediately → Logs activity
+    /// Cache is source of truth, not JWT. Validation checks cache.
+    /// Sample request:
+    /// 
+    ///     PUT /api/cms/users/{id}/status
+    ///     {
+    ///         "status": 0,
+    ///         "reason": "Account suspended for violation"
+    ///     }
+    /// 
+    /// Status values: 0=Active, 1=Inactive, 2=Deleted, 3=Pending
+    /// </summary>
+    /// <param name="id">User ID (Auth Service User ID)</param>
+    /// <param name="request">New status and reason</param>
+    /// <returns>Success result</returns>
+    /// <response code="200">Status updated successfully</response>
+    /// <response code="400">Validation error</response>
+    /// <response code="404">User not found</response>
+    /// <response code="401">Not authorized</response>
+    /// <response code="403">No access (requires Admin role)</response>
+    [HttpPut("{id:guid}/status")]
+    [AuthorizeRoles("Admin")]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status403Forbidden)]
+    [SwaggerOperation(
+        Summary = "Update user status",
+        Description = "Updates user status (Active/Inactive/Deleted/Pending). Publishes event to AuthService and syncs to cache immediately. Validation uses cache, not JWT. Logs activity with IP and UserAgent.",
+        OperationId = "UpdateUserStatus",
+        Tags = new[] { "CMS", "CMS_User" }
+    )]
+    public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequest request)
+    {
+        var command = new UpdateUserStatusCommand 
+        { 
+            UserId = id, 
+            Status = request.Status, 
+            Reason = request.Reason 
+        };
+        var result = await _mediator.Send(command);
         return StatusCode(result.GetHttpStatusCode(), result);
     }
 }
