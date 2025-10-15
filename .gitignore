@@ -38,6 +38,9 @@ migrations-appsettings.json
 
 # Environment files
 .env
+.env.*
+env.txt
+*.env.txt
 .env.local
 .env.production
 .env.development
