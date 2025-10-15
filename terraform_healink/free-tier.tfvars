@@ -1,28 +1,28 @@
-# =========================================
+# ==============================================
 # FREE TIER CONFIGURATION
-# Optimized for AWS Free Tier to minimize costs
-# =========================================
+# AWS Free Tier optimized settings
+# ==============================================
 
-# Environment & Project
-environment  = "dev"  # Keep as "dev" for free tier settings
+# Basic Configuration
+environment = "dev"
 project_name = "healink-free"
 
-# Database (RDS PostgreSQL)
-db_instance_class       = "db.t3.micro"        # Free tier eligible
-db_allocated_storage    = 20                   # Free tier: 20GB
-db_backup_retention_period = 1                 # Minimum retention
+# Database Configuration (RDS Free Tier: db.t3.micro)
+db_instance_class = "db.t3.micro"
+db_allocated_storage = 20
+db_backup_retention_period = 1
 
-# Cache (ElastiCache Redis)  
-redis_node_type = "cache.t3.micro"             # Smallest instance
+# Redis Configuration (ElastiCache Free Tier)
+redis_node_type = "cache.t3.micro"
 
-# ECS Fargate
-ecs_task_cpu    = "256"                        # 0.25 vCPU
-ecs_task_memory = "512"                        # 0.5 GB
-ecs_desired_count = 1                          # Single instance per service
+# ECS Configuration (Fargate Free Tier)
+ecs_task_cpu = "256"
+ecs_task_memory = "512"
+ecs_desired_count = 1
 
-# Message Queue (Amazon MQ RabbitMQ)
-mq_instance_type   = "mq.t3.micro"             # Free tier eligible
-mq_deployment_mode = "SINGLE_INSTANCE"         # No HA for cost saving
+# RabbitMQ Configuration (Amazon MQ)
+rabbitmq_instance_type = "mq.t3.micro"
+rabbitmq_deployment_mode = "SINGLE_INSTANCE"
 
 # Application Settings
 aspnetcore_environment = "Development"
