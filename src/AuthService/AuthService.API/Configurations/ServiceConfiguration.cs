@@ -31,6 +31,9 @@ public static class ServiceConfiguration
             {
                 // Configure Registration Saga owned by AuthService
                 AuthSagaConfiguration.ConfigureRegistrationSaga<AuthDbContext>(x);
+                
+                // Configure Admin User Creation Saga owned by AuthService
+                AuthSagaConfiguration.ConfigureAdminUserCreationSaga<AuthDbContext>(x);
             },
             configureConsumers: x =>
             {
@@ -38,11 +41,24 @@ public static class ServiceConfiguration
                 x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserConsumer>();
                 x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserConsumer>();
                 x.AddConsumer<AuthService.Infrastructure.Consumers.CreatorApplicationConsumer>();
+                
+                // ✅ Register consumers for Admin User Creation Saga
+                x.AddConsumer<AuthService.Infrastructure.Consumers.CreateAuthUserByAdminConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.DeleteAuthUserByAdminConsumer>();
+                
+                // ✅ Register RPC consumers
+                x.AddConsumer<AuthService.Infrastructure.Consumers.GetUserRolesConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.UpdateUserInfoConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.UpdateUserStatusConsumer>();
+                x.AddConsumer<AuthService.Infrastructure.Consumers.UpdateUserRolesConsumer>();// ✅ RPC only
             },
             configureEndpoints: (cfg, context) =>
             {
                 // Configure saga-specific endpoints
                 AuthSagaConfiguration.ConfigureSagaEndpoints(cfg, context);
+                
+                // ✅ Configure RPC endpoints with timeout
+                AuthRpcConfiguration.ConfigureRpcEndpoints(cfg, context);
             });
 
         // Application & Infrastructure layers

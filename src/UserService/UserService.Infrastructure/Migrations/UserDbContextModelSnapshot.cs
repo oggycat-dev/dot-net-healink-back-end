@@ -100,7 +100,7 @@ namespace UserService.Infrastructure.Migrations
 
                     b.HasIndex("ProcessedAt", "NextRetryAt", "RetryCount");
 
-                    b.ToTable("OutboxEvents", (string)null);
+                    b.ToTable("OutboxEvents");
                 });
 
             modelBuilder.Entity("UserService.Domain.Entities.BusinessRole", b =>
@@ -493,7 +493,7 @@ namespace UserService.Infrastructure.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -503,7 +503,8 @@ namespace UserService.Infrastructure.Migrations
                     b.HasIndex("PhoneNumber");
 
                     b.HasIndex("UserId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
 
                     b.HasIndex("UserId", "LastLoginAt");
 

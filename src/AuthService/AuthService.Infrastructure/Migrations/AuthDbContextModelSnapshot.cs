@@ -287,6 +287,217 @@ namespace AuthService.Infrastructure.Migrations
                     b.ToTable("RolePermissions", (string)null);
                 });
 
+            modelBuilder.Entity("AuthService.Infrastructure.Saga.AdminUserCreationSagaState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("AuthUserCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AuthUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("EncryptedPassword")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFailed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UserProfileUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CorrelationId");
+
+                    b.HasIndex("AuthUserId")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_AuthUserId");
+
+                    b.HasIndex("CompletedAt")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_CompletedAt");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_CreatedAt");
+
+                    b.HasIndex("CurrentState")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_CurrentState");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_Email");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_StartedAt");
+
+                    b.HasIndex("UserProfileId")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_UserProfileId");
+
+                    b.HasIndex("IsCompleted", "IsFailed")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_Status");
+
+                    b.HasIndex("Email", "CurrentState", "CreatedAt")
+                        .HasDatabaseName("IX_AdminUserCreationSagaStates_Email_State_Created");
+
+                    b.ToTable("AdminUserCreationSagaStates", (string)null);
+                });
+
+            modelBuilder.Entity("AuthService.Infrastructure.Saga.RegistrationSagaState", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AuthUserCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AuthUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("EncryptedPassword")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("ExpiresInMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFailed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OtpCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime?>("OtpSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("OtpTimeoutTokenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("OtpVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UserProfileCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserProfileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CorrelationId");
+
+                    b.HasIndex("CompletedAt")
+                        .HasDatabaseName("IX_RegistrationSagaStates_CompletedAt");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_RegistrationSagaStates_CreatedAt");
+
+                    b.HasIndex("CurrentState")
+                        .HasDatabaseName("IX_RegistrationSagaStates_CurrentState");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("IX_RegistrationSagaStates_Email");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("IX_RegistrationSagaStates_StartedAt");
+
+                    b.HasIndex("IsCompleted", "IsFailed")
+                        .HasDatabaseName("IX_RegistrationSagaStates_Status");
+
+                    b.HasIndex("Email", "CurrentState", "CreatedAt")
+                        .HasDatabaseName("IX_RegistrationSagaStates_Email_State_Created");
+
+                    b.ToTable("RegistrationSagaStates", (string)null);
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
                 {
                     b.Property<long>("Id")
@@ -637,113 +848,6 @@ namespace AuthService.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "NextRetryAt", "RetryCount");
 
                     b.ToTable("OutboxEvents");
-                });
-
-            modelBuilder.Entity("SharedLibrary.Contracts.User.Saga.RegistrationSagaState", b =>
-                {
-                    b.Property<Guid>("CorrelationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("AuthUserCreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("AuthUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Channel")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CurrentState")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("EncryptedPassword")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("ExpiresInMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FullName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsFailed")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("OtpCode")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<DateTime?>("OtpSentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("OtpTimeoutTokenId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("OtpVerifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("UserProfileCreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UserProfileId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("CorrelationId");
-
-                    b.HasIndex("CompletedAt")
-                        .HasDatabaseName("IX_RegistrationSagaStates_CompletedAt");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_RegistrationSagaStates_CreatedAt");
-
-                    b.HasIndex("CurrentState")
-                        .HasDatabaseName("IX_RegistrationSagaStates_CurrentState");
-
-                    b.HasIndex("Email")
-                        .HasDatabaseName("IX_RegistrationSagaStates_Email");
-
-                    b.HasIndex("StartedAt")
-                        .HasDatabaseName("IX_RegistrationSagaStates_StartedAt");
-
-                    b.HasIndex("IsCompleted", "IsFailed")
-                        .HasDatabaseName("IX_RegistrationSagaStates_Status");
-
-                    b.HasIndex("Email", "CurrentState", "CreatedAt")
-                        .HasDatabaseName("IX_RegistrationSagaStates_Email_State_Created");
-
-                    b.ToTable("RegistrationSagaStates", (string)null);
                 });
 
             modelBuilder.Entity("AuthService.Domain.Entities.RolePermission", b =>

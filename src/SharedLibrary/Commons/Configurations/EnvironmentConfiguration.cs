@@ -348,8 +348,12 @@ public static class EnvironmentConfiguration
         // Default admin account for UserService
         configuration["DefaultAdminAccount:Email"] = 
             Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@healink.com";
-        configuration["DefaultAdminAccount:UserId"] = 
+        configuration["DefaultAdminAccount:UserId"] =
             Environment.GetEnvironmentVariable("ADMIN_USER_ID") ?? "00000000-0000-0000-0000-000000000001";
+            
+        //passsword cryption
+        configuration["PasswordEncryptionKey"] = 
+            Environment.GetEnvironmentVariable("PASSWORD_ENCRYPTION_KEY") ?? "K9ltF1d2jlYvLsaN6AdmiaPHY8qwqUIW";
         
         // AWS S3 settings for UserService
         configuration["AwsS3Config:AccessKey"] = 

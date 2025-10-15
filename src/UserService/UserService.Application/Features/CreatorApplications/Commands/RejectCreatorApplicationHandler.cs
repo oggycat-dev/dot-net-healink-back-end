@@ -72,7 +72,7 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
             var rejectedEvent = new CreatorApplicationRejectedEvent
             {
                 ApplicationId = application.Id,
-                UserId = application.User.UserId,  // AuthUser ID
+                UserId = application.User.UserId ?? Guid.Empty,  // AuthUser ID (use Empty if null)
                 UserEmail = application.User.Email,
                 ReviewerId = request.ReviewerId,
                 RejectedAt = application.ReviewedAt.Value,
@@ -88,7 +88,7 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
             {
                 Success = true,
                 ApplicationId = application.Id,
-                UserId = application.User.UserId,
+                UserId = application.User.UserId ?? Guid.Empty,
                 UserEmail = application.User.Email,
                 RejectedAt = application.ReviewedAt.Value,
                 Message = "Đã từ chối đơn đăng ký Content Creator"

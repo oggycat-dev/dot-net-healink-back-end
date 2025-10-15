@@ -65,7 +65,7 @@ public class GetUserProfileByUserIdConsumer : IConsumer<GetUserProfileByUserIdRe
             {
                 Found = true,
                 UserProfileId = userProfile.Id, // ✅ This is the UserProfileId!
-                UserId = userProfile.UserId,     // Foreign key to AppUser
+                UserId = userProfile.UserId ?? Guid.Empty,     // Foreign key to AppUser (use Empty if null)
                 Email = userProfile.Email,
                 FullName = userProfile.FullName
             });

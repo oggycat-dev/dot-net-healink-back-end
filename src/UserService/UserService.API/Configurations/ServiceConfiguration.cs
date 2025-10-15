@@ -28,6 +28,9 @@ public static class ServiceConfiguration
             x.AddConsumer<UserService.Infrastructure.Consumers.CreateUserProfileConsumer>();
             x.AddConsumer<UserService.Infrastructure.Consumers.DeleteUserProfileConsumer>();
             x.AddConsumer<UserService.Infrastructure.Consumers.GetUserProfileByUserIdConsumer>(); // ✅ For login UserProfileId query
+            
+            // ✅ Add consumer for Admin User Creation Saga
+            x.AddConsumer<UserService.Infrastructure.Consumers.UpdateUserProfileUserIdConsumer>();
         });
 
         // Application & Infrastructure layers

@@ -28,12 +28,20 @@ public class UserDbContext : DbContext
         builder.Entity<UserProfile>(entity =>
         {
             entity.ToTable("UserProfiles");
-            entity.HasIndex(x => x.UserId).IsUnique(); // One profile per user
+            
+            // UserId unique index - using filtered index to allow multiple NULL values
+            // This allows pre-creation of UserProfile (with NULL UserId) during Saga workflow
+            // Once UserId is set, it must be unique
+            entity.HasIndex(x => x.UserId)
+                .IsUnique()
+                .HasFilter("\"UserId\" IS NOT NULL"); // PostgreSQL syntax for filtered index
+            
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.PhoneNumber);
             entity.HasIndex(x => new { x.UserId, x.LastLoginAt });
             
-            entity.Property(x => x.UserId).IsRequired();
+            // UserId is now nullable to support Saga pattern (pre-create profile, set UserId later)
+            entity.Property(x => x.UserId).IsRequired(false);
             entity.Property(x => x.FullName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Email).HasMaxLength(256).IsRequired();
             entity.Property(x => x.PhoneNumber).HasMaxLength(20);

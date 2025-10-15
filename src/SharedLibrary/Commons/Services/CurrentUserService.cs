@@ -94,15 +94,30 @@ public class CurrentUserService : ICurrentUserService
                 return (false, null);
             }
 
-            // For distributed validation, we would need to call AuthService
-            // But for now, if user is authenticated and has valid ID, consider valid
-            // This can be enhanced to call AuthService validate endpoint
+            // ✅ Check cache for user validity (NOT JWT)
+            // Cache is source of truth for user status
+            var userState = await _userStateCache.GetUserStateAsync(userGuid);
             
+            if (userState == null)
+            {
+                _logger.LogWarning("User not found in cache - UserId: {UserId}", userGuid);
+                return (false, null);
+            }
+
+            // User must be Active status
+            if (userState.Status != Enums.EntityStatusEnum.Active)
+            {
+                _logger.LogWarning("User is not active in cache - UserId: {UserId}, Status: {Status}", 
+                    userGuid, userState.Status);
+                return (false, null);
+            }
+
+            _logger.LogDebug("User validated via cache - UserId: {UserId}, Status: Active", userGuid);
             return (true, userGuid);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating current user");
+            _logger.LogError(ex, "Error validating current user via cache");
             return (false, null);
         }
     }
@@ -117,47 +132,24 @@ public class CurrentUserService : ICurrentUserService
                 return new List<string>();
             }
 
-            // Try to get roles from AuthService for up-to-date information
-            try
+            // ✅ Get roles from Redis cache ONLY (NOT JWT, NOT AuthService call)
+            // Cache is single source of truth for roles
+            var userState = await _userStateCache.GetUserStateAsync(userId.Value);
+            
+            if (userState == null || !userState.Roles.Any())
             {
-                var httpClient = _httpClientFactory.CreateClient("AuthService");
-                
-                // Add current authorization header if available
-                var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(authHeader))
-                {
-                    httpClient.DefaultRequestHeaders.Authorization = 
-                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", 
-                            authHeader.Replace("Bearer ", ""));
-                }
-
-                var response = await httpClient.GetAsync($"/api/auth/user-roles/{userId.Value}");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<Models.Result<IList<string>>>(content, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-
-                    if (result?.IsSuccess == true && result.Data != null)
-                    {
-                        return result.Data;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to get roles from AuthService, falling back to JWT claims");
+                _logger.LogWarning("User state or roles not found in cache - UserId: {UserId}", userId.Value);
+                return new List<string>();
             }
 
-            // Fallback to JWT claims if AuthService call fails
-            return Roles.ToList();
+            _logger.LogDebug("Roles loaded from Redis cache for user {UserId}: {Roles}", 
+                userId.Value, string.Join(", ", userState.Roles));
+                
+            return userState.Roles.ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting current user roles");
+            _logger.LogError(ex, "Error getting current user roles from cache");
             return new List<string>();
         }
     }

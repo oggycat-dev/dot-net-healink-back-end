@@ -10,8 +10,10 @@ public class UserProfile : BaseEntity
 {
     /// <summary>
     /// User ID từ Auth Service (Foreign Key)
+    /// Nullable to allow pre-creation of UserProfile before AuthUser exists (Saga pattern)
+    /// Will be set to actual UserId when AuthUser is created
     /// </summary>
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     
     /// <summary>
     /// Họ tên đầy đủ
