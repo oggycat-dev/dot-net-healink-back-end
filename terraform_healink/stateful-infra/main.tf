@@ -242,12 +242,13 @@ resource "aws_elasticache_replication_group" "healink_redis" {
 
 # --- RABBITMQ (Amazon MQ) ---
 resource "aws_mq_broker" "healink_rabbitmq" {
-  broker_name        = "${var.project_name}-rabbitmq-${terraform.workspace}"
-  engine_type        = "RabbitMQ"
-  engine_version     = "3.13"  # Updated to valid version for RabbitMQ
-  host_instance_type = var.rabbitmq_instance_type
-  security_groups    = [aws_security_group.rabbitmq_sg.id]
-  subnet_ids         = [var.public_subnets[0]]
+  broker_name               = "${var.project_name}-rabbitmq-${terraform.workspace}"
+  engine_type               = "RabbitMQ"
+  engine_version            = "3.13"  # Updated to valid version for RabbitMQ
+  host_instance_type        = var.rabbitmq_instance_type
+  security_groups           = [aws_security_group.rabbitmq_sg.id]
+  subnet_ids                = [var.public_subnets[0]]
+  auto_minor_version_upgrade = true  # Required for RabbitMQ 3.13
 
   user {
     username = var.rabbitmq_username
