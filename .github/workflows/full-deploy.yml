@@ -7,14 +7,6 @@ name: 🚀 Full Deploy - All Services
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy'
-        required: true
-        type: choice
-        options:
-          - dev
-          - prod
-        default: 'dev'
       skip_build:
         description: 'Skip Docker build (use existing images)'
         required: false
@@ -87,14 +79,14 @@ jobs:
             --platform linux/amd64 \
             -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:$IMAGE_TAG \
             -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ inputs.environment }} \
+            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:free \
             -f ${{ matrix.service.path }}/Dockerfile \
             .
           
           # Push all tags
           docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:$IMAGE_TAG
           docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest
-          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ inputs.environment }}
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:free
           
           echo "✅ Successfully built and pushed ${{ matrix.service.name }}"
 
@@ -132,18 +124,18 @@ jobs:
       - name: 🚀 Deploy Stateful Infrastructure
         working-directory: ./terraform_healink/stateful-infra
         env:
-          TF_WORKSPACE: ${{ inputs.environment }}
+          TF_WORKSPACE: free
         run: |
-          echo "Deploying stateful infrastructure to ${{ inputs.environment }}..."
+          echo "Deploying stateful infrastructure to free..."
           
           # Initialize
           terraform init -reconfigure
           
           # Select or create workspace
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform workspace select free || terraform workspace new free
           
           # Plan
-          terraform plan -out=tfplan
+          terraform plan -var-file=../free-tier.tfvars -out=tfplan
           
           # Apply
           terraform apply -auto-approve tfplan
@@ -181,21 +173,22 @@ jobs:
       - name: 🚀 Deploy Application Infrastructure
         working-directory: ./terraform_healink/app-infra
         env:
-          TF_WORKSPACE: ${{ inputs.environment }}
+          TF_WORKSPACE: free
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Deploying application infrastructure to ${{ inputs.environment }}..."
+          echo "Deploying application infrastructure to free..."
           
           # Initialize
           terraform init -reconfigure
           
           # Select or create workspace
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform workspace select free || terraform workspace new free
           
           # Plan with variables
           terraform plan \
             -var="image_tag=$IMAGE_TAG" \
-            -var="environment=${{ inputs.environment }}" \
+            -var="environment=free" \
+            -var-file=../free-tier.tfvars \
             -out=tfplan
           
           # Apply
@@ -242,7 +235,7 @@ jobs:
           
           # Initialize and select workspace
           terraform init -reconfigure
-          terraform workspace select ${{ inputs.environment }}
+          terraform workspace select free
           
           # Get ALB URLs
           echo "Waiting 60 seconds for services to start..."
@@ -261,7 +254,7 @@ jobs:
       - name: ✅ Deployment Summary
         run: |
           echo "=== 🎉 DEPLOYMENT COMPLETED ==="
-          echo "Environment: ${{ inputs.environment }}"
+          echo "Environment: free"
           echo "Commit: ${{ github.sha }}"
           echo "Deployed at: $(date)"
           echo ""
