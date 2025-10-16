@@ -89,6 +89,12 @@ variable "db_backup_retention_period" {
   default     = 1
 }
 
+variable "db_max_allocated_storage" {
+  description = "Database max allocated storage in GB"
+  type        = number
+  default     = 100
+}
+
 variable "db_skip_final_snapshot" {
   description = "Skip final snapshot when destroying DB"
   type        = bool
