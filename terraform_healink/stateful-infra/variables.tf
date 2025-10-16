@@ -102,6 +102,28 @@ variable "db_skip_final_snapshot" {
 }
 
 # ==============================================
+# APPLICATION CONFIGURATION (for compatibility)
+# ==============================================
+
+variable "ecs_desired_count" {
+  description = "ECS desired count (for compatibility with tfvars)"
+  type        = number
+  default     = 1
+}
+
+variable "allowed_origins" {
+  description = "CORS allowed origins (for compatibility with tfvars)"
+  type        = string
+  default     = "http://localhost:3000,http://localhost:8080,http://localhost:5010"
+}
+
+variable "aspnetcore_environment" {
+  description = "ASP.NET Core environment (for compatibility with tfvars)"
+  type        = string
+  default     = "Development"
+}
+
+# ==============================================
 # ELASTICACHE REDIS CONFIGURATION
 # ==============================================
 
@@ -171,10 +193,10 @@ variable "rabbitmq_username" {
 }
 
 variable "rabbitmq_password" {
-  description = "RabbitMQ admin password"
+  description = "RabbitMQ admin password (must be 12-250 characters)"
   type        = string
   sensitive   = true
-  default     = "admin@123" # Should be overridden by GitHub Secrets
+  default     = "HealinkMQ2024!" # Should be overridden by GitHub Secrets
 }
 
 variable "rabbitmq_publicly_accessible" {
