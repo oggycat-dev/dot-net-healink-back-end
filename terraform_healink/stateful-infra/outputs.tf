@@ -31,7 +31,7 @@ output "database_port" {
 # === REDIS OUTPUTS ===
 output "redis_endpoint" {
   description = "Redis endpoint"
-  value       = aws_elasticache_replication_group.healink_redis.configuration_endpoint_address
+  value       = aws_elasticache_replication_group.healink_redis.primary_endpoint_address
 }
 
 output "redis_port" {
