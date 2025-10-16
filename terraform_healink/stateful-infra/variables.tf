@@ -73,7 +73,7 @@ variable "db_name" {
 variable "db_username" {
   description = "Database master username"
   type        = string
-  default     = "admin"
+  default     = "healink_user"
 }
 
 variable "db_password" {
@@ -189,7 +189,7 @@ variable "rabbitmq_deployment_mode" {
 variable "rabbitmq_username" {
   description = "RabbitMQ admin username"
   type        = string
-  default     = "admin"
+  default     = "healink_mq"
 }
 
 variable "rabbitmq_password" {
