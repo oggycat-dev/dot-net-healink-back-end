@@ -672,7 +672,7 @@ module "podcast_ai_service" {
     },
     {
       name  = "GATEWAY_URL"
-    value = data.terraform_remote_state.stateful.outputs.gateway_url
+      value = module.gateway.alb_dns_name
     },
     {
       name  = "MODEL_PATH"
