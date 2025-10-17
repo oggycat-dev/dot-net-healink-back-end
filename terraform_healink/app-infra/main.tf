@@ -132,6 +132,28 @@ module "gateway" {
     {
       name  = "PODCAST_RECOMMENDATION_SERVICE_URL"
       value = "http://${module.podcast_recommendation_service.service_name}.${var.project_name}-${terraform.workspace}.local"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
+    },
+    # Redis Configuration
+    {
+      name  = "ConnectionStrings__Redis"
+      value = "${data.terraform_remote_state.stateful.outputs.redis_endpoint}:${data.terraform_remote_state.stateful.outputs.redis_port}"
+    },
+    {
+      name  = "Redis__Password"
+      value = var.redis_password
     }
   ]
   
@@ -197,6 +219,19 @@ module "auth_service" {
     {
       name  = "RabbitMQ__UseSsl"
       value = "true"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
     }
   ]
   
@@ -253,6 +288,19 @@ module "user_service" {
     {
       name  = "RabbitMQ__UseSsl"
       value = "true"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
     }
   ]
   
@@ -309,6 +357,19 @@ module "content_service" {
     {
       name  = "RabbitMQ__UseSsl"
       value = "true"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
     }
   ]
   
@@ -365,6 +426,19 @@ module "notification_service" {
     {
       name  = "RabbitMQ__UseSsl"
       value = "true"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
     }
   ]
   
@@ -421,6 +495,19 @@ module "subscription_service" {
     {
       name  = "RabbitMQ__UseSsl"
       value = "true"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
     }
   ]
   
@@ -477,6 +564,19 @@ module "payment_service" {
     {
       name  = "RabbitMQ__UseSsl"
       value = "true"
+    },
+    # JWT Configuration
+    {
+      name  = "JWT__Secret"
+      value = var.jwt_secret
+    },
+    {
+      name  = "JWT__Issuer"
+      value = "Healink"
+    },
+    {
+      name  = "JWT__Audience"
+      value = "Healink.Users"
     }
   ]
   
