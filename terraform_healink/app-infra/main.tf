@@ -135,15 +135,15 @@ module "gateway" {
     },
     # JWT Configuration
     {
-      name  = "JWT__Secret"
+      name  = "JwtConfig__Key"
       value = var.jwt_secret
     },
     {
-      name  = "JWT__Issuer"
+      name  = "JwtConfig__Issuer"
       value = "Healink"
     },
     {
-      name  = "JWT__Audience"
+      name  = "JwtConfig__Audience"
       value = "Healink.Users"
     },
     # Redis Configuration
@@ -154,6 +154,15 @@ module "gateway" {
     {
       name  = "Redis__Password"
       value = var.redis_password
+    },
+    # SharedLibrary RedisConfig (used by RedisConfiguration)
+    {
+      name  = "RedisConfig__Enabled"
+      value = "true"
+    },
+    {
+      name  = "RedisConfig__ConnectionString"
+      value = "${data.terraform_remote_state.stateful.outputs.redis_endpoint}:${data.terraform_remote_state.stateful.outputs.redis_port},password=${var.redis_password}"
     }
   ]
   
@@ -222,15 +231,15 @@ module "auth_service" {
     },
     # JWT Configuration
     {
-      name  = "JWT__Secret"
+      name  = "JwtConfig__Key"
       value = var.jwt_secret
     },
     {
-      name  = "JWT__Issuer"
+      name  = "JwtConfig__Issuer"
       value = "Healink"
     },
     {
-      name  = "JWT__Audience"
+      name  = "JwtConfig__Audience"
       value = "Healink.Users"
     }
   ]
@@ -291,15 +300,15 @@ module "user_service" {
     },
     # JWT Configuration
     {
-      name  = "JWT__Secret"
+      name  = "JwtConfig__Key"
       value = var.jwt_secret
     },
     {
-      name  = "JWT__Issuer"
+      name  = "JwtConfig__Issuer"
       value = "Healink"
     },
     {
-      name  = "JWT__Audience"
+      name  = "JwtConfig__Audience"
       value = "Healink.Users"
     }
   ]
