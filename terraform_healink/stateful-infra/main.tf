@@ -307,6 +307,22 @@ resource "aws_ecr_repository" "podcast_recommendation_service" {
 
   tags = {
     Name        = "${var.project_name}-podcast-recommendation-service-ecr"
-    Environment = terraform.workspace
+    Environment = var.environment
+  }
+}
+
+# ECR Repository for Podcast AI Service (FastAPI Python)
+resource "aws_ecr_repository" "podcast_ai_service" {
+  name                 = "${var.project_name}/podcast-ai-service"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name        = "${var.project_name}-podcast-ai-service-ecr"
+    Environment = var.environment
   }
 }

@@ -130,6 +130,11 @@ jobs:
           - name: podcast-recommendation-service
             path: src/PodcastRecommendationService/PodcastRecommendationService.API
             ecr: healink-free/podcast-recommendation-service
+          
+          - name: podcast-ai-service
+            path: src/PodcastRecommendationService/ai_service
+            ecr: healink-free/podcast-ai-service
+            dockerfile: Dockerfile_fastapi
     
     steps:
       - name: 📥 Checkout
@@ -150,13 +155,31 @@ jobs:
         run: |
           echo "🔨 Building ${{ matrix.service.name }}..."
           
-          docker build \
-            --platform linux/amd64 \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:$IMAGE_TAG \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:latest \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:${{ env.ENVIRONMENT }} \
-            -f ${{ matrix.service.path }}/Dockerfile \
-            .
+          # Determine dockerfile path
+          if [ -n "${{ matrix.service.dockerfile }}" ]; then
+            DOCKERFILE="${{ matrix.service.path }}/${{ matrix.service.dockerfile }}"
+          else
+            DOCKERFILE="${{ matrix.service.path }}/Dockerfile"
+          fi
+          
+          # For FastAPI service, build from ai_service directory
+          if [ "${{ matrix.service.name }}" = "podcast-ai-service" ]; then
+            docker build \
+              --platform linux/amd64 \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:$IMAGE_TAG \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:latest \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:${{ env.ENVIRONMENT }} \
+              -f $DOCKERFILE \
+              ${{ matrix.service.path }}
+          else
+            docker build \
+              --platform linux/amd64 \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:$IMAGE_TAG \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:latest \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:${{ env.ENVIRONMENT }} \
+              -f $DOCKERFILE \
+              .
+          fi
           
           echo "✅ Build completed"
 

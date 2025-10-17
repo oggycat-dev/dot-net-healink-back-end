@@ -102,6 +102,11 @@ output "podcast_recommendation_service_ecr_url" {
   value       = aws_ecr_repository.podcast_recommendation_service.repository_url
 }
 
+output "podcast_ai_service_ecr_url" {
+  description = "Podcast AI Service (FastAPI) ECR repository URL"
+  value       = aws_ecr_repository.podcast_ai_service.repository_url
+}
+
 # === NETWORK OUTPUTS ===
 output "vpc_id" {
   description = "VPC ID"

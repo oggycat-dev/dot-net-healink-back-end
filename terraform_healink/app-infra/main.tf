@@ -585,7 +585,7 @@ module "payment_service" {
   task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
 }
 
-# --- PODCAST RECOMMENDATION SERVICE ---
+# --- PODCAST RECOMMENDATION SERVICE (.NET API) ---
 module "podcast_recommendation_service" {
   source = "../modules/internal-microservice"
 
@@ -599,7 +599,7 @@ module "podcast_recommendation_service" {
   desired_count    = 1
   
   docker_image     = "${data.terraform_remote_state.stateful.outputs.podcast_recommendation_service_ecr_url}:latest"
-  container_port   = 8000
+  container_port   = 80  # .NET service port (ASPNETCORE_URLS: http://+:80)
   
   environment_variables = [
     {
@@ -625,6 +625,58 @@ module "podcast_recommendation_service" {
     {
       name  = "DB_PASSWORD"
       value = data.terraform_remote_state.stateful.outputs.database_password
+    },
+    {
+      name  = "PODCAST_AI_SERVICE_URL"
+      value = "http://podcast-ai-service.${var.project_name}.local:8000"
+    }
+  ]
+  
+  vpc_id                    = data.terraform_remote_state.stateful.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.stateful.outputs.public_subnets
+  task_execution_role_arn  = aws_iam_role.ecs_task_execution_role.arn
+}
+
+# --- PODCAST AI SERVICE (FastAPI Python ML Service) ---
+module "podcast_ai_service" {
+  source = "../modules/internal-microservice"
+
+  service_name     = "podcast-ai-service"
+  environment      = terraform.workspace
+  project_name     = var.project_name
+  
+  ecs_cluster_name = aws_ecs_cluster.healink_cluster.name
+  task_cpu         = "1024"  # More CPU for ML models
+  task_memory      = "2048"  # More memory for ML models
+  desired_count    = 1
+  
+  docker_image     = "${data.terraform_remote_state.stateful.outputs.podcast_ai_service_ecr_url}:latest"
+  container_port   = 8000  # FastAPI port
+  
+  environment_variables = [
+    {
+      name  = "ENVIRONMENT"
+      value = "production"
+    },
+    {
+      name  = "PYTHONUNBUFFERED"
+      value = "1"
+    },
+    {
+      name  = "USER_SERVICE_URL"
+      value = "http://user-service.${var.project_name}.local:5002"
+    },
+    {
+      name  = "CONTENT_SERVICE_URL"
+      value = "http://content-service.${var.project_name}.local:5003"
+    },
+    {
+      name  = "GATEWAY_URL"
+      value = data.terraform_remote_state.stateful.outputs.alb_dns_name
+    },
+    {
+      name  = "MODEL_PATH"
+      value = "/app/models"
     }
   ]
   
