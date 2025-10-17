@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../EXE2/nextjs-healink-webapp"
 		}
 	],
 	"settings": {}
