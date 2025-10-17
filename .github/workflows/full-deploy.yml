@@ -463,15 +463,38 @@ jobs:
     if: always()
     
     steps:
-      - name: 📢 Status
+      - name: ✅ DEPLOYMENT SUCCEEDED
+        if: ${{ needs.health-check.result == 'success' }}
         run: |
-          if [ "${{ needs.health-check.result }}" == "success" ]; then
-            echo "✅ DEPLOYMENT SUCCEEDED"
-            echo "Environment: ${{ env.ENVIRONMENT }}"
-            echo "All 8 services deployed and healthy"
-            exit 0
-          else
-            echo "❌ DEPLOYMENT FAILED"
-            echo "Check logs above for errors"
-            exit 1
-          fi
+          echo "✅ DEPLOYMENT SUCCEEDED"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "All 8 services deployed and healthy"
+          echo ""
+          echo "🌐 Gateway URL: Check workflow artifacts for api-endpoints-${{ github.sha }}"
+          echo "📊 Services deployed:"
+          echo "  - Gateway (public ALB)"
+          echo "  - AuthService, UserService, ContentService (internal)"
+          echo "  - NotificationService, SubscriptionService, PaymentService (internal)"
+          echo "  - PodcastRecommendationService (internal)"
+          echo ""
+          echo "💰 Cost: ~$60/month (Free Tier optimized)"
+
+      - name: ❌ DEPLOYMENT FAILED
+        if: ${{ needs.health-check.result != 'success' }}
+        run: |
+          echo "❌ DEPLOYMENT FAILED"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Check logs above for errors"
+          echo ""
+          echo "🔍 Common issues:"
+          echo "  - ECS tasks failed to start"
+          echo "  - Health checks failing"
+          echo "  - Missing environment variables"
+          echo "  - Database connection issues"
+          echo ""
+          echo "🛠️ Troubleshooting:"
+          echo "  1. Check ECS Console for task failures"
+          echo "  2. Review CloudWatch logs"
+          echo "  3. Verify GitHub Secrets are set"
+          echo "  4. Check ALB target group health"
+          exit 1
