@@ -6,6 +6,11 @@ output "alb_dns_name" {
   value       = aws_lb.microservice_alb.dns_name
 }
 
+output "alb_url" {
+  description = "URL of the load balancer (alias for compatibility)"
+  value       = "http://${aws_lb.microservice_alb.dns_name}"
+}
+
 output "alb_arn" {
   description = "ARN of the load balancer"
   value       = aws_lb.microservice_alb.arn
@@ -16,13 +21,23 @@ output "target_group_arn" {
   value       = aws_lb_target_group.microservice_tg.arn
 }
 
-output "ecs_service_name" {
+output "service_name" {
   description = "Name of the ECS service"
   value       = aws_ecs_service.microservice_service.name
 }
 
-output "ecs_task_definition_arn" {
+output "ecs_service_name" {
+  description = "Name of the ECS service (alias for compatibility)"
+  value       = aws_ecs_service.microservice_service.name
+}
+
+output "task_definition_arn" {
   description = "ARN of the ECS task definition"
+  value       = aws_ecs_task_definition.microservice_task.arn
+}
+
+output "ecs_task_definition_arn" {
+  description = "ARN of the ECS task definition (alias for compatibility)"
   value       = aws_ecs_task_definition.microservice_task.arn
 }
 
@@ -36,7 +51,12 @@ output "alb_security_group_id" {
   value       = aws_security_group.alb_sg.id
 }
 
-output "cloudwatch_log_group_name" {
+output "cloudwatch_log_group" {
   description = "Name of the CloudWatch log group"
+  value       = aws_cloudwatch_log_group.microservice_logs.name
+}
+
+output "cloudwatch_log_group_name" {
+  description = "Name of the CloudWatch log group (alias for compatibility)"
   value       = aws_cloudwatch_log_group.microservice_logs.name
 }

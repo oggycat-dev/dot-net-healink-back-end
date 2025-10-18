@@ -8,6 +8,7 @@ namespace Gateway.API.Controllers;
 /// Health check controller for API Gateway
 /// </summary>
 [ApiController]
+[Route("gateway-status")]
 [Route("")]
 [ApiExplorerSettings(GroupName = "v1")]
 // [SwaggerTag("Health check endpoints for API Gateway")]
@@ -18,7 +19,8 @@ public class HealthController : ControllerBase
     /// </summary>
     /// <returns>Service health status</returns>
     /// <response code="200">Service is healthy</response>
-    [HttpGet("health")]
+    [HttpGet("ping")]
+    [HttpGet("/health")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     // [SwaggerOperation(

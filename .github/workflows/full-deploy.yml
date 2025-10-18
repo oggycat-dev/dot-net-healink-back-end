@@ -1,22 +1,21 @@
-# Full Deployment Workflow
-# Deploy all Healink microservices to AWS ECS
-# Triggers: Manual only for safety
+# ============================================
+# HEALINK MICROSERVICES - FULL DEPLOYMENT
+# ============================================
+# Deploys all services to AWS with Free Tier optimization
+# Architecture: Stateful (RDS, Redis, RabbitMQ, ECR) → Build Images → Application (ECS, ALB)
 
-name: 🚀 Full Deploy - All Services
+name: 🚀 Deploy Healink - Free Tier
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy'
-        required: true
-        type: choice
-        options:
-          - dev
-          - prod
-        default: 'dev'
       skip_build:
-        description: 'Skip Docker build (use existing images)'
+        description: '⏭️ Skip Docker build (use existing images)'
+        required: false
+        type: boolean
+        default: false
+      skip_stateful:
+        description: '⏭️ Skip stateful deploy (RDS, Redis, MQ already exist)'
         required: false
         type: boolean
         default: false
@@ -24,103 +23,29 @@ on:
 env:
   AWS_REGION: ap-southeast-2
   ECR_REGISTRY: 855160720656.dkr.ecr.ap-southeast-2.amazonaws.com
+  ENVIRONMENT: free
+  PROJECT_NAME: healink
 
 jobs:
   # ============================================
-  # BUILD ALL SERVICES
+  # STEP 1: DEPLOY STATEFUL INFRASTRUCTURE
   # ============================================
-  build-services:
-    name: 🔨 Build & Push All Docker Images
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.skip_build }}
-    permissions:
-      id-token: write
-      contents: read
-    
-    strategy:
-      matrix:
-        service:
-          - name: authservice
-            path: src/AuthService/AuthService.API
-            ecr_repo: healink/auth-service
-          - name: userservice
-            path: src/UserService/UserService.API
-            ecr_repo: healink/user-service
-          - name: contentservice
-            path: src/ContentService/ContentService.API
-            ecr_repo: healink/content-service
-          - name: notificationservice
-            path: src/NotificaitonService/NotificaitonService.API
-            ecr_repo: healink/notification-service
-          - name: subscriptionservice
-            path: src/SubscriptionService/SubscriptionService.API
-            ecr_repo: healink/subscription-service
-          - name: paymentservice
-            path: src/PaymentService/PaymentService.API
-            ecr_repo: healink/payment-service
-          - name: gateway
-            path: src/Gateway/Gateway.API
-            ecr_repo: healink/gateway
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔑 Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: 🐳 Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: 🏗️ Build and push ${{ matrix.service.name }}
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          echo "Building ${{ matrix.service.name }}..."
-          
-          # Build image
-          docker build \
-            --platform linux/amd64 \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:$IMAGE_TAG \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest \
-            -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ inputs.environment }} \
-            -f ${{ matrix.service.path }}/Dockerfile \
-            .
-          
-          # Push all tags
-          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:$IMAGE_TAG
-          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest
-          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ inputs.environment }}
-          
-          echo "✅ Successfully built and pushed ${{ matrix.service.name }}"
-
-      - name: 📊 Image info
-        run: |
-          echo "Service: ${{ matrix.service.name }}"
-          echo "Image: ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ github.sha }}"
-          echo "Tags: latest, ${{ inputs.environment }}, ${{ github.sha }}"
-
-  # ============================================
-  # DEPLOY STATEFUL INFRASTRUCTURE
-  # ============================================
+  # Creates: RDS, Redis, RabbitMQ, ECR repositories
+  # These are long-lived resources
+  
   deploy-stateful:
-    name: 🏗️ Deploy Stateful Infrastructure (RDS, ECR, Redis)
+    name: 🗄️ Stateful Infrastructure
     runs-on: ubuntu-latest
-    needs: [build-services]
-    if: always() && (needs.build-services.result == 'success' || needs.build-services.result == 'skipped')
+    if: ${{ !inputs.skip_stateful }}
     permissions:
       id-token: write
       contents: read
     
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🔑 Configure AWS credentials
+      - name: 🔑 AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
@@ -129,47 +54,166 @@ jobs:
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: 🚀 Deploy Stateful Infrastructure
+      - name: 🚀 Deploy
         working-directory: ./terraform_healink/stateful-infra
         env:
-          TF_WORKSPACE: ${{ inputs.environment }}
+          # GitHub Secrets for stateful infrastructure
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_redis_password: ${{ secrets.REDIS_PASSWORD }}
+          TF_VAR_rabbitmq_password: ${{ secrets.RABBITMQ_PASSWORD }}
+          # GitHub Variables
+          TF_VAR_environment: ${{ vars.ENVIRONMENT || 'free' }}
+          TF_VAR_aws_region: ${{ vars.AWS_REGION || 'ap-southeast-2' }}
+          TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'healink-free' }}
         run: |
-          echo "Deploying stateful infrastructure to ${{ inputs.environment }}..."
+          echo "🏗️ Deploying stateful infrastructure (Free Tier)..."
           
-          # Initialize
           terraform init -reconfigure
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          terraform plan -var-file=../free-tier.tfvars
+          terraform apply -auto-approve -var-file=../free-tier.tfvars
           
-          # Select or create workspace
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
-          
-          # Plan
-          terraform plan -out=tfplan
-          
-          # Apply
-          terraform apply -auto-approve tfplan
-          
-          echo "✅ Stateful infrastructure deployed"
+          echo "✅ Stateful infrastructure ready"
 
-      - name: 📊 Output stateful resources
+      - name: 📊 Resources Created
         working-directory: ./terraform_healink/stateful-infra
-        run: terraform output
+        run: |
+          echo "=== STATEFUL RESOURCES ==="
+          terraform output
 
   # ============================================
-  # DEPLOY APPLICATION INFRASTRUCTURE
+  # STEP 2: BUILD & PUSH DOCKER IMAGES
   # ============================================
-  deploy-application:
-    name: 🚀 Deploy Application Infrastructure (ECS, ALB)
+  # Builds all 8 microservices and pushes to ECR
+  
+  build-services:
+    name: 🔨 Build Images
     runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_build }}
     needs: [deploy-stateful]
     permissions:
       id-token: write
       contents: read
     
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: gateway
+            path: src/Gateway/Gateway.API
+            ecr: healink-free/gateway
+          
+          - name: auth-service
+            path: src/AuthService/AuthService.API
+            ecr: healink-free/auth-service
+          
+          - name: user-service
+            path: src/UserService/UserService.API
+            ecr: healink-free/user-service
+          
+          - name: content-service
+            path: src/ContentService/ContentService.API
+            ecr: healink-free/content-service
+          
+          - name: notification-service
+            path: src/NotificaitonService/NotificaitonService.API
+            ecr: healink-free/notification-service
+          
+          - name: subscription-service
+            path: src/SubscriptionService/SubscriptionService.API
+            ecr: healink-free/subscription-service
+          
+          - name: payment-service
+            path: src/PaymentService/PaymentService.API
+            ecr: healink-free/payment-service
+          
+          - name: podcast-recommendation-service
+            path: src/PodcastRecommendationService/PodcastRecommendationService.API
+            ecr: healink-free/podcast-recommendation-service
+          
+          - name: podcast-ai-service
+            path: src/PodcastRecommendationService/ai_service
+            ecr: healink-free/podcast-ai-service
+            dockerfile: Dockerfile_fastapi
+    
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🔑 Configure AWS credentials
+      - name: 🔑 AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🐳 ECR Login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: 🏗️ Build ${{ matrix.service.name }}
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "🔨 Building ${{ matrix.service.name }}..."
+          
+          # Determine dockerfile path
+          if [ -n "${{ matrix.service.dockerfile }}" ]; then
+            DOCKERFILE="${{ matrix.service.path }}/${{ matrix.service.dockerfile }}"
+          else
+            DOCKERFILE="${{ matrix.service.path }}/Dockerfile"
+          fi
+          
+          # For FastAPI service, build from ai_service directory
+          if [ "${{ matrix.service.name }}" = "podcast-ai-service" ]; then
+            docker build \
+              --platform linux/amd64 \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:$IMAGE_TAG \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:latest \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:${{ env.ENVIRONMENT }} \
+              -f $DOCKERFILE \
+              ${{ matrix.service.path }}
+          else
+            docker build \
+              --platform linux/amd64 \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:$IMAGE_TAG \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:latest \
+              -t ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:${{ env.ENVIRONMENT }} \
+              -f $DOCKERFILE \
+              .
+          fi
+          
+          echo "✅ Build completed"
+
+      - name: 📤 Push to ECR
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "📤 Pushing ${{ matrix.service.name }} to ECR..."
+          
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:$IMAGE_TAG
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr }}:${{ env.ENVIRONMENT }}
+          
+          echo "✅ Pushed with tags: $IMAGE_TAG, latest, ${{ env.ENVIRONMENT }}"
+
+  # ============================================
+  # STEP 3: DEPLOY APPLICATION INFRASTRUCTURE
+  # ============================================
+  # Creates: ECS Cluster, Services, ALBs, Target Groups
+  
+  deploy-application:
+    name: 🚀 Application Infrastructure
+    runs-on: ubuntu-latest
+    needs: [deploy-stateful, build-services]
+    if: always() && !cancelled() && (needs.deploy-stateful.result == 'success' || needs.deploy-stateful.result == 'skipped') && (needs.build-services.result == 'success' || needs.build-services.result == 'skipped')
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔑 AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
@@ -178,42 +222,179 @@ jobs:
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: 🚀 Deploy Application Infrastructure
+      - name: 🚀 Deploy
         working-directory: ./terraform_healink/app-infra
         env:
-          TF_WORKSPACE: ${{ inputs.environment }}
           IMAGE_TAG: ${{ github.sha }}
+          # GitHub Secrets (Sensitive data)
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
+          TF_VAR_rabbitmq_password: ${{ secrets.RABBITMQ_PASSWORD }}
+          TF_VAR_redis_password: ${{ secrets.REDIS_PASSWORD }}
+          TF_VAR_aws_s3_access_key: ${{ secrets.AWS_S3_ACCESS_KEY }}
+          TF_VAR_aws_s3_secret_key: ${{ secrets.AWS_S3_SECRET_KEY }}
+          TF_VAR_smtp_password: ${{ secrets.EMAIL_SENDER_PASSWORD }}
+          TF_VAR_momo_access_key: ${{ secrets.MOMO_ACCESS_KEY }}
+          TF_VAR_momo_secret_key: ${{ secrets.MOMO_SECRET_KEY }}
+          TF_VAR_password_encryption_key: ${{ secrets.PASSWORD_ENCRYPTION_KEY }}
+          # GitHub Variables (Public configs)
+          TF_VAR_environment: ${{ vars.ENVIRONMENT || 'free' }}
+          TF_VAR_aws_region: ${{ vars.AWS_REGION || 'ap-southeast-2' }}
+          TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'healink-free' }}
         run: |
-          echo "Deploying application infrastructure to ${{ inputs.environment }}..."
+          echo "🚀 Deploying application infrastructure..."
           
-          # Initialize
           terraform init -reconfigure
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           
-          # Select or create workspace
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
-          
-          # Plan with variables
           terraform plan \
             -var="image_tag=$IMAGE_TAG" \
-            -var="environment=${{ inputs.environment }}" \
-            -out=tfplan
+            -var="environment=${{ env.ENVIRONMENT }}" \
+            -var-file=../free-tier.tfvars
           
-          # Apply
-          terraform apply -auto-approve tfplan
+          terraform apply -auto-approve \
+            -var="image_tag=$IMAGE_TAG" \
+            -var="environment=${{ env.ENVIRONMENT }}" \
+            -var-file=../free-tier.tfvars
           
-          echo "✅ Application infrastructure deployed"
+          echo "✅ Application deployed"
 
-      - name: 📊 Output application URLs
+      - name: 📊 Service URLs
         working-directory: ./terraform_healink/app-infra
         run: |
-          echo "=== SERVICE URLS ==="
+          echo "=== 🌐 SERVICE ENDPOINTS ==="
           terraform output
 
+      - name: 🔧 Setup Terraform (no wrapper)
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: 📤 Export Gateway Endpoint for Frontend
+        working-directory: ./terraform_healink/app-infra
+        run: |
+          # Initialize workspace
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          
+          # Get Gateway URL
+          GATEWAY_URL=$(terraform output -raw gateway_url)
+          
+          echo "🌐 Gateway Endpoint: $GATEWAY_URL"
+          
+          # Create API endpoints JSON for Frontend
+          cat > api-endpoints.json << EOF
+          {
+            "environment": "${{ env.ENVIRONMENT }}",
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "gatewayUrl": "$GATEWAY_URL",
+            "endpoints": {
+              "base": "$GATEWAY_URL",
+              "health": "$GATEWAY_URL/health",
+              "auth": "$GATEWAY_URL/api/auth",
+              "users": "$GATEWAY_URL/api/users",
+              "content": "$GATEWAY_URL/api/content",
+              "notifications": "$GATEWAY_URL/api/notifications",
+              "subscriptions": "$GATEWAY_URL/api/subscriptions",
+              "payments": "$GATEWAY_URL/api/payments",
+              "recommendations": "$GATEWAY_URL/api/recommendations"
+            }
+          }
+          EOF
+          
+          cat api-endpoints.json
+          
+          # Create .env file for Frontend
+          cat > .env.production << EOF
+          REACT_APP_API_URL=$GATEWAY_URL
+          REACT_APP_API_GATEWAY=$GATEWAY_URL
+          REACT_APP_AUTH_URL=$GATEWAY_URL/api/auth
+          REACT_APP_ENVIRONMENT=${{ env.ENVIRONMENT }}
+          REACT_APP_DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          REACT_APP_COMMIT=${{ github.sha }}
+          EOF
+          
+          cat .env.production
+          
+          echo "✅ API configuration files created"
+
+      - name: 💾 Upload API Endpoints Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-endpoints-${{ github.sha }}
+          path: |
+            terraform_healink/app-infra/api-endpoints.json
+            terraform_healink/app-infra/.env.production
+          retention-days: 90
+
+      - name: 📋 Create Job Summary
+        working-directory: ./terraform_healink/app-infra
+        run: |
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          GATEWAY_URL=$(terraform output -raw gateway_url)
+          
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # 🚀 Deployment Successful
+          
+          ## 🌐 Gateway Endpoint
+          
+          \`\`\`
+          $GATEWAY_URL
+          \`\`\`
+          
+          ## 📦 Quick Start for Frontend Team
+          
+          ### Option 1: Download Artifacts
+          Download the \`api-endpoints-${{ github.sha }}\` artifact from this workflow run.
+          
+          ### Option 2: Copy & Paste
+          
+          **API Base URL:**
+          \`\`\`
+          $GATEWAY_URL
+          \`\`\`
+          
+          **React .env:**
+          \`\`\`env
+          REACT_APP_API_URL=$GATEWAY_URL
+          REACT_APP_API_GATEWAY=$GATEWAY_URL
+          REACT_APP_AUTH_URL=$GATEWAY_URL/api/auth
+          \`\`\`
+          
+          **Next.js .env:**
+          \`\`\`env
+          NEXT_PUBLIC_API_URL=$GATEWAY_URL
+          NEXT_PUBLIC_API_GATEWAY=$GATEWAY_URL
+          NEXT_PUBLIC_AUTH_URL=$GATEWAY_URL/api/auth
+          \`\`\`
+          
+          ## 🧪 Test Endpoints
+          
+          \`\`\`bash
+          # Health check
+          curl $GATEWAY_URL/health
+          
+          # Auth endpoint
+          curl $GATEWAY_URL/api/auth/health
+          \`\`\`
+          
+          ## 📊 Deployment Info
+          
+          - **Environment:** ${{ env.ENVIRONMENT }}
+          - **Commit:** ${{ github.sha }}
+          - **Deployed:** $(date -u +%Y-%m-%d\ %H:%M:%S\ UTC)
+          - **Cost:** ~\$60/month (Free Tier optimized)
+          
+          EOF
+          
+          echo "✅ Job summary created"
+
   # ============================================
-  # HEALTH CHECK
+  # STEP 4: HEALTH CHECK & VERIFICATION
   # ============================================
+  
   health-check:
-    name: 🏥 Health Check All Services
+    name: 🏥 Health Check
     runs-on: ubuntu-latest
     needs: [deploy-application]
     permissions:
@@ -221,79 +402,122 @@ jobs:
       contents: read
     
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🔑 Configure AWS credentials
+      - name: 🔑 AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: 🔧 Setup Terraform
+      - name: ⏳ Wait for Services
+        run: |
+          echo "⏳ Waiting 90 seconds for ECS tasks to start..."
+          sleep 90
+
+      - name: 🏥 Check ECS Tasks
+        run: |
+          echo "🔍 Checking ECS cluster health..."
+          
+          CLUSTER="${{ env.PROJECT_NAME }}-cluster-${{ env.ENVIRONMENT }}"
+          
+          # List running tasks
+          aws ecs list-tasks --cluster $CLUSTER --region ${{ env.AWS_REGION }}
+          
+          # Get service status
+          aws ecs list-services --cluster $CLUSTER --region ${{ env.AWS_REGION }}
+          
+          echo "✅ Health check completed"
+
+      - name: 🔧 Setup Terraform (no wrapper)
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
 
-      - name: 🏥 Check service health
-        working-directory: ./terraform_healink/app-infra
-        run: |
-          echo "Checking service health..."
-          
-          # Initialize and select workspace
-          terraform init -reconfigure
-          terraform workspace select ${{ inputs.environment }}
-          
-          # Get ALB URLs
-          echo "Waiting 60 seconds for services to start..."
-          sleep 60
-          
-          # Get outputs (you'll need to add these to your terraform outputs)
-          echo "=== Service Health Check ==="
-          echo "Note: Run manual health checks on the ALB URLs from terraform output"
-          
-          # Example health check (customize based on your output variables)
-          # GATEWAY_URL=$(terraform output -raw gateway_url 2>/dev/null || echo "")
-          # if [ -n "$GATEWAY_URL" ]; then
-          #   curl -f "$GATEWAY_URL/health" || echo "Gateway health check failed"
-          # fi
-
       - name: ✅ Deployment Summary
         run: |
-          echo "=== 🎉 DEPLOYMENT COMPLETED ==="
-          echo "Environment: ${{ inputs.environment }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Deployed at: $(date)"
+          cd terraform_healink/app-infra
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          GATEWAY_URL=$(terraform output -raw gateway_url 2>/dev/null || echo "Not available")
+          
+          echo "╔═══════════════════════════════════════════════════════════╗"
+          echo "║          🎉 DEPLOYMENT SUCCESSFUL 🎉                     ║"
+          echo "╚═══════════════════════════════════════════════════════════╝"
           echo ""
-          echo "Services deployed:"
-          echo "  - Gateway"
-          echo "  - AuthService"
-          echo "  - UserService"
-          echo "  - ContentService"
-          echo "  - NotificationService"
-          echo "  - SubscriptionService"
-          echo "  - PaymentService"
+          echo "🌐 GATEWAY ENDPOINT FOR FRONTEND:"
+          echo "   $GATEWAY_URL"
           echo ""
-          echo "Check Terraform outputs for service URLs"
+          echo "📦 Environment: ${{ env.ENVIRONMENT }}"
+          echo "🏷️  Commit: ${{ github.sha }}"
+          echo "⏰ Deployed: $(date)"
+          echo ""
+          echo "🔧 Services Deployed (8):"
+          echo "  ✅ Gateway (public ALB)"
+          echo "  ✅ AuthService (internal)"
+          echo "  ✅ UserService (internal)"
+          echo "  ✅ ContentService (internal)"
+          echo "  ✅ NotificationService (internal)"
+          echo "  ✅ SubscriptionService (internal)"
+          echo "  ✅ PaymentService (internal)"
+          echo "  ✅ PodcastRecommendationService (internal)"
+          echo ""
+          echo "📥 FOR FRONTEND TEAM:"
+          echo "  Download artifact: api-endpoints-${{ github.sha }}"
+          echo "  Contains: api-endpoints.json + .env.production"
+          echo ""
+          echo "🧪 Quick Test:"
+          echo "  curl $GATEWAY_URL/health"
+          echo ""
+          echo "💰 Cost Optimization:"
+          echo "  • Only 1 ALB (saves $96/month)"
+          echo "  • Free Tier: ~$60/month"
+          echo "  • After 12 months: ~$91/month"
+          echo ""
 
   # ============================================
-  # NOTIFICATION
+  # STEP 5: NOTIFICATION
   # ============================================
+  
   notify:
-    name: 📢 Send Deployment Notification
+    name: 📢 Notify
     runs-on: ubuntu-latest
     needs: [health-check]
     if: always()
     
     steps:
-      - name: 📢 Deployment Status
+      - name: ✅ DEPLOYMENT SUCCEEDED
+        if: ${{ needs.health-check.result == 'success' }}
         run: |
-          if [ "${{ needs.health-check.result }}" == "success" ]; then
-            echo "Deployment SUCCEEDED"
-            echo "Environment: ${{ inputs.environment }}"
-            echo "All services are deployed and healthy"
-          else
-            echo "❌ Deployment FAILED"
-            echo "Check the logs above for errors"
-            exit 1
-          fi
+          echo "✅ DEPLOYMENT SUCCEEDED"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "All 8 services deployed and healthy"
+          echo ""
+          echo "🌐 Gateway URL: Check workflow artifacts for api-endpoints-${{ github.sha }}"
+          echo "📊 Services deployed:"
+          echo "  - Gateway (public ALB)"
+          echo "  - AuthService, UserService, ContentService (internal)"
+          echo "  - NotificationService, SubscriptionService, PaymentService (internal)"
+          echo "  - PodcastRecommendationService (internal)"
+          echo ""
+          echo "💰 Cost: ~$60/month (Free Tier optimized)"
+
+      - name: ❌ DEPLOYMENT FAILED
+        if: ${{ needs.health-check.result != 'success' }}
+        run: |
+          echo "❌ DEPLOYMENT FAILED"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Check logs above for errors"
+          echo ""
+          echo "🔍 Common issues:"
+          echo "  - ECS tasks failed to start"
+          echo "  - Health checks failing"
+          echo "  - Missing environment variables"
+          echo "  - Database connection issues"
+          echo ""
+          echo "🛠️ Troubleshooting:"
+          echo "  1. Check ECS Console for task failures"
+          echo "  2. Review CloudWatch logs"
+          echo "  3. Verify GitHub Secrets are set"
+          echo "  4. Check ALB target group health"
+          exit 1

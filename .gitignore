@@ -38,6 +38,9 @@ migrations-appsettings.json
 
 # Environment files
 .env
+.env.*
+env.txt
+*.env.txt
 .env.local
 .env.production
 .env.development
@@ -138,8 +141,20 @@ launchSettings.json
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
-*.tfvars
 *.tfstate.backup
+
+# Ignore auto-generated tfvars (secrets)
+terraform.tfvars
+*.auto.tfvars
+*-secrets.tfvars
+
+# But keep environment config files
+!free-tier.tfvars
+!dev.tfvars
+!prod.tfvars
+
+# Generated API endpoints for Frontend
+api-endpoints/
 
 # Terraform layers state files
 terraform_healink/stateful-infra/.terraform/

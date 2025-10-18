@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using ContentService.Application.Features.Podcasts.Queries;
 using ContentService.Domain.Enums;
@@ -48,41 +49,51 @@ public class InternalPodcastsController : ControllerBase
     /// <param name="topicCategories">Optional filter by topic categories</param>
     /// <returns>Paginated list of published podcasts</returns>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<GetPodcastsResponse>> GetAllPublishedPodcasts(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100,
         [FromQuery] EmotionCategory[]? emotionCategories = null,
         [FromQuery] TopicCategory[]? topicCategories = null)
     {
-        // Validate page size for internal API (allow larger batches)
-        if (pageSize > 1000)
+        try
         {
-            _logger.LogWarning("Internal API requested page size {PageSize} exceeds maximum 1000", pageSize);
-            pageSize = 1000;
+            // Validate page size for internal API (allow larger batches)
+            if (pageSize > 1000)
+            {
+                _logger.LogWarning("Internal API requested page size {PageSize} exceeds maximum 1000", pageSize);
+                pageSize = 1000;
+            }
+
+            // Only return published podcasts
+            var query = new GetPodcastsQuery(
+                Page: page,
+                PageSize: pageSize,
+                Status: ContentStatus.Published,
+                EmotionCategories: emotionCategories,
+                TopicCategories: topicCategories,
+                SearchTerm: null,
+                SeriesName: null,
+                IsInternalRequest: true  // ✅ Bypass authentication for internal service access
+            );
+
+            var result = await _mediator.Send(query);
+            
+            _logger.LogInformation(
+                "[INTERNAL] AI Service retrieved {Count} podcasts (Page: {Page}, PageSize: {PageSize}, TotalCount: {TotalCount})",
+                result.Podcasts.Count(),
+                page,
+                pageSize,
+                result.TotalCount
+            );
+
+            return Ok(result);
         }
-
-        // Only return published podcasts
-        var query = new GetPodcastsQuery(
-            Page: page,
-            PageSize: pageSize,
-            Status: ContentStatus.Published,
-            EmotionCategories: emotionCategories,
-            TopicCategories: topicCategories,
-            SearchTerm: null,
-            SeriesName: null
-        );
-
-        var result = await _mediator.Send(query);
-        
-        _logger.LogInformation(
-            "[INTERNAL] AI Service retrieved {Count} podcasts (Page: {Page}, PageSize: {PageSize}, TotalCount: {TotalCount})",
-            result.Podcasts.Count(),
-            page,
-            pageSize,
-            result.TotalCount
-        );
-
-        return Ok(result);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[INTERNAL] Error retrieving podcasts for AI service");
+            return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+        }
     }
 
     /// <summary>

@@ -31,7 +31,7 @@ output "database_port" {
 # === REDIS OUTPUTS ===
 output "redis_endpoint" {
   description = "Redis endpoint"
-  value       = aws_elasticache_replication_group.healink_redis.configuration_endpoint_address
+  value       = aws_elasticache_replication_group.healink_redis.primary_endpoint_address
 }
 
 output "redis_port" {
@@ -95,6 +95,16 @@ output "payment_service_ecr_url" {
 output "gateway_ecr_url" {
   description = "Gateway ECR repository URL"
   value       = aws_ecr_repository.gateway.repository_url
+}
+
+output "podcast_recommendation_service_ecr_url" {
+  description = "Podcast Recommendation Service ECR repository URL"
+  value       = aws_ecr_repository.podcast_recommendation_service.repository_url
+}
+
+output "podcast_ai_service_ecr_url" {
+  description = "Podcast AI Service (FastAPI) ECR repository URL"
+  value       = aws_ecr_repository.podcast_ai_service.repository_url
 }
 
 # === NETWORK OUTPUTS ===

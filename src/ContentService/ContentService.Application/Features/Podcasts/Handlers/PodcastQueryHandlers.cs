@@ -32,8 +32,11 @@ public class GetPodcastsQueryHandler : IRequestHandler<GetPodcastsQuery, GetPodc
     {
         try
         {
-            // ✅ Check subscription requirement from cache
-            await ValidateSubscriptionAccessAsync();
+            // ✅ Skip subscription check for internal requests (e.g. AI Recommendation Service)
+            if (!request.IsInternalRequest)
+            {
+                await ValidateSubscriptionAccessAsync();
+            }
             
             var query = _unitOfWork.Repository<Podcast>().GetQueryable();
 

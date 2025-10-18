@@ -1,10 +1,10 @@
 # Nuke AWS Workflow
 # Destroy all Healink AWS resources EXCEPT ECR and RDS
 # ⚠️ USE WITH EXTREME CAUTION ⚠️
-# This will destroy: ECS clusters, ALB, CloudWatch logs, etc.
-# This will KEEP: ECR repositories, RDS databases (data safe)
+# This will DESTROY: ECS, ALB, Redis, RabbitMQ, CloudWatch logs, etc.
+# This will KEEP: ECR repositories (Docker images), RDS PostgreSQL (data safe)
 
-name: ☢️ Nuke AWS (Keep ECR & RDS)
+name: ☢️ Nuke AWS (Keep ONLY ECR & RDS)
 
 on:
   workflow_dispatch:
@@ -14,9 +14,10 @@ on:
         required: true
         type: choice
         options:
+          - free
           - dev
           - prod
-        default: 'dev'
+        default: 'free'
       confirmation:
         description: 'Type "NUKE" to confirm destruction'
         required: true
@@ -55,21 +56,22 @@ jobs:
           
           echo "✅ Confirmation validated"
           echo ""
-          echo "⚠️  WARNING: This will destroy the following:"
+          echo "⚠️  WARNING: This will DESTROY the following:"
           echo "   - ECS Clusters and Services"
           echo "   - Application Load Balancers"
           echo "   - Target Groups"
           echo "   - Security Groups"
           echo "   - CloudWatch Log Groups"
           echo "   - IAM Roles (ECS Task Execution)"
+          echo "   - ElastiCache Redis (~$12/month saved)"
+          echo "   - Amazon MQ RabbitMQ (~$13/month saved)"
           echo ""
           echo "✅ This will KEEP (safe):"
           if [ "${{ inputs.keep_ecr_images }}" == "true" ]; then
             echo "   - ECR Repositories and Docker Images"
           fi
           if [ "${{ inputs.keep_rds }}" == "true" ]; then
-            echo "   - RDS Database Instances (data preserved)"
-            echo "   - Redis Cache"
+            echo "   - RDS PostgreSQL Database (data preserved)"
           fi
           echo ""
           echo "Environment: ${{ inputs.environment }}"
@@ -289,12 +291,139 @@ jobs:
           echo "✅ CloudWatch logs cleanup completed"
 
   # ============================================
+  # DESTROY REDIS (ElastiCache)
+  # ============================================
+  destroy-redis:
+    name: 💣 Destroy Redis Cache
+    runs-on: ubuntu-latest
+    needs: [cleanup-logs]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔥 Delete ElastiCache clusters
+        run: |
+          echo "Destroying Redis clusters..."
+          
+          # List all replication groups starting with healink
+          REDIS_CLUSTERS=$(aws elasticache describe-replication-groups \
+            --query "ReplicationGroups[?starts_with(ReplicationGroupId, 'healink')].ReplicationGroupId" \
+            --output text || echo "")
+          
+          if [ -z "$REDIS_CLUSTERS" ]; then
+            echo "No Redis clusters found"
+          else
+            for CLUSTER in $REDIS_CLUSTERS; do
+              echo "Deleting Redis cluster: $CLUSTER"
+              aws elasticache delete-replication-group \
+                --replication-group-id $CLUSTER \
+                --no-retain-primary-cluster || echo "Failed to delete $CLUSTER"
+            done
+          fi
+          
+          # Also check for standalone cache clusters
+          CACHE_CLUSTERS=$(aws elasticache describe-cache-clusters \
+            --query "CacheClusters[?starts_with(CacheClusterId, 'healink')].CacheClusterId" \
+            --output text || echo "")
+          
+          if [ -z "$CACHE_CLUSTERS" ]; then
+            echo "No cache clusters found"
+          else
+            for CLUSTER in $CACHE_CLUSTERS; do
+              echo "Deleting cache cluster: $CLUSTER"
+              aws elasticache delete-cache-cluster \
+                --cache-cluster-id $CLUSTER || echo "Failed to delete $CLUSTER"
+            done
+          fi
+          
+          echo "✅ Redis destruction initiated (will take ~5 minutes)"
+
+      - name: ⏳ Wait for Redis deletion
+        run: |
+          echo "Waiting for Redis clusters to be deleted..."
+          sleep 60
+          echo "✅ Redis cleanup completed"
+
+      - name: 🧹 Delete Redis subnet groups
+        run: |
+          echo "Deleting Redis subnet groups..."
+          
+          SUBNET_GROUPS=$(aws elasticache describe-cache-subnet-groups \
+            --query "CacheSubnetGroups[?starts_with(CacheSubnetGroupName, 'healink')].CacheSubnetGroupName" \
+            --output text || echo "")
+          
+          if [ -z "$SUBNET_GROUPS" ]; then
+            echo "No Redis subnet groups found"
+            exit 0
+          fi
+          
+          for SG in $SUBNET_GROUPS; do
+            echo "Deleting subnet group: $SG"
+            aws elasticache delete-cache-subnet-group \
+              --cache-subnet-group-name $SG || echo "Failed to delete $SG"
+          done
+          
+          echo "✅ Redis subnet groups deleted"
+
+  # ============================================
+  # DESTROY RABBITMQ (Amazon MQ)
+  # ============================================
+  destroy-rabbitmq:
+    name: 💣 Destroy RabbitMQ
+    runs-on: ubuntu-latest
+    needs: [destroy-redis]
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::855160720656:role/GitHubActionRole-Healink
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔥 Delete Amazon MQ brokers
+        run: |
+          echo "Destroying RabbitMQ brokers..."
+          
+          # List all brokers
+          BROKERS=$(aws mq list-brokers \
+            --query "BrokerSummaries[?starts_with(BrokerName, 'healink')].BrokerId" \
+            --output text || echo "")
+          
+          if [ -z "$BROKERS" ]; then
+            echo "No RabbitMQ brokers found"
+            exit 0
+          fi
+          
+          for BROKER in $BROKERS; do
+            echo "Deleting RabbitMQ broker: $BROKER"
+            aws mq delete-broker --broker-id $BROKER || echo "Failed to delete $BROKER"
+          done
+          
+          echo "✅ RabbitMQ destruction initiated (will take ~5-10 minutes)"
+
+      - name: ⏳ Wait for RabbitMQ deletion
+        run: |
+          echo "Waiting for RabbitMQ brokers to be deleted..."
+          sleep 120
+          echo "✅ RabbitMQ cleanup completed"
+
+  # ============================================
   # VERIFY SAFETY
   # ============================================
   verify-safety:
     name: ✅ Verify ECR & RDS Still Exist
     runs-on: ubuntu-latest
-    needs: [cleanup-logs]
+    needs: [destroy-rabbitmq]
     permissions:
       id-token: write
       contents: read
@@ -377,20 +506,24 @@ jobs:
           echo "  - Security Groups"
           echo "  - CloudWatch Log Groups"
           echo "  - IAM Roles (ECS Task Execution)"
+          echo "  - ElastiCache Redis"
+          echo "  - Amazon MQ RabbitMQ"
           echo ""
           echo "✅ PRESERVED:"
           if [ "${{ inputs.keep_ecr_images }}" == "true" ]; then
             echo "  - ECR Repositories (Docker images intact)"
           fi
           if [ "${{ inputs.keep_rds }}" == "true" ]; then
-            echo "  - RDS Database (data intact)"
-            echo "  - Redis Cache"
+            echo "  - RDS PostgreSQL Database (data intact)"
           fi
           echo ""
           echo "💰 COST SAVINGS:"
-          echo "  - ECS Fargate: ~$0/month (no running tasks)"
+          echo "  - ECS Fargate: ~$0/month (deleted)"
           echo "  - ALB: ~$0/month (deleted)"
+          echo "  - ElastiCache Redis: ~$0/month (deleted)"
+          echo "  - Amazon MQ RabbitMQ: ~$0/month (deleted)"
           echo "  - Remaining costs: RDS (~$15/month) + ECR storage (~$1/month)"
+          echo "  - Total savings: ~$50/month → Only ~$16/month remaining"
           echo ""
           echo "🚀 TO REDEPLOY:"
           echo "  Run the 'Full Deploy' workflow to recreate all services"

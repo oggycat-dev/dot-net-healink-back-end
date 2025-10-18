@@ -334,18 +334,9 @@ public class CreatorPodcastsController : ControllerBase
             return Unauthorized(new { message = "Invalid user ID" });
         }
 
-        // TODO: Implement dashboard with statistics
-        _logger.LogInformation("Creator {CreatorId} accessed dashboard", creatorId);
+        var stats = await _mediator.Send(new GetCreatorDashboardStatsQuery(creatorId));
+        _logger.LogInformation("Creator {CreatorId} dashboard fetched", creatorId);
 
-        return Ok(new
-        {
-            message = "Creator dashboard coming soon",
-            creatorId = creatorId,
-            totalPodcasts = 0,
-            publishedPodcasts = 0,
-            pendingPodcasts = 0,
-            totalViews = 0,
-            totalLikes = 0
-        });
+        return Ok(stats);
     }
 }
