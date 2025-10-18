@@ -1,5 +1,6 @@
 {
   "Routes": [
+
     {
       "DownstreamPathTemplate": "/api/cms/auth/login",
       "DownstreamScheme": "http",
@@ -238,7 +239,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/user/podcasts/{everything}",
+      "UpstreamPathTemplate": "/api/user/podcasts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
     },
     {
@@ -250,7 +251,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/user/podcasts",
+      "UpstreamPathTemplate": "/api/user/podcasts",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
@@ -262,7 +263,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/user/podcasts/latest",
+      "UpstreamPathTemplate": "/api/user/podcasts/latest",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
@@ -274,7 +275,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/user/podcasts/trending",
+      "UpstreamPathTemplate": "/api/user/podcasts/trending",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
@@ -286,7 +287,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/creator/podcasts/{everything}",
+      "UpstreamPathTemplate": "/api/creator/podcasts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -302,7 +303,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/creator/podcasts",
+      "UpstreamPathTemplate": "/api/creator/podcasts",
       "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -318,7 +319,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/cms/podcasts/{everything}",
+      "UpstreamPathTemplate": "/api/cms/podcasts/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -334,7 +335,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/cms/podcasts",
+      "UpstreamPathTemplate": "/api/cms/podcasts",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -366,7 +367,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/fileupload/{everything}",
+      "UpstreamPathTemplate": "/api/fileupload/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -382,7 +383,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/user/community/{everything}",
+      "UpstreamPathTemplate": "/api/user/community/{everything}",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
@@ -394,7 +395,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/creator/community/{everything}",
+      "UpstreamPathTemplate": "/api/creator/community/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -410,7 +411,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/cms/community/{everything}",
+      "UpstreamPathTemplate": "/api/cms/community/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -426,7 +427,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/creator/upload/{everything}",
+      "UpstreamPathTemplate": "/api/creator/upload/{everything}",
       "UpstreamHttpMethod": [ "POST", "DELETE", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -442,7 +443,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/flashcards/{everything}",
+      "UpstreamPathTemplate": "/api/flashcards/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -458,7 +459,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/postcards/{everything}",
+      "UpstreamPathTemplate": "/api/postcards/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -848,6 +849,702 @@
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
       }
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/podcasts/my-podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/podcasts/my-podcasts",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/podcasts/dashboard",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/podcasts/dashboard",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/podcasts/{id}/stats",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/podcasts/{id}/stats",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/community/my-stories",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/community/my-stories",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/community/stories/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/community/stories/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/podcast/audio",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/podcast/audio",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/podcast/thumbnail",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/podcast/thumbnail",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/podcast/transcript",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/podcast/transcript",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/flashcard",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/flashcard",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/postcard",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/postcard",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/community/image",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/community/image",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/creator/upload/presigned-url",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/creator/upload/presigned-url",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts/pending",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/podcasts/pending",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts/{id}/analytics",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/podcasts/{id}/analytics",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts/statistics",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/podcasts/statistics",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts/moderation-log",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/podcasts/moderation-log",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/podcasts/bulk-approve",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/podcasts/bulk-approve",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/community/stories/pending",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/community/stories/pending",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/cms/community/statistics",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/cms/community/statistics",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/by-emotion/{emotion}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/podcasts/by-emotion/{emotion}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/by-topic/{topic}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/podcasts/by-topic/{topic}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/series/{seriesName}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/podcasts/series/{seriesName}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/search",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/podcasts/search",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/{id}/views",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/podcasts/{id}/views",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/podcasts/{id}/likes",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/podcasts/{id}/likes",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/community/stories/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/community/stories/{id}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/community/stories/trending",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/community/stories/trending",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/user/community/stories/search",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/community/stories/search",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/internal/podcasts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/internal/podcasts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/internal/podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/internal/podcasts",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/internal/podcasts/health",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/internal/podcasts/health",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/podcast",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/podcast",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/podcast/thumbnail",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/podcast/thumbnail",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/podcast/transcript",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/podcast/transcript",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/flashcard",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/flashcard",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/postcard",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/postcard",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/community/image",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/community/image",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/fileupload/presigned-url",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/fileupload/presigned-url",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/{id}/related-flashcards",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts/{id}/related-flashcards",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/{id}/analytics",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts/{id}/analytics",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/{id}/views",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts/{id}/views",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/{id}/likes",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts/{id}/likes",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/podcasts/debug/me",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/podcasts/debug/me",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/community/stories/{id}/helpful",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/community/stories/{id}/helpful",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/health/test-event",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/health/test-event",
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ]
     }
   ],
   "GlobalConfiguration": {

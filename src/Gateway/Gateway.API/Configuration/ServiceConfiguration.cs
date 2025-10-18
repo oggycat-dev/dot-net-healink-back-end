@@ -109,6 +109,9 @@ public static class ServiceConfiguration
         // Use correlation ID middleware for distributed tracing - early in pipeline
         app.UseCorrelationId();
 
+        // Map Gateway's own controllers BEFORE Ocelot
+        app.MapControllers();
+
         // Use distributed auth middleware (Gateway-specific) - before Ocelot
         app.UseMiddleware<Gateway.API.Middlewares.DistributedAuthMiddleware>();
 
