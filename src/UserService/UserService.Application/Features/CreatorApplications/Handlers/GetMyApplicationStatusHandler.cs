@@ -53,19 +53,22 @@ public class GetMyApplicationStatusHandler : IRequestHandler<GetMyApplicationSta
             _logger.LogInformation("Total applications in database: {TotalApplications}", totalApplications);
 
             // Get applications for this specific user using UserProfile.Id
-            var userApplications = await _unitOfWork.Repository<CreatorApplication>()
-                .GetQueryable()
-                .Where(a => a.UserId == userProfile.Id)
-                .OrderByDescending(a => a.SubmittedAt)
-                .ToListAsync(cancellationToken);
+            // Force fresh data by using AsNoTracking and explicit ordering
+                var userApplications = await _unitOfWork.Repository<CreatorApplication>()
+                    .GetQueryable()
+                    .AsNoTracking()
+                    .Where(a => a.UserId == userProfile.Id)
+                    .OrderByDescending(a => a.SubmittedAt)
+                    .ThenByDescending(a => a.ReviewedAt) // Add ReviewedAt to ensure latest data
+                    .ToListAsync(cancellationToken);
             
             _logger.LogInformation("Applications found for user {UserId}: {Count}", request.UserId, userApplications.Count);
             
             // Log all applications for debugging
             foreach (var app in userApplications.Take(3))
             {
-                _logger.LogInformation("Application: ID={ApplicationId}, Status={Status}, SubmittedAt={SubmittedAt}", 
-                    app.Id, app.ApplicationStatus, app.SubmittedAt);
+                _logger.LogInformation("Application: ID={ApplicationId}, Status={Status}, SubmittedAt={SubmittedAt}, ReviewedAt={ReviewedAt}, RejectionReason={RejectionReason}", 
+                    app.Id, app.ApplicationStatus, app.SubmittedAt, app.ReviewedAt, app.RejectionReason);
             }
 
             if (userApplications.Count == 0)
@@ -86,6 +89,9 @@ public class GetMyApplicationStatusHandler : IRequestHandler<GetMyApplicationSta
             }
 
             var application = userApplications.First();
+
+            _logger.LogInformation("Retrieved application from database: ID={ApplicationId}, Status={Status}, ReviewedAt={ReviewedAt}, RejectionReason={RejectionReason}", 
+                application.Id, application.ApplicationStatus, application.ReviewedAt, application.RejectionReason);
 
             // Parse application data from JSON
             var applicationData = JsonSerializer.Deserialize<Dictionary<string, object>>(application.ApplicationData) ?? new Dictionary<string, object>();
