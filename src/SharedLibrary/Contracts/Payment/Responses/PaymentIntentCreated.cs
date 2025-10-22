@@ -15,6 +15,7 @@ public record PaymentIntentCreated
     public string? PaymentUrl { get; init; }
     public string? QrCodeUrl { get; init; }
     public string? DeepLink { get; init; }
+    public string? AppLink { get; init; }  // ✅ For in-app browser (MoMo DeepLinkWebInApp)
     
     // Error info (if failed)
     public string? ErrorCode { get; init; }

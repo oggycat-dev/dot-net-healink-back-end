@@ -46,7 +46,8 @@ public class CreatePaymentIntentConsumer : IConsumer<CreatePaymentIntentRequest>
                 Currency = request.Currency,
                 Description = request.Description,
                 Metadata = request.Metadata,
-                CreatedBy = request.CreatedBy
+                CreatedBy = request.CreatedBy,
+                UserAgent = request.UserAgent // ✅ Pass UserAgent
             };
 
             var result = await _mediator.Send(command);

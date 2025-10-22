@@ -87,6 +87,7 @@ public static class PaymentGatewayResponseParser
             PaymentUrl = momoResponse.PayUrl,
             QrCodeUrl = momoResponse.QrCodeUrl,
             DeepLink = momoResponse.DeepLink,
+            AppLink = momoResponse.DeepLinkWebInApp,  // ✅ For in-app browser
             ErrorCode = isSuccess ? null : momoResponse.ResultCode.ToString(),
             ErrorMessage = isSuccess ? null : momoResponse.Message,
             Metadata = new Dictionary<string, string>
@@ -94,7 +95,8 @@ public static class PaymentGatewayResponseParser
                 ["orderId"] = momoResponse.OrderId,          // ✅ MoMo's OrderId (SubscriptionId)
                 ["requestId"] = momoResponse.RequestId,      // ✅ MoMo's RequestId (REQ_{subscriptionId})
                 ["gatewayType"] = PaymentGatewayType.Momo.ToString(),
-                ["resultCode"] = momoResponse.ResultCode.ToString()
+                ["resultCode"] = momoResponse.ResultCode.ToString(),
+                ["deepLinkWebInApp"] = momoResponse.DeepLinkWebInApp ?? ""  // ✅ For debugging
             }
         };
     }

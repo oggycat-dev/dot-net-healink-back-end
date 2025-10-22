@@ -92,7 +92,8 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 request.Currency,
                 request.Description,
                 request.Metadata,
-                transaction);
+                transaction,
+                request.UserAgent); // ✅ Pass UserAgent
 
             // 5. Create payment intent with gateway
             // ✅ Returns gateway-specific response: MomoResponse, VnPayResponse, etc.

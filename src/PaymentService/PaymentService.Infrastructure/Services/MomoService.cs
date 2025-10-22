@@ -75,6 +75,28 @@ public class MomoService : IPaymentGatewayService
             var amount = (long)requestPayment.Amount;
             var orderId = requestPayment.SubscriptionId.ToString();
             var orderInfo = requestPayment.Description;
+            
+            // ✅ Detect client type from User-Agent header or metadata
+            var userAgent = requestPayment.UserAgent ?? "";
+            var isFlutterApp = userAgent.Contains("Flutter") || userAgent.Contains("Dart");
+            var isMobileApp = userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iOS");
+            
+            // ✅ Set appropriate redirect URL based on client type
+            string redirectUrl;
+            if (isFlutterApp || isMobileApp)
+            {
+                // ✅ Flutter app redirect - use custom scheme
+                redirectUrl = "healink://payment/result";
+            }
+            else
+            {
+                // ✅ Web app redirect - use web URL
+                redirectUrl = _redirectUrl; // Use configured web redirect URL
+            }
+            
+            _logger.LogInformation(
+                "MoMo redirect configured: UserAgent={UserAgent}, IsFlutter={IsFlutter}, RedirectUrl={RedirectUrl}",
+                userAgent, isFlutterApp, redirectUrl);
 
             // Build signature
             var parameters = new Dictionary<string, string>
@@ -83,7 +105,7 @@ public class MomoService : IPaymentGatewayService
                 { "partnerCode", _partnerCode },
                 { "requestType", requestType },
                 { "ipnUrl", _ipnUrl },
-                { "redirectUrl", _redirectUrl },
+                { "redirectUrl", redirectUrl }, // ✅ Use dynamic redirect URL
                 { "orderId", orderId },
                 { "amount", amount.ToString() },
                 { "orderInfo", orderInfo },
@@ -100,7 +122,7 @@ public class MomoService : IPaymentGatewayService
                 StoreId = _storeId,
                 RequestType = requestType,
                 IpnUrl = _ipnUrl,
-                RedirectUrl = _redirectUrl,
+                RedirectUrl = redirectUrl, // ✅ Use dynamic redirect URL
                 OrderId = orderId,
                 Amount = amount,
                 Lang = lang,
@@ -120,6 +142,10 @@ public class MomoService : IPaymentGatewayService
             // ✅ Parse and validate MoMo response
             var result = await response.Content.ReadFromJsonAsync<MomoResponse>(options: new JsonSerializerOptions { PropertyNamingPolicy  = JsonNamingPolicy.CamelCase }, cancellationToken)
                 ?? throw new Exception("Failed to parse MoMo response");
+
+            // ✅ Log response details for debugging
+            _logger.LogInformation("MoMo Response - PayUrl: {PayUrl}, DeepLink: {DeepLink}, DeepLinkWebInApp: {DeepLinkWebInApp}", 
+                result.PayUrl, result.DeepLink, result.DeepLinkWebInApp);
 
             return result;
         }

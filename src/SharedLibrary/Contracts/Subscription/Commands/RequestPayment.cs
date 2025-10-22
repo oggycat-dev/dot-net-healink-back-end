@@ -14,5 +14,6 @@ public record RequestPayment : IntegrationEvent
     public string Currency { get; init; } = "VND";
     public string Description { get; init; } = string.Empty;
     public Dictionary<string, string>? Metadata { get; init; }
+    public string? UserAgent { get; init; } // ✅ For client type detection
 }
 
