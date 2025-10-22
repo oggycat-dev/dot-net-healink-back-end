@@ -54,8 +54,12 @@ public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result>
             user.UpdateEntity(Guid.Parse(userId));
             await _identityService.UpdateUserAsync(user);
             
-            // Remove user state from cache
-            await _userStateCache.RemoveUserStateAsync(Guid.Parse(userId));
+            // ✅ Only revoke refresh token, preserve subscription cache
+            await _userStateCache.RevokeRefreshTokenAsync(Guid.Parse(userId));
+            
+            _logger.LogInformation(
+                "🔍 DEBUG: Logout - Revoked refresh token for UserId={UserId}, preserved subscription cache", 
+                userId);
             
             // Publish logout event
             var logoutEvent = new UserLoggedOutEvent

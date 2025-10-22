@@ -111,6 +111,22 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/user/state/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/user/state/{everything}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/user/profile/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -345,6 +361,18 @@
         "AuthenticationProviderKey": "Bearer",
         "AllowedScopes": []
       }
+    },
+    {
+      "DownstreamPathTemplate": "/api/FileUpload/proxy{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "contentservice-api",
+          "Port": 80
+        }
+      ],
+      "UpstreamPathTemplate": "/api/content/fileupload/proxy{everything}",
+      "UpstreamHttpMethod": [ "GET", "HEAD", "OPTIONS" ]
     },
     {
       "DownstreamPathTemplate": "/api/FileUpload/{everything}",
@@ -2283,7 +2311,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/cms/podcasts/{id}/approve",
+      "UpstreamPathTemplate": "/api/cms/podcasts/{id}/approve",
       "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
@@ -2299,7 +2327,7 @@
           "Port": 80
         }
       ],
-      "UpstreamPathTemplate": "/api/content/cms/podcasts/{id}/reject",
+      "UpstreamPathTemplate": "/api/cms/podcasts/{id}/reject",
       "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",

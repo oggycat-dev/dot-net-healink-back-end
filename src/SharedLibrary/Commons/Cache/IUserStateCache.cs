@@ -108,12 +108,12 @@ public record UserSubscriptionInfo
     public Guid SubscriptionPlanId { get; init; }
     public string SubscriptionPlanName { get; init; } = string.Empty;
     public string SubscriptionPlanDisplayName { get; init; } = string.Empty;
-    public int SubscriptionStatus { get; init; } // 0=Pending, 1=Active, 2=Expired, 3=Canceled
+    public int SubscriptionStatus { get; init; } // 1=Pending, 2=Active, 3=PastDue, 4=Canceled, 5=Paused
     public DateTime? CurrentPeriodStart { get; init; }
     public DateTime? CurrentPeriodEnd { get; init; }
     public DateTime? ActivatedAt { get; init; }
     public DateTime? CanceledAt { get; init; }
     
-    public bool IsActive => SubscriptionStatus == 1; // Active
+    public bool IsActive => SubscriptionStatus == 2; // Active (theo enum SubscriptionStatus)
     public bool IsExpired => CurrentPeriodEnd.HasValue && CurrentPeriodEnd.Value < DateTime.UtcNow;
 }

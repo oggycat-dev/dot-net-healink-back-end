@@ -13,4 +13,5 @@ public record ProcessPaymentCommand : IRequest<Result<PaymentIntentResult>>
     public string Description { get; init; } = string.Empty;
     public Dictionary<string, string>? Metadata { get; init; }
     public Guid? CreatedBy { get; init; }
+    public string? UserAgent { get; init; } // ✅ For client type detection
 }

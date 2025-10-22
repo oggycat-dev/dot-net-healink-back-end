@@ -27,8 +27,13 @@ public class SubscriptionResponse
     public bool CancelAtPeriodEnd { get; set; }
     
     public int RenewalBehavior { get; set; }
-    
+
     public string RenewalBehaviorName { get; set; } = string.Empty;
+    
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = string.Empty;
+
+    public string BillingPeriodUnit { get; set; } = string.Empty;
     
     public DateTime CreatedAt { get; set; }
     

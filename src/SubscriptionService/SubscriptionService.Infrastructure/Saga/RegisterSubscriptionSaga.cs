@@ -62,6 +62,7 @@ public class RegisterSubscriptionSaga : MassTransitStateMachine<RegisterSubscrip
                         ["SubscriptionPlanId"] = context.Saga.SubscriptionPlanId.ToString(),
                         ["SubscriptionPlanName"] = context.Saga.SubscriptionPlanName ?? ""
                     },
+                    UserAgent = context.Message.UserAgent, // ✅ Pass UserAgent for client detection
                     CreatedBy = context.Saga.CreatedBy
                 }))
                 .TransitionTo(AwaitingPayment)

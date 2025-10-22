@@ -192,14 +192,10 @@ public class UserPodcastsController : ControllerBase
     [HttpGet("search")]
     [AllowAnonymous]
     public async Task<ActionResult<GetPodcastsResponse>> SearchPodcasts(
-        [FromQuery] string keyword,
+        [FromQuery] string? keyword,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        if (string.IsNullOrWhiteSpace(keyword))
-        {
-            return BadRequest(new { message = "Search keyword is required" });
-        }
 
         var query = new GetPodcastsQuery(
             Page: page,

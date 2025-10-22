@@ -16,7 +16,10 @@ public class SubscriptionMappingProfile : Profile
             .ForMember(dest => dest.PlanName, opt => opt.MapFrom(src => src.Plan.Name))
             .ForMember(dest => dest.PlanDisplayName, opt => opt.MapFrom(src => src.Plan.DisplayName))
             .ForMember(dest => dest.SubscriptionStatusName, opt => opt.MapFrom(src => src.SubscriptionStatus.ToString()))
-            .ForMember(dest => dest.RenewalBehaviorName, opt => opt.MapFrom(src => src.RenewalBehavior.ToString()));
+            .ForMember(dest => dest.RenewalBehaviorName, opt => opt.MapFrom(src => src.RenewalBehavior.ToString()))
+            .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Plan.Amount))
+            .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Plan.Currency))
+            .ForMember(dest => dest.BillingPeriodUnit, opt => opt.MapFrom(src => src.Plan.BillingPeriodUnit.ToString()));
 
         // SubscriptionPlan mappings
         CreateMap<SubscriptionPlan, SubscriptionPlanResponse>()

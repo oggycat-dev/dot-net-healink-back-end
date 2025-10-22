@@ -22,13 +22,14 @@ public static class PaymentGatewayRequestBuilder
         string currency,
         string description,
         Dictionary<string, string>? metadata,
-        PaymentTransaction transaction)
+        PaymentTransaction transaction,
+        string? userAgent = null) // ✅ Add UserAgent parameter
     {
         return gatewayType switch
         {
             PaymentGatewayType.Momo => BuildMomoRequest(
                 subscriptionId, userProfileId, paymentMethodId, 
-                amount, currency, description, metadata, transaction),
+                amount, currency, description, metadata, transaction, userAgent),
             
             // FUTURE: Add other gateways here
             // PaymentGatewayType.VnPay => BuildVnPayRequest(...),
@@ -49,7 +50,8 @@ public static class PaymentGatewayRequestBuilder
         string currency,
         string description,
         Dictionary<string, string>? metadata,
-        PaymentTransaction transaction)
+        PaymentTransaction transaction,
+        string? userAgent = null) // ✅ Add UserAgent parameter
     {
         var requestMetadata = metadata ?? new Dictionary<string, string>();
         
@@ -67,7 +69,8 @@ public static class PaymentGatewayRequestBuilder
             Amount = amount,
             Currency = currency,
             Description = description,
-            Metadata = requestMetadata
+            Metadata = requestMetadata,
+            UserAgent = userAgent // ✅ Pass UserAgent to RequestPayment
         };
     }
 

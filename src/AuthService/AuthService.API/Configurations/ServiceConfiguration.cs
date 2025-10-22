@@ -5,6 +5,9 @@ using SharedLibrary.Commons.DependencyInjection;
 using SharedLibrary.Commons.Configurations;
 using SharedLibrary.Commons.Extensions;
 using AuthService.Infrastructure.Context;
+using SharedLibrary.Contracts.User.Requests;
+using SharedLibrary.Contracts.Subscription.Requests;
+using MassTransit;
 
 namespace AuthService.API.Configurations;
 
@@ -64,6 +67,19 @@ public static class ServiceConfiguration
         // Application & Infrastructure layers
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);
+
+        // // ✅ Register Request Clients for RPC calls
+        // builder.Services.AddScoped(provider =>
+        // {
+        //     var bus = provider.GetRequiredService<MassTransit.IBus>();
+        //     return bus.CreateRequestClient<GetUserProfileByUserIdRequest>(RequestTimeout.After(s: 10));
+        // });
+        
+        // builder.Services.AddScoped(provider =>
+        // {
+        //     var bus = provider.GetRequiredService<MassTransit.IBus>();
+        //     return bus.CreateRequestClient<GetUserSubscriptionRequest>(RequestTimeout.After(s: 10));
+        // });
 
         return builder;
     }

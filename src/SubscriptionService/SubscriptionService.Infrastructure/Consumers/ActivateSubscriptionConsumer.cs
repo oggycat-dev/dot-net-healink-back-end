@@ -97,7 +97,7 @@ public class ActivateSubscriptionConsumer : IConsumer<ActivateSubscription>
                     SubscriptionPlanId = subscriptionData.SubscriptionPlanId,
                     SubscriptionPlanName = subscriptionData.SubscriptionPlanName,
                     SubscriptionPlanDisplayName = subscriptionData.SubscriptionPlanDisplayName,
-                    SubscriptionStatus = 1, // Active
+                    SubscriptionStatus = 2, // Active
                     CurrentPeriodStart = subscriptionData.CurrentPeriodStart,
                     CurrentPeriodEnd = subscriptionData.CurrentPeriodEnd,
                     ActivatedAt = subscriptionData.ActivatedAt,

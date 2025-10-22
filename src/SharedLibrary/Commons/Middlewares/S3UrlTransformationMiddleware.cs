@@ -85,6 +85,9 @@ public class S3UrlTransformationMiddleware
             // Transform S3 URLs to presigned URLs
             var transformedContent = await TransformS3Urls(responseContent, fileStorageService);
 
+            // Add CORS headers for S3 presigned URLs (allows Flutter Web to fetch images/audio)
+            AddCorsHeaders(context.Response);
+
             // Write transformed content back
             var bytes = Encoding.UTF8.GetBytes(transformedContent);
             context.Response.ContentLength = bytes.Length;
@@ -102,6 +105,15 @@ public class S3UrlTransformationMiddleware
             context.Response.Body = originalBodyStream;
             await responseBody.CopyToAsync(originalBodyStream);
         }
+    }
+
+    private static void AddCorsHeaders(HttpResponse response)
+    {
+        // Add CORS headers to allow Flutter Web and other browsers to access S3 presigned URLs
+        response.Headers["Access-Control-Allow-Origin"] = "*";
+        response.Headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS";
+        response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+        response.Headers["Access-Control-Expose-Headers"] = "Content-Length, Content-Range";
     }
 
     private static bool ShouldTransform(HttpContext context)

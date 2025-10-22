@@ -201,7 +201,8 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                     ["billingPeriodCount"] = plan.BillingPeriodCount.ToString(),
                     ["billingPeriodUnit"] = plan.BillingPeriodUnit.ToString()
                 },
-                CreatedBy = authUserId // ✅ Use authUserId (JWT UserId) for audit
+                CreatedBy = authUserId, // ✅ Use authUserId (JWT UserId) for audit
+                UserAgent = _currentUserService.UserAgent // ✅ Pass UserAgent for client detection
             };
 
             // ✅ Use Request-Response pattern (timeout 30s)
@@ -269,6 +270,28 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
             await _publishEndpoint.Publish(sagaEvent, cancellationToken);
 
             // 8. ✅ Return payment data to frontend for redirect
+            // ✅ Detect user agent to determine redirect URL
+            var userAgent = _currentUserService.UserAgent ?? "";
+            var isFlutterApp = userAgent.Contains("Flutter") || userAgent.Contains("Dart");
+            var isMobileApp = userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iOS");
+            
+            // ✅ Set appropriate redirect URL based on client type
+            string redirectUrl;
+            if (isFlutterApp || isMobileApp)
+            {
+                // ✅ Flutter app redirect - use custom scheme or deep link
+                redirectUrl = "healink://payment/result"; // Custom scheme for Flutter
+            }
+            else
+            {
+                // ✅ Web app redirect - use web URL
+                redirectUrl = "https://healink-omega.vercel.app/payment/result";
+            }
+            
+            _logger.LogInformation(
+                "Payment redirect configured: UserAgent={UserAgent}, IsFlutter={IsFlutter}, RedirectUrl={RedirectUrl}",
+                userAgent, isFlutterApp, redirectUrl);
+
             return Result<object>.Success(
                 new
                 {
@@ -279,7 +302,10 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                     // ✅ Payment redirect URLs
                     PaymentUrl = paymentResult.PaymentUrl,
                     DeepLink = paymentResult.DeepLink,
+                    AppLink = paymentResult.AppLink,  // ✅ For in-app browser
                     PaymentTransactionId = paymentResult.PaymentTransactionId,
+                    // ✅ Custom redirect URL based on client type
+                    RedirectUrl = redirectUrl,
                     // ✅ QR Code (Base64-encoded PNG)
                     // Frontend can use: <img src="data:image/png;base64,{QrCodeBase64}" />
                     QrCodeBase64 = qrCodeBase64,

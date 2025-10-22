@@ -5,16 +5,18 @@ using ContentService.Application.Features.Podcasts.Queries;
 using ContentService.Application.Features.Podcasts.Commands;
 using ContentService.API.DTOs;
 using SharedLibrary.Commons.Services;
+using SharedLibrary.Commons.Attributes;
 using ContentService.Domain.Enums;
 
 namespace ContentService.API.Controllers.Creator;
 
 /// <summary>
 /// Creator Podcasts Controller - For content creators to manage their podcasts
+/// Uses Redis User State Cache for real-time role verification (NOT trusting JWT claims)
 /// </summary>
 [ApiController]
 [Route("api/creator/podcasts")]
-[Authorize(Policy = "ContentCreator")]
+[DistributedAuthorizeRoles("ContentCreator", "Admin")]
 [ApiExplorerSettings(GroupName = "Creator")]
 public class CreatorPodcastsController : ControllerBase
 {

@@ -12,6 +12,7 @@ using SharedLibrary.Commons.Outbox;
 using SharedLibrary.Commons.Entities;
 using SharedLibrary.Contracts.User.Requests;
 using SharedLibrary.Contracts.User.Responses;
+using SharedLibrary.Contracts.Subscription.Requests;
 
 
 namespace AuthService.Application.Features.Auth.Commands.Login;
@@ -24,6 +25,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
     private readonly IUserStateCache _userStateCache;
     private readonly IOutboxUnitOfWork _unitOfWork;
     private readonly IRequestClient<GetUserProfileByUserIdRequest> _userProfileClient;
+    private readonly IRequestClient<GetUserSubscriptionRequest> _userSubscriptionClient;
 
     public LoginCommandHandler(
         IIdentityService identityService, 
@@ -31,7 +33,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
         ILogger<LoginCommandHandler> logger,
         IUserStateCache userStateCache,
         IOutboxUnitOfWork unitOfWork,
-        IRequestClient<GetUserProfileByUserIdRequest> userProfileClient)
+        IRequestClient<GetUserProfileByUserIdRequest> userProfileClient,
+        IRequestClient<GetUserSubscriptionRequest> userSubscriptionClient)
     {
         _identityService = identityService;
         _jwtService = jwtService;
@@ -39,6 +42,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
         _userStateCache = userStateCache;
         _unitOfWork = unitOfWork;
         _userProfileClient = userProfileClient;
+        _userSubscriptionClient = userSubscriptionClient;
     }
     public async Task<Result<AuthResponse>> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
@@ -114,6 +118,60 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
                     user.Id, userProfileId);
             }
             
+            // ✅ Try to load subscription from Subscription Service if not in cache
+            var subscriptionInfo = existingCache?.Subscription;
+            if (subscriptionInfo == null && userProfileId != Guid.Empty)
+            {
+                _logger.LogInformation("🔍 DEBUG: Subscription not in cache, attempting to load from Subscription Service for UserProfileId={UserProfileId}", userProfileId);
+                
+                try
+                {
+                    var subscriptionRequest = new GetUserSubscriptionRequest { UserProfileId = userProfileId };
+                    var subscriptionResponse = await _userSubscriptionClient.GetResponse<GetUserSubscriptionResponse>(
+                        subscriptionRequest, 
+                        cancellationToken,
+                        RequestTimeout.After(s: 10));
+
+                    if (subscriptionResponse.Message.Found)
+                    {
+                        subscriptionInfo = new UserSubscriptionInfo
+                        {
+                            SubscriptionId = subscriptionResponse.Message.SubscriptionId!.Value,
+                            SubscriptionPlanId = subscriptionResponse.Message.SubscriptionPlanId!.Value,
+                            SubscriptionPlanName = subscriptionResponse.Message.SubscriptionPlanName ?? string.Empty,
+                            SubscriptionPlanDisplayName = subscriptionResponse.Message.SubscriptionPlanDisplayName ?? string.Empty,
+                            SubscriptionStatus = subscriptionResponse.Message.SubscriptionStatus!.Value,
+                            CurrentPeriodStart = subscriptionResponse.Message.CurrentPeriodStart,
+                            CurrentPeriodEnd = subscriptionResponse.Message.CurrentPeriodEnd,
+                            ActivatedAt = subscriptionResponse.Message.ActivatedAt,
+                            CanceledAt = subscriptionResponse.Message.CanceledAt
+                        };
+                        
+                        _logger.LogInformation(
+                            "🔍 DEBUG: Subscription loaded via RPC: UserProfileId={UserProfileId}, SubscriptionId={SubscriptionId}, Status={Status}, IsActive={IsActive}",
+                            userProfileId, subscriptionInfo.SubscriptionId, subscriptionInfo.SubscriptionStatus, subscriptionInfo.IsActive);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "🔍 DEBUG: No active subscription found via RPC for UserProfileId={UserProfileId}",
+                            userProfileId);
+                    }
+                }
+                catch (RequestTimeoutException)
+                {
+                    _logger.LogError(
+                        "🔍 DEBUG: Timeout querying subscription for UserProfileId={UserProfileId}. Subscription will remain NULL.",
+                        userProfileId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "🔍 DEBUG: Error querying subscription for UserProfileId={UserProfileId}. Subscription will remain NULL.",
+                        userProfileId);
+                }
+            }
+            
             // Cache user state for distributed auth (with UserProfileId)
             var userState = new UserStateInfo
             {
@@ -125,8 +183,15 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
                 RefreshToken = refreshToken,
                 RefreshTokenExpiryTime = refreshTokenExpiryTime,
                 LastLoginAt = user.LastLoginAt ?? DateTime.UtcNow,
-                Subscription = existingCache?.Subscription  // ✅ PRESERVE existing subscription data
+                Subscription = subscriptionInfo  // ✅ Use loaded subscription or existing cache
             };
+            
+            // 🔍 DEBUG: Log subscription status during login
+            _logger.LogInformation(
+                "🔍 DEBUG: Login subscription status - UserId={UserId}, HasExistingCache={HasExistingCache}, Subscription={Subscription}",
+                user.Id, 
+                existingCache != null,
+                existingCache?.Subscription != null ? $"Status={existingCache.Subscription.SubscriptionStatus}, IsActive={existingCache.Subscription.IsActive}" : "NULL");
             
             _logger.LogInformation(
                 "Setting user state in cache: UserId={UserId}, UserProfileId={UserProfileId}, HasSubscription={HasSubscription}",

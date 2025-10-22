@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using SharedLibrary.Commons.Attributes;
 using SharedLibrary.Commons.Controllers;
 using SharedLibrary.Commons.Interfaces;
@@ -207,6 +208,73 @@ public class FileUploadController : BaseFileUploadController
         [FromBody] PresignedUrlRequest request)
     {
         return await GeneratePresignedUrl(request.FileUrl, request.ExpirationMinutes);
+    }
+
+    /// <summary>
+    /// Download file from S3 through backend proxy (fixes CORS for Flutter web)
+    /// </summary>
+    /// <remarks>
+    /// This endpoint proxies S3 file downloads through the backend with CORS headers.
+    /// Solves the issue where Flutter web cannot load images/audio from S3 presigned URLs due to CORS policy.
+    /// </remarks>
+    [HttpGet("proxy")]
+    [AllowAnonymous]
+    [SwaggerOperation(
+        Summary = "Download file from S3 proxy",
+        Description = "Proxies file downloads from S3 through the backend with proper CORS headers for web clients",
+        OperationId = "ProxyS3Download",
+        Tags = new[] { "File Download" }
+    )]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> ProxyDownloadFile(
+        [FromQuery] string url,
+        [FromQuery] string? contentType = null)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return BadRequest(new { message = "URL parameter is required" });
+        }
+
+        try
+        {
+            // Validate URL is S3 (security check)
+            // Support both regional S3 URLs (s3.region.amazonaws.com) and legacy (s3.amazonaws.com, s3-)
+            if (!url.Contains(".s3.") && !url.Contains(".s3-") && !url.Contains("://s3.") && !url.Contains("://s3-"))
+            {
+                return BadRequest(new { message = "Invalid S3 URL" });
+            }
+
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+            var response = await httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("S3 proxy download failed for URL: {Url}, Status: {Status}", url, response.StatusCode);
+                return StatusCode((int)response.StatusCode, new { message = "Failed to download file from S3" });
+            }
+
+            var stream = await response.Content.ReadAsStreamAsync();
+            
+            // Determine content type
+            var type = contentType ?? response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+            
+            // Add CORS headers to response (browser will see these)
+            Response.Headers["Access-Control-Allow-Origin"] = "*";
+            Response.Headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS";
+            Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+            Response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
+
+            _logger.LogInformation("S3 proxy download succeeded for URL: {Url}, ContentType: {Type}", url, type);
+
+            return File(stream, type, enableRangeProcessing: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error proxying S3 download for URL: {Url}", url);
+            return StatusCode(500, new { message = "Error downloading file", error = ex.Message });
+        }
     }
 }
 
