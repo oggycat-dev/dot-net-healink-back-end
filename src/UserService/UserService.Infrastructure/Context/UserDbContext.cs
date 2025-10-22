@@ -132,6 +132,7 @@ public class UserDbContext : DbContext
                 .HasDefaultValue("{}");
                 
             entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.ApplicationStatus).HasConversion<int>();
             
             entity.Property(x => x.SubmittedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")

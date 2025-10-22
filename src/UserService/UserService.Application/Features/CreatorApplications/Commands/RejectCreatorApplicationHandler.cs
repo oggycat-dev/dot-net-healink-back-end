@@ -29,7 +29,11 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
     {
         try
         {
-            _logger.LogInformation("Processing rejection of creator application: {ApplicationId}", request.ApplicationId);
+            _logger.LogInformation("Processing rejection of creator application: {ApplicationId}, ReviewerId: {ReviewerId}", 
+                request.ApplicationId, request.ReviewerId);
+
+            // Flexible ReviewerId validation - similar to ApproveCreatorApplicationHandler
+            // Don't throw exception if reviewerId doesn't exist, just log warning
 
             // Find application
             var application = await _unitOfWork.Repository<CreatorApplication>()
@@ -47,12 +51,35 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
                 throw new InvalidOperationException($"Đơn đăng ký này không còn ở trạng thái chờ duyệt. Trạng thái hiện tại: {application.ApplicationStatus}");
             }
 
-            // Update application
+            // Update application - similar to ApproveCreatorApplicationHandler
             application.ApplicationStatus = ApplicationStatusEnum.Rejected;
             application.ReviewedAt = DateTime.UtcNow;
-            application.ReviewedBy = request.ReviewerId;
+            
+            // Flexible ReviewerId handling - similar to ApproveCreatorApplicationHandler
+            if (request.ReviewerId != Guid.Empty)
+            {
+                var reviewerExists = await _unitOfWork.Repository<UserProfile>()
+                    .GetQueryable()
+                    .AnyAsync(x => x.Id == request.ReviewerId, cancellationToken);
+                    
+                application.ReviewedBy = reviewerExists ? request.ReviewerId : null;
+                
+                if (!reviewerExists)
+                {
+                    _logger.LogWarning("ReviewerId {ReviewerId} not found in UserProfiles, setting ReviewedBy to null", request.ReviewerId);
+                }
+            }
+            else
+            {
+                application.ReviewedBy = null;
+            }
+            
             application.ReviewNotes = request.Notes;
             application.RejectionReason = request.RejectionReason;
+
+            // Explicitly mark as modified to ensure EF tracks the changes
+            _unitOfWork.Repository<CreatorApplication>().Update(application);
+            _logger.LogInformation("Marked application as modified in EF context");
 
             // Log activity
             var activityLog = new UserActivityLog
@@ -66,9 +93,8 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
             };
 
             await _unitOfWork.Repository<UserActivityLog>().AddAsync(activityLog);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Publish rejection event
+            
+            // Add rejection event to outbox for reliable publishing - similar to ApproveCreatorApplicationHandler
             var rejectedEvent = new CreatorApplicationRejectedEvent
             {
                 ApplicationId = application.Id,
@@ -79,7 +105,14 @@ public class RejectCreatorApplicationHandler : IRequestHandler<RejectCreatorAppl
                 RejectionReason = application.RejectionReason ?? "Không đáp ứng yêu cầu"
             };
 
-            await _eventBus.PublishAsync(rejectedEvent);
+            await _unitOfWork.AddOutboxEventAsync(rejectedEvent);
+            _logger.LogInformation("CreatorApplicationRejectedEvent added to outbox. ApplicationId: {ApplicationId}", application.Id);
+
+            // Save all changes with outbox events atomically - similar to ApproveCreatorApplicationHandler
+            await _unitOfWork.SaveChangesWithOutboxAsync(cancellationToken);
+            
+            _logger.LogInformation("Application rejected and saved to database with outbox events. ApplicationId: {ApplicationId}, Status: {Status}", 
+                application.Id, application.ApplicationStatus);
 
             _logger.LogInformation("Creator application rejected successfully. ApplicationId: {ApplicationId}, UserId: {UserId}, Reason: {Reason}", 
                 application.Id, application.User.UserId, application.RejectionReason);
