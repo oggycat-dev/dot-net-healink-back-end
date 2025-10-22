@@ -46,6 +46,16 @@ public class UserSubscriptionStatusChangedConsumer : IConsumer<UserSubscriptionS
                 CanceledAt = message.CanceledAt
             };
 
+            // 🔍 DEBUG: Log subscription info details
+            _logger.LogInformation(
+                "🔍 DEBUG: Processing subscription event - UserId={UserId}, SubscriptionId={SubscriptionId}, Status={Status} (IsActive={IsActive}), Action={Action}, Plan={Plan}",
+                message.UserId, 
+                message.SubscriptionId, 
+                message.SubscriptionStatus, 
+                subscriptionInfo.IsActive,
+                message.Action,
+                message.SubscriptionPlanName);
+
             // Update cache
             await _userStateCache.UpdateUserSubscriptionAsync(message.UserId, subscriptionInfo);
 

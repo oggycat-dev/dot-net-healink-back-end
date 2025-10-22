@@ -109,6 +109,7 @@ public class HandleSubscriptionSagaCommandHandler : IRequestHandler<HandleSubscr
         subscription.SubscriptionStatus = SubscriptionStatus.Active;
         subscription.Status = EntityStatusEnum.Active;
         subscription.CurrentPeriodStart = activatedAt;
+        subscription.ActivatedAt = activatedAt;
         subscription.CurrentPeriodEnd = subscription.Plan.BillingPeriodUnit == BillingPeriodUnit.Month
             ? activatedAt.AddMonths(subscription.Plan.BillingPeriodCount)
             : activatedAt.AddYears(subscription.Plan.BillingPeriodCount);

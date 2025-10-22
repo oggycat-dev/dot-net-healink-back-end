@@ -90,6 +90,13 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
                 Subscription = existingCache?.Subscription  // ✅ PRESERVE subscription
             };
             
+            // 🔍 DEBUG: Log subscription status during refresh
+            _logger.LogInformation(
+                "🔍 DEBUG: Refresh subscription status - UserId={UserId}, HasExistingCache={HasExistingCache}, Subscription={Subscription}",
+                user.Id, 
+                existingCache != null,
+                existingCache?.Subscription != null ? $"Status={existingCache.Subscription.SubscriptionStatus}, IsActive={existingCache.Subscription.IsActive}" : "NULL");
+            
             _logger.LogInformation(
                 "Updating user state in cache after refresh: UserId={UserId}, HasSubscription={HasSubscription}",
                 userState.UserId, userState.Subscription != null);

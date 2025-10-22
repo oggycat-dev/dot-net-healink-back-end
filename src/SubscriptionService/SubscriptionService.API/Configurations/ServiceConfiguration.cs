@@ -37,6 +37,7 @@ public static class ServiceConfiguration
                 // Register consumers for SubscriptionService
                 x.AddConsumer<Infrastructure.Consumers.ActivateSubscriptionConsumer>();
                 x.AddConsumer<Infrastructure.Consumers.CancelSubscriptionConsumer>();
+                x.AddConsumer<Infrastructure.Consumers.GetUserSubscriptionConsumer>();
             },
             configureEndpoints: (cfg, context) =>
             {

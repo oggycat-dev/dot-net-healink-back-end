@@ -300,9 +300,16 @@ public class RedisUserStateCache : IUserStateCache
                 };
                 
                 await SetUserStateAsync(updatedState);
+                
+                // 🔍 DEBUG: Log detailed subscription update
                 _logger.LogInformation(
-                    "Subscription cached for user {UserId}: SubscriptionId={SubscriptionId}, Status={Status}, Plan={Plan}",
-                    userId, subscriptionInfo.SubscriptionId, subscriptionInfo.SubscriptionStatus, subscriptionInfo.SubscriptionPlanName);
+                    "🔍 DEBUG: Subscription cached for user {UserId}: SubscriptionId={SubscriptionId}, Status={Status} (IsActive={IsActive}), Plan={Plan}, HasActiveSubscription={HasActiveSubscription}",
+                    userId, 
+                    subscriptionInfo.SubscriptionId, 
+                    subscriptionInfo.SubscriptionStatus, 
+                    subscriptionInfo.IsActive,
+                    subscriptionInfo.SubscriptionPlanName,
+                    updatedState.HasActiveSubscription);
             }
             else
             {

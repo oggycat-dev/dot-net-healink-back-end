@@ -26,7 +26,10 @@ public class UserLoggedInEventHandler : IIntegrationEventHandler<UserLoggedInEve
     {
         try
         {
-            // Update user state in cache khi user login
+            // ✅ Get existing cache to preserve subscription data
+            var existingCache = await _userStateCache.GetUserStateAsync(@event.UserId);
+            
+            // Update user state in cache khi user login (preserve subscription)
             var userState = new UserStateInfo
             {
                 UserId = @event.UserId,
@@ -36,14 +39,15 @@ public class UserLoggedInEventHandler : IIntegrationEventHandler<UserLoggedInEve
                 Status = EntityStatusEnum.Active,
                 RefreshToken = @event.RefreshToken,
                 RefreshTokenExpiryTime = @event.RefreshTokenExpiryTime,
-                LastLoginAt = @event.LoginAt
+                LastLoginAt = @event.LoginAt,
+                Subscription = existingCache?.Subscription  // ✅ PRESERVE subscription data
             };
 
             await _userStateCache.SetUserStateAsync(userState);
             
             _logger.LogInformation(
-                "User state cached for user {UserId} with UserProfileId={UserProfileId} after login", 
-                @event.UserId, @event.UserProfileId);
+                "User state cached for user {UserId} with UserProfileId={UserProfileId} after login (HasSubscription={HasSubscription})", 
+                @event.UserId, @event.UserProfileId, userState.Subscription != null);
         }
         catch (Exception ex)
         {
