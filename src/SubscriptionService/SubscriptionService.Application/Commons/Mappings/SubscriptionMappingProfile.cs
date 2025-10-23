@@ -32,7 +32,6 @@ public class SubscriptionMappingProfile : Profile
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Status, opt => opt.Ignore())
             .ForMember(dest => dest.FeatureConfig, opt => opt.MapFrom(src => src.FeatureConfig ?? "{}"))
             .ForMember(dest => dest.BillingPeriodUnit, opt => opt.MapFrom(src => src.BillingPeriodUnit));
 

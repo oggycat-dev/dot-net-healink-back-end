@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PaymentService.Application.Commons.DTOs;
 using PaymentService.Application.Features.PaymentMethods.Queries.GetPaymentMethodById;
 using PaymentService.Application.Features.PaymentMethods.Queries.GetPaymentMethods;
+using SharedLibrary.Commons.Enums;
 using SharedLibrary.Commons.Extensions;
 using SharedLibrary.Commons.Models;
 using Swashbuckle.AspNetCore.Annotations;
@@ -45,7 +46,7 @@ public class PaymentMethodController : ControllerBase
     {
         // Note: PaymentMethod doesn't have status field
         // Active payment methods are determined by IsDeleted field
-        
+        filter.Status = EntityStatusEnum.Active;
         var query = new GetPaymentMethodsQuery(filter);
         var result = await _mediator.Send(query);
         return StatusCode(result.GetHttpStatusCode(), result);

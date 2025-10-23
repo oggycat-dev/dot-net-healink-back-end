@@ -38,7 +38,11 @@ public class GetPaymentMethodsQueryHandler : IRequestHandler<GetPaymentMethodsQu
 
             // Build predicate
             Expression<Func<PaymentMethod, bool>> predicate = x => !x.IsDeleted;
-
+            if (request.Filter.Status.HasValue)
+            {
+                predicate = predicate.And(x => x.Status == request.Filter.Status.Value);
+            }
+            
             if (!string.IsNullOrEmpty(request.Filter.Name))
             {
                 var name = request.Filter.Name;
