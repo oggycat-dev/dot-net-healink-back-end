@@ -15,5 +15,5 @@ public class SubscriptionPlanRequest
     public BillingPeriodUnit BillingPeriodUnit { get; set; }  
     public decimal Amount { get; set; }
     public int TrialDays { get; set; } 
-    public EntityStatusEnum Status { get; set; } = EntityStatusEnum.Active;
+    public EntityStatusEnum Status { get; set; }
 }
