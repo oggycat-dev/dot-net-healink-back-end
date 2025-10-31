@@ -14,6 +14,7 @@ using SharedLibrary.Contracts.Payment.Requests;
 using SharedLibrary.Contracts.Payment.Responses;
 using SubscriptionService.Application.Commons.Services;
 using SubscriptionService.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 
 namespace SubscriptionService.Application.Features.Subscriptions.Commands.RegisterSubscription;
 
@@ -36,7 +37,7 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
     private readonly ICurrentUserService _currentUserService;
     private readonly IQrCodeService _qrCodeService;
     private readonly IUserStateCache _userStateCache;
-    
+    private readonly IConfiguration _configuration;
     public RegisterSubscriptionCommandHandler(
         IOutboxUnitOfWork outboxUnitOfWork,
         IPublishEndpoint publishEndpoint,
@@ -45,7 +46,8 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
         ILogger<RegisterSubscriptionCommandHandler> logger,
         ICurrentUserService currentUserService,
         IQrCodeService qrCodeService,
-        IUserStateCache userStateCache)
+        IUserStateCache userStateCache,
+        IConfiguration configuration)
     {
         _outboxUnitOfWork = outboxUnitOfWork;
         _publishEndpoint = publishEndpoint;
@@ -55,20 +57,21 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
         _currentUserService = currentUserService;
         _qrCodeService = qrCodeService;
         _userStateCache = userStateCache;
+        _configuration = configuration;
     }
     
     public async Task<Result<object>> Handle(RegisterSubscriptionCommand command, CancellationToken cancellationToken)
     {
         try
         {
-            // ✅ Step 1: Get UserId from JWT token (for AUTHENTICATION only)
+            // Step 1: Get UserId from JWT token (for AUTHENTICATION only)
             var userIdStr = _currentUserService.UserId;
             if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var authUserId))
             {
                 return Result<object>.Failure("User not authenticated", ErrorCodeEnum.Unauthorized);
             }
 
-                // ✅ Step 2: Get UserProfileId from Redis cache (for BUSINESS LOGIC)
+                // Step 2: Get UserProfileId from Redis cache (for BUSINESS LOGIC)
                 _logger.LogInformation("Querying cache for UserId={UserId}", authUserId);
                 var userState = await _userStateCache.GetUserStateAsync(authUserId);
                 if (userState == null)
@@ -176,15 +179,34 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
             };
             await _outboxUnitOfWork.AddOutboxEventAsync(activityEvent);
 
-            // 7. ATOMIC: Save subscription + custom outbox, then publish immediately
-            // ✅ Use SaveChangesWithOutboxAsync() to publish custom outbox events immediately
+            // 7. ✅ Publish Saga Event TRƯỚC SaveChanges (Transactional Outbox Pattern)
+            // MassTransit Outbox will store this event in OutboxState table atomically with subscription
+            var sagaEvent = new SubscriptionRegistrationStarted
+            {
+                SubscriptionId = subscription.Id, // Used as CorrelationId
+                UserProfileId = userProfileId, // ✅ Use UserProfileId for business logic
+                SubscriptionPlanId = plan.Id,
+                PaymentMethodId = command.Request.PaymentMethodId,
+                SubscriptionPlanName = plan.Name,
+                Amount = plan.Amount,
+                Currency = plan.Currency,
+                // Capture HTTP context for saga workflow
+                IpAddress = _currentUserService.IpAddress,
+                UserAgent = _currentUserService.UserAgent,
+                CreatedBy = authUserId // ✅ Use authUserId (JWT UserId) for cache query
+            };
+            await _publishEndpoint.Publish(sagaEvent, cancellationToken);
+
+            // 8. ✅ ATOMIC COMMIT: Subscription + Custom OutboxEvent + MassTransit OutboxState
+            // All three are committed in a single transaction - guaranteed consistency
             await _outboxUnitOfWork.SaveChangesWithOutboxAsync(cancellationToken);
 
             _logger.LogInformation(
-                "Subscription created. Now requesting payment intent: SubscriptionId={SubscriptionId}, UserProfileId={UserProfileId}, Amount={Amount}",
+                "Subscription created and saga event published. Now requesting payment intent: SubscriptionId={SubscriptionId}, UserProfileId={UserProfileId}, Amount={Amount}",
                 subscription.Id, userProfileId, plan.Amount);
 
-            // 8. ✅ REQUEST PAYMENT via RPC (synchronous - wait for response)
+            // 9. ✅ REQUEST PAYMENT via RPC (synchronous - wait for response)
+            // Transaction already committed - if RPC fails, saga will handle timeout/cancellation
             // Frontend needs PayUrl/QrCodeUrl immediately for redirect
             var paymentRequest = new CreatePaymentIntentRequest
             {
@@ -219,9 +241,10 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                     "Payment intent creation failed for SubscriptionId={SubscriptionId}: {Error}",
                     subscription.Id, paymentResult.ErrorMessage);
 
-                // ❌ Payment failed - return error to frontend
+                // ⚠️ Payment RPC failed but subscription + saga already saved
+                // Saga will timeout and can trigger cancellation
                 return Result<object>.Failure(
-                    paymentResult.ErrorMessage ?? "Failed to initialize payment",
+                    paymentResult.ErrorMessage ?? "Failed to initialize payment. Please check subscription status.",
                     ErrorCodeEnum.InternalError);
             }
 
@@ -229,7 +252,7 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                 "Payment intent created successfully. SubscriptionId={SubscriptionId}, PaymentTransactionId={PaymentTransactionId}",
                 subscription.Id, paymentResult.PaymentTransactionId);
 
-            // 6.5. ✅ Generate QR Code from MoMo qrCodeUrl (if available)
+            // 10. ✅ Generate QR Code from MoMo qrCodeUrl (if available)
             // Per MoMo docs: qrCodeUrl is DATA string, not image URL
             // Generate QR code image here to avoid sending large data through message queue
             string? qrCodeBase64 = null;
@@ -251,25 +274,7 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                 }
             }
 
-            // 9. ✅ Publish Saga event for state tracking (async - fire and forget)
-            // Saga will track payment status via callbacks
-            var sagaEvent = new SubscriptionRegistrationStarted
-            {
-                SubscriptionId = subscription.Id, // Used as CorrelationId
-                UserProfileId = userProfileId, // ✅ Use UserProfileId for business logic
-                SubscriptionPlanId = plan.Id,
-                PaymentMethodId = command.Request.PaymentMethodId,
-                SubscriptionPlanName = plan.Name,
-                Amount = plan.Amount,
-                Currency = plan.Currency,
-                // Capture HTTP context for saga workflow
-                IpAddress = _currentUserService.IpAddress,
-                UserAgent = _currentUserService.UserAgent,
-                CreatedBy = authUserId // ✅ Use authUserId (JWT UserId) for cache query
-            };
-            await _publishEndpoint.Publish(sagaEvent, cancellationToken);
-
-            // 8. ✅ Return payment data to frontend for redirect
+            // 11. ✅ Return payment data to frontend for redirect
             // ✅ Detect user agent to determine redirect URL
             var userAgent = _currentUserService.UserAgent ?? "";
             var isFlutterApp = userAgent.Contains("Flutter") || userAgent.Contains("Dart");
@@ -280,12 +285,12 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
             if (isFlutterApp || isMobileApp)
             {
                 // ✅ Flutter app redirect - use custom scheme or deep link
-                redirectUrl = "healink://payment/result"; // Custom scheme for Flutter
+                redirectUrl = _configuration["Momo:MobileRedirectUrl"] ?? ""; // Custom scheme for Flutter
             }
             else
             {
                 // ✅ Web app redirect - use web URL
-                redirectUrl = "https://healink-omega.vercel.app/payment/result";
+                redirectUrl = _configuration["Momo:WebRedirectUrl"] ?? "";
             }
             
             _logger.LogInformation(

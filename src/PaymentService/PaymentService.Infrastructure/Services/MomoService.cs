@@ -27,6 +27,7 @@ public class MomoService : IPaymentGatewayService
     private readonly string _accessKey;
     private readonly string _secretKey;
     private readonly string _apiEndpoint;
+    private readonly string _mobileRedirectUrl;
     
     public MomoService(IConfiguration config, IHttpClientFactory httpClientFactory, ILogger<MomoService> logger)
     {
@@ -40,6 +41,7 @@ public class MomoService : IPaymentGatewayService
         _storeId = GetRequiredConfig("Momo:StoreId");
         _ipnUrl = GetRequiredConfig("Momo:IpnUrl");
         _redirectUrl = GetRequiredConfig("Momo:RedirectUrl");
+        _mobileRedirectUrl = GetRequiredConfig("Momo:MobileRedirectUrl");
         _accessKey = GetRequiredConfig("Momo:AccessKey");
         _secretKey = GetRequiredConfig("Momo:SecretKey");
         _apiEndpoint = GetRequiredConfig("Momo:ApiEndpoint");
@@ -86,7 +88,7 @@ public class MomoService : IPaymentGatewayService
             if (isFlutterApp || isMobileApp)
             {
                 // ✅ Flutter app redirect - use custom scheme
-                redirectUrl = "healink://payment/result";
+                redirectUrl = _mobileRedirectUrl;
             }
             else
             {
