@@ -43,7 +43,9 @@ public static class ServiceConfiguration
             {
                 // Configure saga-specific endpoints with Entity Framework Outbox
                 SubscriptionSagaConfiguration.ConfigureSagaEndpoints(cfg, context);
-            });
+            },
+            useEntityFrameworkOutbox: true,  // ✅ Enable Entity Framework Outbox
+            useBusOutbox: true);             // ✅ Enable Bus Outbox for IPublishEndpoint from HTTP handlers
 
         // Application & Infrastructure layers
         builder.Services.AddSubscriptionApplication();

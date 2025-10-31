@@ -21,12 +21,16 @@ public static class MassTransitSagaConfiguration
     /// <param name="configureSagas">Action to configure saga state machines</param>
     /// <param name="configureConsumers">Action to configure consumers</param>
     /// <param name="configureEndpoints">Action to configure custom endpoints (optional)</param>
+    /// <param name="useEntityFrameworkOutbox">Enable Entity Framework Outbox (default: false)</param>
+    /// <param name="useBusOutbox">Enable Bus Outbox for IPublishEndpoint in HTTP handlers (default: false, requires useEntityFrameworkOutbox=true)</param>
     public static IServiceCollection AddMassTransitWithSaga<TDbContext>(
         this IServiceCollection services, 
         IConfiguration configuration,
         Action<IRegistrationConfigurator> configureSagas,
         Action<IRegistrationConfigurator>? configureConsumers = null,
         Action<IRabbitMqBusFactoryConfigurator, IBusRegistrationContext>? configureEndpoints = null,
+        bool useEntityFrameworkOutbox = false,
+        bool useBusOutbox = false,
         string connectionStringKey = "DefaultConnection")
         where TDbContext : DbContext
     {
@@ -53,6 +57,31 @@ public static class MassTransitSagaConfiguration
 
             // Configure consumers (optional)
             configureConsumers?.Invoke(x);
+
+            // ✅ CRITICAL: Add Entity Framework Outbox if requested
+            // Reference: https://masstransit.io/documentation/configuration/middleware/outbox
+            if (useEntityFrameworkOutbox)
+            {
+                x.AddEntityFrameworkOutbox<TDbContext>(o =>
+                {
+                    // Use PostgreSQL lock provider for pessimistic locking
+                    o.UsePostgres();
+
+                    // ✅ Enable bus outbox for HTTP handler publishes (IPublishEndpoint)
+                    // This ensures events published from HTTP handlers are transactional
+                    if (useBusOutbox)
+                    {
+                        o.UseBusOutbox();
+                    }
+
+                    // Duplicate detection window (inbox deduplication)
+                    o.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
+                    
+                    // Query settings for outbox delivery service
+                    o.QueryDelay = TimeSpan.FromSeconds(1);
+                    o.QueryMessageLimit = 100;
+                });
+            }
 
             // Configure RabbitMQ transport
             x.UsingRabbitMq((context, cfg) =>
