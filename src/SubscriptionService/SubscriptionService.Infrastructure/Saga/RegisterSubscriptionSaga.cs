@@ -44,27 +44,14 @@ public class RegisterSubscriptionSaga : MassTransitStateMachine<RegisterSubscrip
                     context.Saga.StartedAt = DateTime.UtcNow;
                     context.Saga.PaymentRequestedAt = DateTime.UtcNow;
                     context.Saga.CreatedBy = context.Message.CreatedBy;
+                    
                     _logger.LogInformation(
-                        "Subscription saga started for SubscriptionId: {SubscriptionId}, User: {UserId}, Plan: {PlanName}",
+                        "Subscription saga started for SubscriptionId: {SubscriptionId}, User: {UserId}, Plan: {PlanName}. " +
+                        "Payment intent already created by HTTP handler (RPC), saga now tracking payment status.",
                         context.Saga.CorrelationId, context.Saga.UserProfileId, context.Saga.SubscriptionPlanName);
                 })
-                // Send payment request to PaymentService
-                .PublishAsync(context => context.Init<RequestPayment>(new
-                {
-                    SubscriptionId = context.Saga.CorrelationId,
-                    UserProfileId = context.Saga.UserProfileId,
-                    PaymentMethodId = context.Saga.PaymentMethodId,
-                    Amount = context.Saga.Amount,
-                    Currency = context.Saga.Currency,
-                    Description = $"Subscription to {context.Saga.SubscriptionPlanName}",
-                    Metadata = new Dictionary<string, string>
-                    {
-                        ["SubscriptionPlanId"] = context.Saga.SubscriptionPlanId.ToString(),
-                        ["SubscriptionPlanName"] = context.Saga.SubscriptionPlanName ?? ""
-                    },
-                    UserAgent = context.Message.UserAgent, // ✅ Pass UserAgent for client detection
-                    CreatedBy = context.Saga.CreatedBy
-                }))
+                // ✅ NO NEED to publish RequestPayment - payment intent already created via RPC in HTTP handler
+                // Saga's responsibility: Track payment status and orchestrate activation/cancellation
                 .TransitionTo(AwaitingPayment)
         );
 

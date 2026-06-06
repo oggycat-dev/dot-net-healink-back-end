@@ -232,9 +232,8 @@ sequenceDiagram
     Note over Handler,Saga: Phase 3: Saga Orchestration Starts
     Handler->>RabbitMQ: Publish SubscriptionRegistrationStarted<br/>(MassTransit Bus Outbox)<br/>CreatedBy: authUserId ✅
     RabbitMQ->>Saga: SubscriptionRegistrationStarted Event
-    Saga->>Saga: State: Initial → AwaitingPayment
-    Saga->>RabbitMQ: Publish RequestPayment
-    Note over Saga: Saga State Saved with<br/>Entity Framework Outbox
+    Saga->>Saga: State: Initial → AwaitingPayment<br/>✅ Payment already created via RPC
+    Note over Saga: Saga State Saved with Entity Framework Outbox<br/>Saga tracks payment status (no RequestPayment needed)
     
     Note over User,MoMo: Phase 4: User Payment
     User->>MoMo: Scan QR / Click PayUrl<br/>Complete Payment
