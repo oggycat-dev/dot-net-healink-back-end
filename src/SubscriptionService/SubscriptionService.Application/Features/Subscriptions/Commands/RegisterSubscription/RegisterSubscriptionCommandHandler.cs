@@ -15,6 +15,7 @@ using SharedLibrary.Contracts.Payment.Responses;
 using SubscriptionService.Application.Commons.Services;
 using SubscriptionService.Domain.Entities;
 using Microsoft.Extensions.Configuration;
+using SharedLibrary.Contracts.Payment.Events;
 
 namespace SubscriptionService.Application.Features.Subscriptions.Commands.RegisterSubscription;
 
@@ -62,6 +63,9 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
     
     public async Task<Result<object>> Handle(RegisterSubscriptionCommand command, CancellationToken cancellationToken)
     {
+        // Store subscriptionId for exception handling (available in catch blocks)
+        Guid subscriptionId = Guid.Empty;
+        
         try
         {
             // Step 1: Get UserId from JWT token (for AUTHENTICATION only)
@@ -149,8 +153,6 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                 SubscriptionStatus = Domain.Enums.SubscriptionStatus.Pending,
                 RenewalBehavior = Domain.Enums.RenewalBehavior.Manual,
                 CancelAtPeriodEnd = false
-                // ❌ DO NOT set Plan navigation property here - causes EF to try INSERT plan!
-                // Navigation property will be populated by EF when querying later
             };
             subscription.InitializeEntity(authUserId); // ✅ CreatedBy = authUserId (JWT UserId) for audit
 
@@ -205,6 +207,9 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                 "Subscription created and saga event published. Now requesting payment intent: SubscriptionId={SubscriptionId}, UserProfileId={UserProfileId}, Amount={Amount}",
                 subscription.Id, userProfileId, plan.Amount);
 
+            // Update subscriptionId for exception handling
+            subscriptionId = subscription.Id;
+
             // 9. ✅ REQUEST PAYMENT via RPC (synchronous - wait for response)
             // Transaction already committed - if RPC fails, saga will handle timeout/cancellation
             // Frontend needs PayUrl/QrCodeUrl immediately for redirect
@@ -242,9 +247,23 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
                     subscription.Id, paymentResult.ErrorMessage);
 
                 // ⚠️ Payment RPC failed but subscription + saga already saved
-                // Saga will timeout and can trigger cancellation
+                // ✅ Publish PaymentFailed event to trigger saga compensation (cancel subscription)
+                await _publishEndpoint.Publish(new PaymentFailed
+                {
+                    PaymentIntentId = Guid.Empty, // No payment transaction created
+                    SubscriptionId = subscription.Id,
+                    Reason = "Payment intent creation failed via RPC",
+                    ErrorCode = "RPC_FAILED",
+                    ErrorMessage = paymentResult.ErrorMessage ?? "Failed to initialize payment",
+                    FailedAt = DateTime.UtcNow
+                }, cancellationToken);
+
+                _logger.LogInformation(
+                    "Published PaymentFailed event for SubscriptionId={SubscriptionId}. Saga will trigger compensation.",
+                    subscription.Id);
+
                 return Result<object>.Failure(
-                    paymentResult.ErrorMessage ?? "Failed to initialize payment. Please check subscription status.",
+                    paymentResult.ErrorMessage ?? "Failed to initialize payment. Please try again.",
                     ErrorCodeEnum.InternalError);
             }
 
@@ -321,7 +340,31 @@ public class RegisterSubscriptionCommandHandler : IRequestHandler<RegisterSubscr
         }
         catch (RequestTimeoutException timeoutEx)
         {
-            _logger.LogError(timeoutEx, "Payment request timeout for SubscriptionId");
+            _logger.LogError(timeoutEx, "Payment RPC timeout for SubscriptionId={SubscriptionId}", subscriptionId);
+            
+            // ✅ Publish PaymentFailed event to trigger saga compensation (cancel subscription)
+            try
+            {
+                await _publishEndpoint.Publish(new SharedLibrary.Contracts.Payment.Events.PaymentFailed
+                {
+                    PaymentIntentId = Guid.Empty, // No payment transaction created
+                    SubscriptionId = subscriptionId,
+                    Reason = "Payment service RPC timeout (30s)",
+                    ErrorCode = "RPC_TIMEOUT",
+                    ErrorMessage = "Payment service did not respond in time",
+                    FailedAt = DateTime.UtcNow
+                }, cancellationToken);
+
+                _logger.LogInformation(
+                    "Published PaymentFailed event for SubscriptionId={SubscriptionId} due to timeout. Saga will trigger compensation.",
+                    subscriptionId);
+            }
+            catch (Exception publishEx)
+            {
+                _logger.LogError(publishEx, "Failed to publish PaymentFailed event after timeout for SubscriptionId={SubscriptionId}", subscriptionId);
+                // Continue with error response even if publish fails
+            }
+            
             return Result<object>.Failure("Payment service timeout. Please try again.", ErrorCodeEnum.InternalError);
         }
         catch (DbUpdateException dbEx)
