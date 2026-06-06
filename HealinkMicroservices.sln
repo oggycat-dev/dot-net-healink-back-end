@@ -57,7 +57,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionService.Domain"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionService.Application", "src\SubscriptionService\SubscriptionService.Application\SubscriptionService.Application.csproj", "{8A388C43-FF05-4C5B-B8B4-4F2DACC1C255}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionService.InfraStructure", "src\SubscriptionService\SubscriptionService.Infrastructure\SubscriptionService.InfraStructure.csproj", "{8CA30066-2045-4914-A087-CEC5D611C634}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionService.Infrastructure", "src\SubscriptionService\SubscriptionService.Infrastructure\SubscriptionService.Infrastructure.csproj", "{8CA30066-2045-4914-A087-CEC5D611C634}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionService.API", "src\SubscriptionService\SubscriptionService.API\SubscriptionService.API.csproj", "{CB57B7CE-A42E-4706-8724-520E30EBAE56}"
 EndProject
